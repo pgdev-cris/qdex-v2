@@ -1,0 +1,11 @@
+# covers both frontend/node_modules and backend/node_modules
+node_modules/
+
+# covers both frontend/build and backend/dist
+build/
+dist/
+
+# covers both frontend/.env and backend/.env
+.env
+
+.idea/

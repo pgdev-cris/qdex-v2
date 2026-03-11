@@ -1,0 +1,18 @@
+{
+  "name": "qdex-v2",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently --kill-others --names \"API,WEB\" \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "npm run dev --prefix backend",
+    "dev:web": "npm start --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

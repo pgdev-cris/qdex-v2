@@ -1,10 +1,16 @@
-import mysql, { Pool, PoolConnection, PoolOptions, RowDataPacket, ResultSetHeader } from "mysql2/promise";
-import { mainDb } from "./db.config";
+import mysql, {
+    Pool,
+    PoolConnection,
+    PoolOptions,
+    RowDataPacket,
+    ResultSetHeader,
+} from 'mysql2/promise';
+import { mainDb } from './db.config';
 
 class PoolManager {
     private static pools = new Map<string, Pool>();
 
-    static get(name: string = "default", config: PoolOptions = mainDb): Pool {
+    static get(name: string = 'default', config: PoolOptions = mainDb): Pool {
         if (!this.pools.has(name)) {
             const pool = mysql.createPool(config);
             this.pools.set(name, pool);
@@ -16,7 +22,7 @@ class PoolManager {
     static async query<T = RowDataPacket[]>(
         sql: string,
         params: any[] = [],
-        poolName: string = "default"
+        poolName: string = 'default'
     ): Promise<T> {
         const [rows] = await this.get(poolName).execute(sql, params);
         return rows as T;
@@ -25,7 +31,7 @@ class PoolManager {
     static async execute(
         sql: string,
         params: any[] = [],
-        poolName: string = "default"
+        poolName: string = 'default'
     ): Promise<ResultSetHeader> {
         const [result] = await this.get(poolName).execute(sql, params);
         return result as ResultSetHeader;
@@ -33,7 +39,7 @@ class PoolManager {
 
     static async transaction<T>(
         callback: (connection: PoolConnection) => Promise<T>,
-        poolName: string = "default"
+        poolName: string = 'default'
     ): Promise<T> {
         const connection = await this.get(poolName).getConnection();
 

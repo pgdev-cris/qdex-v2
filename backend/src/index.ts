@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './modules/auth/auth.route';
 import usersRoutes from './modules/users/users.route';
 import { notFoundHandler, errorHandler } from './shared/middlewares';
-import {API_PREFIX} from "./shared/constants";
+import { API_PREFIX } from './shared/constants';
 
 dotenv.config();
 

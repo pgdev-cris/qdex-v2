@@ -1,5 +1,5 @@
 import repository from './../../shared/repository/auth.repository';
-import {signToken} from "../../shared/utils/jwt.util";
+import { signToken } from '../../shared/utils/jwt.util';
 
 const login = async (username: string, password: string) => {
     console.log(username, password);
@@ -14,8 +14,8 @@ const login = async (username: string, password: string) => {
         ...user,
         token,
     };
-}
+};
 
 export default {
     login,
-}
+};

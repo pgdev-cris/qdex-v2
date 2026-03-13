@@ -4,7 +4,7 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
     console.error(err);
     res.status(err.status ?? 500).json({
         status: err.status ?? 500,
-        message: err.message || "Internal Server Error",
-        ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+        message: err.message || 'Internal Server Error',
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     });
 };

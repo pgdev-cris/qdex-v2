@@ -1,7 +1,7 @@
 import service from './auth.service';
 import { Request, Response } from 'express';
 import { LoginRequestBody } from './auth.type';
-import {HTTP_STATUS} from "../../shared/constants";
+import { HTTP_STATUS } from '../../shared/constants';
 
 /**
  * Handle login request.
@@ -18,7 +18,7 @@ const loginRequest = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
         message: 'Login successful',
         data: user,
     });
-}
+};
 
 export default {
     loginRequest,

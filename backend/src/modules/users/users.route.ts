@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import controller from './users.controller';
-import {jwtValidator} from "../../shared/middlewares/jwtValidator";
+import { jwtValidator } from '../../shared/middlewares/jwtValidator';
 
 const router = Router();
 

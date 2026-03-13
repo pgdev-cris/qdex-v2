@@ -3,6 +3,8 @@
     "singleQuote": true,
     "tabWidth": 4,
     "printWidth": 100,
-    "trailingComma": "es5",
-    "arrowParens": "always"
+    "trailingComma": "all",
+    "arrowParens": "always",
+    "bracketSpacing": true,
+    "endOfLine": "lf"
 }

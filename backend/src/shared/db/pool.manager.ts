@@ -22,7 +22,7 @@ class PoolManager {
     static async query<T = RowDataPacket[]>(
         sql: string,
         params: any[] = [],
-        poolName: string = 'default'
+        poolName: string = 'default',
     ): Promise<T> {
         const [rows] = await this.get(poolName).execute(sql, params);
         return rows as T;
@@ -31,7 +31,7 @@ class PoolManager {
     static async execute(
         sql: string,
         params: any[] = [],
-        poolName: string = 'default'
+        poolName: string = 'default',
     ): Promise<ResultSetHeader> {
         const [result] = await this.get(poolName).execute(sql, params);
         return result as ResultSetHeader;
@@ -39,7 +39,7 @@ class PoolManager {
 
     static async transaction<T>(
         callback: (connection: PoolConnection) => Promise<T>,
-        poolName: string = 'default'
+        poolName: string = 'default',
     ): Promise<T> {
         const connection = await this.get(poolName).getConnection();
 
@@ -61,7 +61,7 @@ class PoolManager {
             Array.from(this.pools.entries()).map(async ([name, pool]) => {
                 await pool.end();
                 console.log(`Pool "${name}" closed`);
-            })
+            }),
         );
         this.pools.clear();
     }

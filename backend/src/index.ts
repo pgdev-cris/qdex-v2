@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import authRoutes from './modules/auth/auth.routes';
+import authRoutes from './modules/auth/auth.route';
+import usersRoutes from './modules/users/users.route';
 import { notFoundHandler, errorHandler } from './shared/middlewares';
 import {API_PREFIX} from "./shared/constants";
 
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
  * Routes Section
  */
 app.use(`${API_PREFIX}/auth`, authRoutes);
+app.use(`${API_PREFIX}/users`, usersRoutes);
 
 /**
  * Error Handling

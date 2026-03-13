@@ -1,6 +1,6 @@
-import service from './auth.services';
+import service from './auth.service';
 import { Request, Response } from 'express';
-import { LoginRequestBody } from './auth.types';
+import { LoginRequestBody } from './auth.type';
 import {HTTP_STATUS} from "../../shared/constants";
 
 /**

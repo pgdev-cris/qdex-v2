@@ -1,10 +1,5 @@
 import {RowDataPacket} from "mysql2/promise";
 
-export interface LoginRequestBody {
-    username: string;
-    password: string;
-}
-
 export interface User extends RowDataPacket {
     auto_id: number;
     user_name: string;

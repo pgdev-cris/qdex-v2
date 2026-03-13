@@ -10,9 +10,13 @@
     "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "concurrently": "^8.0.0"
   },
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.3"
+  }
 }

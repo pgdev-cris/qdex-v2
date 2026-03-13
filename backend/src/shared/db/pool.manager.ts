@@ -5,8 +5,6 @@ class PoolManager {
     private static pools = new Map<string, Pool>();
 
     static get(name: string = "default", config: PoolOptions = mainDb): Pool {
-
-        console.log(config);
         if (!this.pools.has(name)) {
             const pool = mysql.createPool(config);
             this.pools.set(name, pool);

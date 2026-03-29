@@ -1,22 +1,28 @@
 {
-  "name": "qdex-v2",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "dev": "concurrently --kill-others --names \"API,WEB\" \"npm run dev:api\" \"npm run dev:web\"",
-    "dev:api": "npm run dev --prefix backend",
-    "dev:web": "npm run dev --prefix frontend",
-    "build": "npm run build --prefix backend && npm run build --prefix frontend",
-    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend"
-  },
-  "devDependencies": {
-    "@types/jsonwebtoken": "^9.0.10",
-    "concurrently": "^8.0.0"
-  },
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "jsonwebtoken": "^9.0.3"
-  }
+    "name": "qdex-v2",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "dev": "concurrently --kill-others --names \"API,WEB\" \"npm run dev:api\" \"npm run dev:web\"",
+        "dev:api": "npm run dev --prefix backend",
+        "dev:web": "npm run dev --prefix frontend",
+        "build": "npm run build --prefix backend && npm run build --prefix frontend",
+        "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "format:backend": "prettier --write backend/src",
+        "format:frontend": "prettier --write frontend/src"
+    },
+    "devDependencies": {
+        "@types/jsonwebtoken": "^9.0.10",
+        "concurrently": "^8.0.0",
+        "prettier": "^3.8.1"
+    },
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "jsonwebtoken": "^9.0.3",
+        "zod": "^4.3.6"
+    }
 }

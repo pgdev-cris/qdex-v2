@@ -1,7 +1,6 @@
 import service from './auth.service';
 import { Request, Response } from 'express';
 import { LoginRequestBody } from './auth.type';
-import { HTTP_STATUS } from '../../shared/constants';
 
 /**
  * Handle login request.
@@ -14,7 +13,7 @@ const loginRequest = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
 
     const user = await service.login(username, password);
 
-    return res.status(HTTP_STATUS.OK).json({
+    return res.json({
         message: 'Login successful',
         data: user,
     });

@@ -1,4 +1,10 @@
-const getVendorSales = async (vendorCode: string) => {
+import vendorRepository from '../../shared/repository/vendor.repository';
+import { VENDOR_STATUS } from '../../shared/constants';
+import { ConflictError, NotFoundError } from '../../shared/errors';
+
+const getVendorSales = async (vendorCode: number) => {
+    await validateVendorCode(vendorCode);
+
     const baseUrl = process.env.SALES_API_URL ?? 'http://192.168.110.90:4003/qdex';
     const url = `${baseUrl}/fetch-sales/${encodeURIComponent(vendorCode)}`;
 
@@ -21,7 +27,24 @@ const getVendorSales = async (vendorCode: string) => {
     }
 };
 
+const validateVendorCode = async (vendorCode: number) => {
+    const vendor = await vendorRepository.getVendorByCode(vendorCode);
+    if (!vendor) {
+        throw new NotFoundError(
+            'Vendor not found or invalid code. Please check the vendor code and try again.',
+        );
+    }
+
+    if (vendor.status !== VENDOR_STATUS.ACTIVE) {
+        throw new ConflictError('Vendor is not active.');
+    }
+
+    return vendor;
+};
+
 const getVendorSalesMock = async (vendorCode: number) => {
+    await validateVendorCode(vendorCode);
+
     return [
         {
             payment_method: 'CASH',

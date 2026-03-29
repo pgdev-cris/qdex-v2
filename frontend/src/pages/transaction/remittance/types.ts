@@ -1,16 +1,26 @@
 export interface SalesRecord {
     payment_method: string
     total: string
+    total_count: number
+}
+
+export interface VendorInfo {
+    name: string
+    code: number
+}
+
+export interface SalesData {
+    vendor: VendorInfo
+    sales: SalesRecord[]
+    total_amount: number
 }
 
 export interface SalesResponse {
     result: string
     message: string
     status: number
-    data: SalesRecord[]
-    vendor_name?: string
+    data: SalesData
 }
-
 export interface ReceiptLine {
     method: string
     amount: string

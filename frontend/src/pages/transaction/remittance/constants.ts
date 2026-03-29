@@ -7,7 +7,7 @@ export const EVENT_CODE = 'tnap-2024-test'
 // ─── API ──────────────────────────────────────────────────────────────────────
 // Sales data is now proxied through the qdex-v2 backend.
 // Full call: GET {VITE_API_URL}/api/v1/sales/fetch/:vendor_code
-export const SALES_FETCH_PATH = '/api/v1/sales/fetch'
+export const SALES_FETCH_PATH = '/api/v1/sales/vendor'
 
 // ─── Thermal receipt lines ────────────────────────────────────────────────────
 export const LINE_DASHES = '-'.repeat(45)

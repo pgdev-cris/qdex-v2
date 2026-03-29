@@ -1,6 +1,7 @@
 interface SalesRecord {
     payment_method: string;
     total: string;
+    total_count: number;
 }
 
 interface SalesApiResponse {

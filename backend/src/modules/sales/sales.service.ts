@@ -17,7 +17,10 @@ const getVendorSales = async (vendorCode: number) => {
 
         const json: SalesApiResponse = (await response.json()) as SalesApiResponse;
 
-        return json.data;
+        return {
+            sales: json.data,
+            total_amount: getVendorSalesTotalAmount(json.data),
+        };
     } catch (err: unknown) {
         console.error('Error fetching sales:', err);
 
@@ -39,13 +42,14 @@ const validateVendorCode = async (vendorCode: number) => {
         throw new ConflictError('Vendor is not active.');
     }
 
-    return vendor;
+    const { name, code } = vendor;
+    return { name, code };
 };
 
 const getVendorSalesMock = async (vendorCode: number) => {
-    await validateVendorCode(vendorCode);
+    const vendor = await validateVendorCode(vendorCode);
 
-    return [
+    const vendorSales = [
         {
             payment_method: 'CASH',
             total: '6055.37',
@@ -66,7 +70,18 @@ const getVendorSalesMock = async (vendorCode: number) => {
             total: '1000.00',
             total_count: 4,
         },
-    ];
+    ] as SalesRecord[];
+
+    return {
+        vendor: vendor,
+        sales: vendorSales,
+        total_amount: getVendorSalesTotalAmount(vendorSales),
+    };
+};
+
+const getVendorSalesTotalAmount = (sales: SalesRecord[]): string => {
+    const totalAmount = sales.reduce((sum, sale) => sum + parseFloat(sale.total), 0);
+    return parseFloat(totalAmount.toFixed(2)).toString();
 };
 
 export default { getVendorSales, getVendorSalesMock };

@@ -212,7 +212,7 @@ function buildReceiptFromApi(
     vendorCode: string,
     vendorName: string,
     remitterName: string,
-    printedBy: string,
+    printedBy: string
 ): Receipt {
     return {
         trans_no: apiData.receipt_no,
@@ -278,15 +278,12 @@ export function RemittancePage() {
                 method: 'GET',
                 token: token ?? undefined,
             })
-            if (json.result !== 'success') {
-                setError(json.message ?? 'Vendor not found.')
-                return
-            }
-            setSalesData(json.data)
+            setSalesData(json.data.sales)
             setVendorCode(code)
-            setVendorName(json.vendor_name ?? '')
+            setVendorName(json.data.vendor.name ?? '')
             setStep('select-type')
         } catch (err: unknown) {
+            console.error('Error fetching sales data:', err)
             const msg =
                 err && typeof err === 'object' && 'message' in err
                     ? String((err as { message: unknown }).message)
@@ -341,7 +338,14 @@ export function RemittancePage() {
             }
 
             setReceipt(
-                buildReceiptFromApi(json.data, 'full', vendorCode, vendorName, remitterName.trim(), printedBy)
+                buildReceiptFromApi(
+                    json.data,
+                    'full',
+                    vendorCode,
+                    vendorName,
+                    remitterName.trim(),
+                    printedBy
+                )
             )
             setStep('receipt')
         } catch (err: unknown) {
@@ -388,7 +392,14 @@ export function RemittancePage() {
             }
 
             setReceipt(
-                buildReceiptFromApi(json.data, 'partial', vendorCode, vendorName, remitterName.trim(), printedBy)
+                buildReceiptFromApi(
+                    json.data,
+                    'partial',
+                    vendorCode,
+                    vendorName,
+                    remitterName.trim(),
+                    printedBy
+                )
             )
             setStep('receipt')
         } catch (err: unknown) {

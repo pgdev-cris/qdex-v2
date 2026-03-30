@@ -28,9 +28,14 @@ apiClient.interceptors.request.use((config) => {
 })
 
 // Normalise error shape: throw the response body so callers get { message, status, ... }
+// On 401, clear stored credentials and redirect to login.
 apiClient.interceptors.response.use(
     (res) => res,
     (err) => {
+        if (err.response?.status === 401) {
+            localStorage.removeItem('qdex_auth')
+            window.location.href = '/login'
+        }
         const data = err.response?.data
         return Promise.reject(data ?? err)
     }

@@ -25,8 +25,8 @@ function buildFilters(query: RemittanceReportQuery): FilterResult {
         params.push(query.to);
     }
     if (query.vendor_code) {
-        clauses.push('r.vendor_code = ?');
-        params.push(query.vendor_code.toUpperCase());
+        clauses.push('v.code = ?');
+        params.push(Number(query.vendor_code));
     }
     if (query.event_code) {
         clauses.push('r.event_code = ?');
@@ -50,7 +50,7 @@ const getRemittances = async (query: RemittanceReportQuery): Promise<RemittanceR
         SELECT
             r.remittance_id,
             r.vendor_code,
-            s.supplier_name AS vendor_name,
+            s.name AS vendor_name,
             r.event_code,
             r.total_cash,
             r.total_gcash,
@@ -66,7 +66,8 @@ const getRemittances = async (query: RemittanceReportQuery): Promise<RemittanceR
             r.remitted_at,
             r.created_at
         FROM tbl_remittances r
-        LEFT JOIN tbl_suppliers s ON s.supplier_code = r.vendor_code
+        INNER JOIN tbl_transactions t ON t.reference_code = r.reference_code
+        INNER JOIN tbl_vendors v ON v.id = t.vendor_id
         ${where}
         ORDER BY r.remitted_at DESC
         LIMIT ? OFFSET ?
@@ -100,13 +101,14 @@ const getRemittanceById = async (id: number): Promise<RemittanceRecord | null> =
     const sql = `
         SELECT
             r.remittance_id, r.vendor_code,
-            s.supplier_name AS vendor_name,
+            v.name AS vendor_name,
             r.event_code, r.total_cash, r.total_gcash, r.total_pwallet,
             r.total_credit_card, r.total_debit_card, r.total_credit,
             r.grand_total, r.reference_code, r.is_partial,
             r.remitted_by, r.received_by, r.remitted_at, r.created_at
         FROM tbl_remittances r
-        LEFT JOIN tbl_suppliers s ON s.supplier_code = r.vendor_code
+        INNER JOIN tbl_transactions t ON t.reference_code = r.reference_code
+        INNER JOIN tbl_vendors v ON v.id = t.vendor_id
         WHERE r.remittance_id = ?
         LIMIT 1
     `;

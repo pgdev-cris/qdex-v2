@@ -15,9 +15,9 @@ const getSupplierById = async (id: number) => {
 
 const createSupplier = async (data: CreateSupplierRequest) => {
     // Check for duplicate code
-    const existing = await repository.getSupplierByCode(data.supplier_code);
+    const existing = await repository.getSupplierByCode(data.code);
     if (existing) {
-        throw new Error(`Supplier code "${data.supplier_code}" is already in use.`);
+        throw new Error(`Supplier code "${data.code}" is already in use.`);
     }
     return await repository.createSupplier(data);
 };
@@ -27,10 +27,10 @@ const updateSupplier = async (id: number, data: UpdateSupplierRequest) => {
     if (!exists) return null;
 
     // Check code uniqueness if being changed
-    if (data.supplier_code && data.supplier_code !== exists.supplier_code) {
-        const duplicate = await repository.getSupplierByCode(data.supplier_code);
+    if (data.code !== undefined && data.code !== exists.code) {
+        const duplicate = await repository.getSupplierByCode(data.code);
         if (duplicate) {
-            throw new Error(`Supplier code "${data.supplier_code}" is already in use.`);
+            throw new Error(`Supplier code "${data.code}" is already in use.`);
         }
     }
 

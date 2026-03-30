@@ -1,38 +1,57 @@
-import { useState } from 'react'
-import { Package, Search, Plus, Pencil, Trash2 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Package, Search, Plus, Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Modal, DeleteModal, FormField, FormRow, FormSelect } from '@/components/ui/modal'
+import { Modal, DeleteModal, FormField, FormRow } from '@/components/ui/modal'
+import { apiFetch } from '@/lib/api'
 
 //  Types
 
 interface Supplier {
     id: number
-    code: string
+    code: number
     name: string
-    status: 'Active' | 'Inactive'
-    registered: string
+    status: number
+    created_at: string
 }
 
-const BLANK: Omit<Supplier, 'id' | 'registered'> = {
+interface ApiListResponse {
+    status: number
+    message: string
+    data: Supplier[]
+}
+
+interface ApiSingleResponse {
+    status: number
+    message: string
+    data: Supplier
+}
+
+type FormData = {
+    code: string
+    name: string
+}
+
+const BLANK: FormData = {
     code: '',
     name: '',
-    status: 'Active',
 }
 
 //  Status badge
 
-function StatusBadge({ status }: { status: string }) {
-    const active = status === 'Active'
+function StatusBadge({ status }: { status: number }) {
+    if (status === 1) {
+        return (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                Active
+            </span>
+        )
+    }
     return (
-        <span
-            className={[
-                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
-            ].join(' ')}
-        >
-            {status}
+        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            Inactive
         </span>
     )
 }
@@ -44,56 +63,151 @@ const COLUMNS = ['Code', 'Supplier Name', 'Status', 'Registered', 'Actions']
 export function SuppliersPage() {
     const [rows, setRows] = useState<Supplier[]>([])
     const [search, setSearch] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
     const [modal, setModal] = useState<{
         mode: 'add' | 'edit'
-        data: Omit<Supplier, 'id' | 'registered'>
+        data: FormData
         id?: number
     } | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null)
-    const [nextId, setNextId] = useState(1)
+
+    //  Fetch
+
+    const fetchSuppliers = useCallback(async () => {
+        setLoading(true)
+        setError(null)
+        try {
+            const res = await apiFetch<ApiListResponse>('/api/v1/suppliers')
+            setRows(res.data)
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to load suppliers.')
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        fetchSuppliers()
+    }, [fetchSuppliers])
 
     //  Helpers
 
     const filtered = rows.filter((r) => {
         const q = search.toLowerCase()
-        return r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)
+        return String(r.code).toLowerCase().includes(q) || r.name.toLowerCase().includes(q)
     })
 
     function openAdd() {
+        setError(null)
         setModal({ mode: 'add', data: { ...BLANK } })
     }
 
     function openEdit(supplier: Supplier) {
-        const { id, registered, ...data } = supplier
-        setModal({ mode: 'edit', data, id })
+        setError(null)
+        setModal({
+            mode: 'edit',
+            id: supplier.id,
+            data: {
+                code: String(supplier.code),
+                name: supplier.name,
+            },
+        })
     }
 
-    function setField<K extends keyof typeof BLANK>(key: K, value: (typeof BLANK)[K]) {
+    function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
         setModal((m) => (m ? { ...m, data: { ...m.data, [key]: value } } : m))
     }
 
-    function handleSave() {
-        if (!modal) return
-        if (!modal.data.name.trim() || !modal.data.code.trim()) return
+    //  Save (create / update)
 
-        if (modal.mode === 'add') {
-            const now = new Date().toLocaleDateString('en-PH', {
-                year: 'numeric',
-                month: 'short',
-                day: '2-digit',
-            })
-            setRows((r) => [...r, { id: nextId, ...modal.data, registered: now }])
-            setNextId((n) => n + 1)
-        } else {
-            setRows((r) => r.map((row) => (row.id === modal.id ? { ...row, ...modal.data } : row)))
+    async function handleSave() {
+        if (!modal) return
+        const { code, name } = modal.data
+        if (!code.trim() || !name.trim()) return
+
+        setSaving(true)
+        setError(null)
+        try {
+            const payload = {
+                code: parseInt(code.trim(), 10),
+                name: name.trim(),
+            }
+
+            if (isNaN(payload.code)) {
+                throw new Error('Code must be a number')
+            }
+
+            if (modal.mode === 'add') {
+                await apiFetch<ApiSingleResponse>('/api/v1/suppliers', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                })
+            } else {
+                await apiFetch<ApiSingleResponse>(`/api/v1/suppliers/${modal.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload),
+                })
+            }
+
+            setModal(null)
+            await fetchSuppliers()
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to save supplier.')
+        } finally {
+            setSaving(false)
         }
-        setModal(null)
     }
 
-    function handleDelete() {
+    //  Toggle active / inactive
+
+    async function handleToggleStatus(supplier: Supplier) {
+        setSaving(true)
+        setError(null)
+        try {
+            const next = supplier.status === 1 ? 0 : 1
+            await apiFetch(`/api/v1/suppliers/${supplier.id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: next }),
+            })
+            await fetchSuppliers()
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to update status.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    //  Delete (soft — sets status to 'deleted')
+
+    async function handleDelete() {
         if (!deleteTarget) return
-        setRows((r) => r.filter((row) => row.id !== deleteTarget.id))
-        setDeleteTarget(null)
+        setSaving(true)
+        setError(null)
+        try {
+            await apiFetch(`/api/v1/suppliers/${deleteTarget.id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 9 }),
+            })
+            setDeleteTarget(null)
+            await fetchSuppliers()
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to delete supplier.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    //  Format
+
+    function fmtDate(d: string) {
+        return new Date(d).toLocaleDateString('en-PH', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+        })
     }
 
     //  Render
@@ -104,10 +218,10 @@ export function SuppliersPage() {
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h1 className="flex items-center gap-2 text-2xl font-semibold">
-                        <Package className="text-muted-foreground h-5 w-5" />
+                        <Package className="h-5 w-5 text-muted-foreground" />
                         Suppliers
                     </h1>
-                    <p className="text-muted-foreground mt-1 text-sm">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Manage supplier records and information.
                     </p>
                 </div>
@@ -116,6 +230,13 @@ export function SuppliersPage() {
                     Add Supplier
                 </Button>
             </div>
+
+            {/* Error banner */}
+            {error && !modal && (
+                <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {error}
+                </div>
+            )}
 
             {/* Table card */}
             <Card>
@@ -129,7 +250,7 @@ export function SuppliersPage() {
                             </CardDescription>
                         </div>
                         <div className="relative w-64">
-                            <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+                            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 placeholder="Search suppliers..."
                                 className="pl-8"
@@ -146,7 +267,7 @@ export function SuppliersPage() {
                                 {COLUMNS.map((col) => (
                                     <th
                                         key={col}
-                                        className="text-muted-foreground px-4 py-3 text-left text-xs font-medium tracking-wide"
+                                        className="px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground"
                                     >
                                         {col}
                                     </th>
@@ -154,11 +275,20 @@ export function SuppliersPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.length === 0 ? (
+                            {loading ? (
                                 <tr>
                                     <td
                                         colSpan={COLUMNS.length}
-                                        className="text-muted-foreground py-16 text-center text-sm"
+                                        className="py-16 text-center text-sm text-muted-foreground"
+                                    >
+                                        Loading suppliers…
+                                    </td>
+                                </tr>
+                            ) : filtered.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={COLUMNS.length}
+                                        className="py-16 text-center text-sm text-muted-foreground"
                                     >
                                         {search
                                             ? 'No suppliers match your search.'
@@ -179,24 +309,41 @@ export function SuppliersPage() {
                                             <StatusBadge status={supplier.status} />
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
-                                            {supplier.registered}
+                                            {fmtDate(supplier.created_at)}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon-sm"
-                                                    onClick={() => openEdit(supplier)}
+                                                    title={
+                                                        supplier.status === 1
+                                                            ? 'Deactivate'
+                                                            : 'Activate'
+                                                    }
+                                                    disabled={saving}
+                                                    onClick={() => handleToggleStatus(supplier)}
+                                                >
+                                                    {supplier.status === 1 ? (
+                                                        <ToggleRight className="h-3.5 w-3.5 text-primary" />
+                                                    ) : (
+                                                        <ToggleLeft className="h-3.5 w-3.5" />
+                                                    )}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
                                                     title="Edit"
+                                                    onClick={() => openEdit(supplier)}
                                                 >
                                                     <Pencil className="h-3.5 w-3.5" />
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon-sm"
-                                                    onClick={() => setDeleteTarget(supplier)}
                                                     title="Delete"
                                                     className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                    onClick={() => setDeleteTarget(supplier)}
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </Button>
@@ -219,11 +366,15 @@ export function SuppliersPage() {
                 size="sm"
                 footer={
                     <>
-                        <Button variant="outline" onClick={() => setModal(null)}>
+                        <Button variant="outline" onClick={() => setModal(null)} disabled={saving}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSave}>
-                            {modal?.mode === 'add' ? 'Add Supplier' : 'Save Changes'}
+                        <Button onClick={handleSave} disabled={saving}>
+                            {saving
+                                ? 'Saving…'
+                                : modal?.mode === 'add'
+                                  ? 'Add Supplier'
+                                  : 'Save Changes'}
                         </Button>
                     </>
                 }
@@ -231,22 +382,13 @@ export function SuppliersPage() {
                 {modal && (
                     <div className="flex flex-col gap-4">
                         <FormRow>
-                            <FormField label="Supplier Code" required hint="e.g. SUP-001">
+                            <FormField label="Supplier Code" required hint="e.g. 1001">
                                 <Input
-                                    placeholder="SUP-001"
+                                    type="number"
+                                    placeholder="1001"
                                     value={modal.data.code}
-                                    onChange={(e) => setField('code', e.target.value.toUpperCase())}
-                                    className="uppercase"
+                                    onChange={(e) => setField('code', e.target.value)}
                                 />
-                            </FormField>
-                            <FormField label="Status">
-                                <FormSelect
-                                    value={modal.data.status}
-                                    onChange={(v) => setField('status', v as 'Active' | 'Inactive')}
-                                >
-                                    <option value="Active">Active</option>
-                                    <option value="Inactive">Inactive</option>
-                                </FormSelect>
                             </FormField>
                         </FormRow>
                         <FormField label="Supplier Name" required>
@@ -256,6 +398,7 @@ export function SuppliersPage() {
                                 onChange={(e) => setField('name', e.target.value)}
                             />
                         </FormField>
+                        {error && <p className="text-sm text-destructive">{error}</p>}
                     </div>
                 )}
             </Modal>

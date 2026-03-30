@@ -1,17 +1,17 @@
 import { z } from 'zod';
 
 export const CreateSupplierSchema = z.object({
-    supplier_code: z.string().min(1).toUpperCase(),
-    supplier_name: z.string().min(1),
+    code: z.number().int().min(1),
+    name: z.string().min(1),
 });
 
 export const UpdateSupplierSchema = z.object({
-    supplier_code: z.string().min(1).toUpperCase().optional(),
-    supplier_name: z.string().min(1).optional(),
+    code: z.number().int().min(1).optional(),
+    name: z.string().min(1).optional(),
 });
 
 export const UpdateSupplierStatusSchema = z.object({
-    status: z.enum(['active', 'inactive', 'deleted']),
+    status: z.number().int(),
 });
 
 export const SupplierIdParamSchema = z.object({

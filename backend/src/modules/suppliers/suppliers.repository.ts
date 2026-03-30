@@ -6,28 +6,28 @@ const POOL = 'auth-pool';
 
 const getSuppliers = async (): Promise<Supplier[]> => {
     const query = `
-        SELECT supplier_id, supplier_code, supplier_name, supplier_status, created_at
+        SELECT id, code, name, status, created_at
         FROM tbl_suppliers
-        WHERE supplier_status != 'deleted'
-        ORDER BY supplier_code ASC
+        WHERE status != 9
+        ORDER BY code ASC
     `;
     return (await PoolManager.query<Supplier[]>(query, [], POOL)) ?? [];
 };
 
 const getSupplierById = async (id: number): Promise<Supplier | null> => {
     const query = `
-        SELECT supplier_id, supplier_code, supplier_name, supplier_status, created_at
+        SELECT id, code, name, status, created_at
         FROM tbl_suppliers
-        WHERE supplier_id = ? AND supplier_status != 'deleted'
+        WHERE id = ? AND status != 9
         LIMIT 1
     `;
     const rows = await PoolManager.query<Supplier[]>(query, [id], POOL);
     return rows?.[0] ?? null;
 };
 
-const getSupplierByCode = async (code: string): Promise<Supplier | null> => {
+const getSupplierByCode = async (code: number): Promise<Supplier | null> => {
     const query = `
-        SELECT supplier_id FROM tbl_suppliers WHERE supplier_code = ? LIMIT 1
+        SELECT id FROM tbl_suppliers WHERE code = ? LIMIT 1
     `;
     const rows = await PoolManager.query<Supplier[]>(query, [code], POOL);
     return rows?.[0] ?? null;
@@ -37,10 +37,10 @@ const createSupplier = async (
     data: CreateSupplierRequest,
 ): Promise<{ insertId: number } | null> => {
     const query = `
-        INSERT INTO tbl_suppliers (supplier_code, supplier_name, supplier_status)
-        VALUES (?, ?, 'active')
+        INSERT INTO tbl_suppliers (code, name, status)
+        VALUES (?, ?, 1)
     `;
-    const result = await PoolManager.execute(query, [data.supplier_code, data.supplier_name], POOL);
+    const result = await PoolManager.execute(query, [data.code, data.name], POOL);
     return result ? { insertId: result.insertId } : null;
 };
 
@@ -48,28 +48,25 @@ const updateSupplier = async (id: number, data: UpdateSupplierRequest): Promise<
     const fields: string[] = [];
     const params: unknown[] = [];
 
-    if (data.supplier_code !== undefined) {
-        fields.push('supplier_code = ?');
-        params.push(data.supplier_code);
+    if (data.code !== undefined) {
+        fields.push('code = ?');
+        params.push(data.code);
     }
-    if (data.supplier_name !== undefined) {
-        fields.push('supplier_name = ?');
-        params.push(data.supplier_name);
+    if (data.name !== undefined) {
+        fields.push('name = ?');
+        params.push(data.name);
     }
 
     if (fields.length === 0) return false;
 
     params.push(id);
-    const query = `UPDATE tbl_suppliers SET ${fields.join(', ')} WHERE supplier_id = ? AND supplier_status != 'deleted'`;
+    const query = `UPDATE tbl_suppliers SET ${fields.join(', ')} WHERE id = ? AND status != 9`;
     const result = await PoolManager.execute(query, params, POOL);
     return (result?.affectedRows ?? 0) > 0;
 };
 
-const setSupplierStatus = async (
-    id: number,
-    status: 'active' | 'inactive' | 'deleted',
-): Promise<boolean> => {
-    const query = `UPDATE tbl_suppliers SET supplier_status = ? WHERE supplier_id = ?`;
+const setSupplierStatus = async (id: number, status: number): Promise<boolean> => {
+    const query = `UPDATE tbl_suppliers SET status = ? WHERE id = ?`;
     const result = await PoolManager.execute(query, [status, id], POOL);
     return (result?.affectedRows ?? 0) > 0;
 };

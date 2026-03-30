@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Activity, Search, RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
+import { Activity, Search, RefreshCw, ChevronLeft, ChevronRight, Eye, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { apiFetch } from '@/lib/api'
 import { fmt } from '@/pages/transaction/remittance/helpers'
+import { ThermalReceipt } from '@/pages/transaction/remittance/components/ThermalReceipt'
+import type { Receipt } from '@/pages/transaction/remittance/types'
 
 //  Types
 
@@ -124,10 +126,14 @@ function TransactionDetailModal({
     open,
     transaction,
     onClose,
+    onReprint,
+    reprinting,
 }: {
     open: boolean
     transaction: TransactionWithDetails | null
     onClose: () => void
+    onReprint: (id: number) => void
+    reprinting: boolean
 }) {
     if (!transaction) return null
 
@@ -139,9 +145,24 @@ function TransactionDetailModal({
             description={`Ref: ${transaction.reference_code}`}
             size="md"
             footer={
-                <Button variant="outline" onClick={onClose}>
-                    Close
-                </Button>
+                <div className="flex w-full items-center justify-between">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onReprint(transaction.id)}
+                        disabled={reprinting}
+                    >
+                        <Printer
+                            className={['mr-2 h-4 w-4', reprinting ? 'animate-pulse' : ''].join(
+                                ' '
+                            )}
+                        />
+                        {reprinting ? 'Reprinting...' : 'Reprint Receipt'}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={onClose}>
+                        Close
+                    </Button>
+                </div>
             }
         >
             <div className="flex flex-col gap-5">
@@ -238,6 +259,9 @@ export function MonitoringPage() {
     const [detail, setDetail] = useState<TransactionWithDetails | null>(null)
     const [detailLoading, setDetailLoading] = useState(false)
 
+    const [reprintData, setReprintData] = useState<Receipt | null>(null)
+    const [reprintLoadingId, setReprintLoadingId] = useState<number | null>(null)
+
     const fetchTransactions = useCallback(
         async (p = 1) => {
             setLoading(true)
@@ -282,6 +306,26 @@ export function MonitoringPage() {
             console.error('Failed to fetch transaction detail:', err)
         } finally {
             setDetailLoading(false)
+        }
+    }
+
+    const handleReprint = async (id: number) => {
+        setReprintLoadingId(id)
+        try {
+            const res = await apiFetch<{ result: string; data: Receipt }>(
+                `/api/v1/monitoring/${id}/reprint`,
+                { method: 'GET' }
+            )
+            setReprintData(res.data)
+            // Wait for state update and DOM render
+            setTimeout(() => {
+                window.print()
+            }, 100)
+        } catch (err) {
+            console.error('Failed to reprint transaction:', err)
+            alert('Failed to generate reprint data.')
+        } finally {
+            setReprintLoadingId(null)
         }
     }
 
@@ -428,7 +472,7 @@ export function MonitoringPage() {
                                         <td className="px-4 py-3 text-xs text-muted-foreground">
                                             {new Date(row.transacted_at).toLocaleString('en-PH')}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 flex items-center gap-1">
                                             <Button
                                                 variant="ghost"
                                                 size="icon-sm"
@@ -437,6 +481,22 @@ export function MonitoringPage() {
                                                 onClick={() => openDetail(row.id)}
                                             >
                                                 <Eye className="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                title="Reprint"
+                                                disabled={reprintLoadingId !== null}
+                                                onClick={() => handleReprint(row.id)}
+                                            >
+                                                <Printer
+                                                    className={[
+                                                        'h-3.5 w-3.5',
+                                                        reprintLoadingId === row.id
+                                                            ? 'animate-pulse'
+                                                            : '',
+                                                    ].join(' ')}
+                                                />
                                             </Button>
                                         </td>
                                     </tr>
@@ -479,7 +539,12 @@ export function MonitoringPage() {
                 open={detail !== null}
                 transaction={detail}
                 onClose={() => setDetail(null)}
+                onReprint={handleReprint}
+                reprinting={reprintLoadingId === detail?.id}
             />
+
+            {/* Print rendering */}
+            {reprintData && <ThermalReceipt receipt={reprintData} />}
         </div>
     )
 }

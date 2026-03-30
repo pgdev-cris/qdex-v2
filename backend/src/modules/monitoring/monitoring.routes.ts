@@ -10,4 +10,7 @@ router.get('/', jwtValidator, controller.listTransactionsRequest);
 // GET /api/v1/monitoring/:id      — single transaction with details
 router.get('/:id', jwtValidator, controller.getTransactionRequest);
 
+// GET /api/v1/monitoring/:id/reprint — get formatted receipt data for reprinting
+router.get('/:id/reprint', jwtValidator, controller.reprintTransactionRequest);
+
 export default router;

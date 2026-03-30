@@ -35,4 +35,22 @@ const getTransactionRequest = async (req: Request, res: Response) => {
     });
 };
 
-export default { listTransactionsRequest, getTransactionRequest };
+const reprintTransactionRequest = async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const user = (req as any).user;
+    const printedBy = user ? `${user.first_name} ${user.last_name}`.trim() : 'System';
+
+    if (!id || isNaN(id)) {
+        res.status(400).json({ result: 'error', message: 'Invalid transaction ID.' });
+        return;
+    }
+
+    const data = await monitoringService.reprintTransaction(id, printedBy);
+
+    return res.json({
+        result: 'success',
+        data,
+    });
+};
+
+export default { listTransactionsRequest, getTransactionRequest, reprintTransactionRequest };

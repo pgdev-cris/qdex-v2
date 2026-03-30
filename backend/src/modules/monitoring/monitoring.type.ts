@@ -5,7 +5,9 @@ export interface TransactionRow {
     vendor_code: number;
     vendor_name: string;
     event_name: string;
+    event_code: string;
     type: number;
+    remit_type: number;
     status: number;
     total_amount: number;
     remitted_by: string;

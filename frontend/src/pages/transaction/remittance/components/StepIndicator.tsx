@@ -20,10 +20,14 @@ export function StepIndicator({ step }: Props) {
             {STEPS.map((s, i) => {
                 const done = i < idx
                 const active = i === idx
+                const isLast = i === STEPS.length - 1
                 return (
-                    <li key={s.key} className="flex flex-1 items-center">
+                    <li
+                        key={s.key}
+                        className={['flex items-center', !isLast ? 'flex-1' : ''].join(' ')}
+                    >
                         {/* Step node */}
-                        <div className="flex flex-col items-center" style={{ minWidth: 0 }}>
+                        <div className="flex shrink-0 flex-col items-center">
                             <span
                                 className={[
                                     'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold',
@@ -50,11 +54,11 @@ export function StepIndicator({ step }: Props) {
                             </span>
                         </div>
 
-                        {/* Connector line — only between steps */}
-                        {i < STEPS.length - 1 && (
+                        {/* Connector — only non-last items, takes all remaining space */}
+                        {!isLast && (
                             <div
                                 className={[
-                                    'mb-4 mx-1 h-px flex-1',
+                                    'mx-2 mb-4 h-px flex-1',
                                     done ? 'bg-primary' : 'bg-border',
                                 ].join(' ')}
                             />

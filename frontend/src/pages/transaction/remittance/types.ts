@@ -37,6 +37,8 @@ export interface Receipt {
     verified_at: string
     gen_at: string
     printed_by: string
+    event_name: string
+    event_code: string
 }
 
 // ─── Remittance API ───────────────────────────────────────────────────────────

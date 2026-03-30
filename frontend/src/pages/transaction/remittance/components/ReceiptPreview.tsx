@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator'
 import type { Receipt } from '../types'
 import { fmtAmt, methodLabel } from '../helpers'
-import { COMPANY_NAME, EVENT_NAME, RECEIPT_TITLE, EVENT_CODE } from '../constants'
+import { COMPANY_NAME, RECEIPT_TITLE } from '../constants'
 
 // ─── Screen-only receipt row ──────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ export function ReceiptPreview({ receipt, onPrint, onReset }: Props) {
                     {/* Header band */}
                     <div className="border-b bg-muted/40 px-5 py-3 text-center font-mono text-xs leading-5">
                         <p className="font-bold">{COMPANY_NAME}</p>
-                        <p>{EVENT_NAME}</p>
+                        <p>{receipt.event_name}</p>
                         <p>{RECEIPT_TITLE}</p>
                         <p>Supplier Copy</p>
                     </div>
@@ -69,7 +69,7 @@ export function ReceiptPreview({ receipt, onPrint, onReset }: Props) {
                         <ScreenRow label="Trans No:" value={receipt.trans_no} />
                         <div className="text-[11px]">Verified Date: {receipt.verified_at}</div>
                         <ScreenRow label="Ref Code:" value={receipt.ref_code} />
-                        <ScreenRow label="Event Code:" value={EVENT_CODE} />
+                        <ScreenRow label="Event Code:" value={receipt.event_code} />
                         <div>
                             Supplier: ({receipt.vendor_code})
                             {receipt.vendor_name ? ` ${receipt.vendor_name}` : ''}

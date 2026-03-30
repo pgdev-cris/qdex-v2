@@ -29,6 +29,8 @@ import { VendorSearch } from './components/VendorSearch'
 import { SelectType } from './components/SelectType'
 import { RemittanceForm } from './components/RemittanceForm'
 import { ReceiptPreview } from './components/ReceiptPreview'
+import { ConfirmModal } from '@/components/ui/modal'
+import type { ConfirmRow } from '@/components/ui/modal'
 
 // ─── Context panel ────────────────────────────────────────────────────────────
 
@@ -39,6 +41,7 @@ interface ContextPanelProps {
     remitterName: string
     remitType: RemitType | null
     salesData: SalesRecord[]
+    cashAmount: string
     receipt: Receipt | null
 }
 
@@ -69,17 +72,10 @@ function ContextPanel({
     remitterName,
     remitType,
     salesData,
+    cashAmount,
     receipt,
 }: ContextPanelProps) {
-    const cashTotal = salesData.reduce(
-        (s, r) => (r.payment_method === 'CASH' ? s + Number(r.total) : s),
-        0
-    )
-    const cardsTotal = salesData.reduce(
-        (s, r) => (r.payment_method !== 'CASH' ? s + Number(r.total) : s),
-        0
-    )
-    const grandTotal = cashTotal + cardsTotal
+    const encodedCash = Number(cashAmount) || 0
 
     if (step === 'search') {
         return (
@@ -121,9 +117,11 @@ function ContextPanel({
     if (step === 'select-type' || step === 'remit') {
         return (
             <div className="flex flex-col gap-6">
-                <Section title="Vendor">
-                    <InfoRow label="Code" value={vendorCode} />
-                    {vendorName && <InfoRow label="Name" value={vendorName} />}
+                <Section title="Remittance Summary">
+                    <InfoRow
+                        label="Vendor"
+                        value={vendorName ? `${vendorCode} - ${vendorName}` : vendorCode}
+                    />
                 </Section>
 
                 {remitterName && step === 'remit' && (
@@ -148,27 +146,45 @@ function ContextPanel({
                     </Section>
                 )}
 
-                {salesData.length > 0 && (
-                    <Section title="Payment Summary">
-                        <div className="flex flex-col gap-2">
-                            {salesData.map((r) => (
-                                <div
-                                    key={r.payment_method}
-                                    className="flex justify-between text-sm"
-                                >
-                                    <span className="text-muted-foreground">
-                                        {methodLabel(r.payment_method)}
-                                    </span>
-                                    <span className="font-medium tabular-nums">{fmt(r.total)}</span>
+                {salesData.length > 0 && (() => {
+                    const visibleRows = remitType === 'partial'
+                        ? salesData.filter((r) => r.payment_method === 'CASH')
+                        : salesData
+
+                    // On remit step, substitute the typed cash amount for the CASH row
+                    const resolveAmount = (r: SalesRecord) => {
+                        if (step === 'remit' && r.payment_method === 'CASH') {
+                            return encodedCash
+                        }
+                        return Number(r.total)
+                    }
+
+                    const visibleTotal = visibleRows.reduce((s, r) => s + resolveAmount(r), 0)
+
+                    return (
+                        <Section title="Sales">
+                            <div className="flex flex-col gap-2">
+                                {visibleRows.map((r) => (
+                                    <div
+                                        key={r.payment_method}
+                                        className="flex justify-between text-sm"
+                                    >
+                                        <span className="text-muted-foreground">
+                                            {methodLabel(r.payment_method)}
+                                        </span>
+                                        <span className="font-medium tabular-nums">
+                                            {fmt(resolveAmount(r))}
+                                        </span>
+                                    </div>
+                                ))}
+                                <div className="mt-1 flex justify-between border-t pt-2 text-sm font-semibold">
+                                    <span>Total</span>
+                                    <span className="tabular-nums">{fmt(visibleTotal)}</span>
                                 </div>
-                            ))}
-                            <div className="mt-1 flex justify-between border-t pt-2 text-sm font-semibold">
-                                <span>Total</span>
-                                <span className="tabular-nums">{fmt(grandTotal)}</span>
                             </div>
-                        </div>
-                    </Section>
-                )}
+                        </Section>
+                    )
+                })()}
             </div>
         )
     }
@@ -212,7 +228,9 @@ function buildReceiptFromApi(
     vendorCode: string,
     vendorName: string,
     remitterName: string,
-    printedBy: string
+    printedBy: string,
+    eventName: string,
+    eventCode: string,
 ): Receipt {
     return {
         trans_no: apiData.receipt_no,
@@ -225,13 +243,15 @@ function buildReceiptFromApi(
         verified_at: fmtReceiptDate(new Date(apiData.remitted_at)),
         gen_at: fmtReceiptDate(new Date()),
         printed_by: printedBy,
+        event_name: eventName,
+        event_code: eventCode,
     }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function RemittancePage() {
-    const { token, user } = useAuth()
+    const { token, user, currentEvent } = useAuth()
 
     // ── Wizard state ──────────────────────────────────────────────────────────
     const [step, setStep] = useState<Step>('search')
@@ -253,11 +273,17 @@ export function RemittancePage() {
     /** Which type button is currently in a pending API call */
     const [pendingType, setPendingType] = useState<RemitType | null>(null)
 
+    // ── Confirm modal ─────────────────────────────────────────────────────────
+    const [confirmOpen, setConfirmOpen] = useState(false)
+    const [confirmRows, setConfirmRows] = useState<ConfirmRow[]>([])
+
     const inputRef = useRef<HTMLInputElement>(null)
     const cashRecord = salesData.find((r) => r.payment_method === 'CASH')
 
     const printedBy =
         `${user?.user_fname ?? ''} ${user?.user_lname ?? ''}`.trim().toUpperCase() || 'UNKNOWN'
+    const eventName = currentEvent?.name ?? ''
+    const eventCode = currentEvent?.code ?? ''
 
     // Auto-focus vendor input so handheld scanner fires without a click
     useEffect(() => {
@@ -295,9 +321,9 @@ export function RemittancePage() {
     }
 
     // ── Step 2 — select type ──────────────────────────────────────────────────
-    // • Partial  → go to remit form (cash amount collected there)
-    // • Full     → call API immediately (all data known), then show receipt
-    async function handleSelectType(type: RemitType) {
+    // • Partial → go to remit form
+    // • Full    → show confirm modal first, then execute on approval
+    function handleSelectType(type: RemitType) {
         setRemitType(type)
         setSelectError(null)
 
@@ -307,7 +333,28 @@ export function RemittancePage() {
             return
         }
 
-        // ── Full remittance: call API on selection ─────────────────────────
+        // Full remittance: build summary rows and open confirm modal
+        const cashTotal = cashRecord?.total ?? '0'
+        setCashAmount(cashTotal)
+
+        const rows: ConfirmRow[] = [
+            {
+                label: 'Vendor',
+                value: vendorName ? `${vendorCode} - ${vendorName}` : vendorCode,
+            },
+            { label: 'Remitter', value: remitterName.trim() || '—' },
+            { label: 'Type', value: 'Full Remittance' },
+            ...salesData.map((r) => ({
+                label: methodLabel(r.payment_method),
+                value: fmt(r.payment_method === 'CASH' ? cashTotal : r.total),
+            })),
+        ]
+        setConfirmRows(rows)
+        setConfirmOpen(true)
+    }
+
+    // ── Full remittance — execute after confirmation ───────────────────────────
+    async function executeFullRemittance() {
         const cashTotal = cashRecord?.total ?? '0'
         const lines: ReceiptLine[] = salesData.map((r) =>
             r.payment_method === 'CASH'
@@ -315,7 +362,7 @@ export function RemittancePage() {
                 : { method: r.payment_method, amount: r.total }
         )
 
-        setCashAmount(cashTotal)
+        setConfirmOpen(false)
         setPendingType('full')
         setLoading(true)
 
@@ -344,7 +391,9 @@ export function RemittancePage() {
                     vendorCode,
                     vendorName,
                     remitterName.trim(),
-                    printedBy
+                    printedBy,
+                    eventName,
+                    eventCode,
                 )
             )
             setStep('receipt')
@@ -360,8 +409,8 @@ export function RemittancePage() {
         }
     }
 
-    // ── Step 3 — submit partial ───────────────────────────────────────────────
-    async function handleSubmit() {
+    // ── Step 3 — submit partial: validate then open confirm modal ─────────────
+    function handleSubmit() {
         setSubmitError(null)
 
         const cashVal = Number(cashAmount)
@@ -370,9 +419,26 @@ export function RemittancePage() {
             return
         }
 
+        const rows: ConfirmRow[] = [
+            {
+                label: 'Vendor',
+                value: vendorName ? `${vendorCode} - ${vendorName}` : vendorCode,
+            },
+            { label: 'Remitter', value: remitterName.trim() || '—' },
+            { label: 'Type', value: 'Partial Remittance' },
+            { label: 'Cash to Remit', value: fmt(cashVal) },
+        ]
+        setConfirmRows(rows)
+        setConfirmOpen(true)
+    }
+
+    // ── Partial remittance — execute after confirmation ────────────────────────
+    async function executePartialRemittance() {
         const lines: ReceiptLine[] = [{ method: 'CASH', amount: cashAmount }]
 
+        setConfirmOpen(false)
         setLoading(true)
+
         try {
             const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance/partial', {
                 method: 'POST',
@@ -398,7 +464,9 @@ export function RemittancePage() {
                     vendorCode,
                     vendorName,
                     remitterName.trim(),
-                    printedBy
+                    printedBy,
+                    eventName,
+                    eventCode,
                 )
             )
             setStep('receipt')
@@ -411,6 +479,12 @@ export function RemittancePage() {
         } finally {
             setLoading(false)
         }
+    }
+
+    // ── Confirm modal dispatcher ──────────────────────────────────────────────
+    function handleConfirm() {
+        if (remitType === 'full') executeFullRemittance()
+        else if (remitType === 'partial') executePartialRemittance()
     }
 
     // ── Reset ─────────────────────────────────────────────────────────────────
@@ -428,6 +502,8 @@ export function RemittancePage() {
         setSelectError(null)
         setSubmitError(null)
         setPendingType(null)
+        setConfirmOpen(false)
+        setConfirmRows([])
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -436,6 +512,18 @@ export function RemittancePage() {
         <div className="flex min-h-full flex-col p-6">
             {/* Thermal receipt — hidden on screen, prints on 4.25×8.5 in */}
             {receipt && <ThermalReceipt receipt={receipt} />}
+
+            {/* Remittance confirm modal */}
+            <ConfirmModal
+                open={confirmOpen}
+                title="Confirm Remittance"
+                description="Please review the details below before proceeding."
+                rows={confirmRows}
+                confirmLabel="Process Remittance"
+                loading={loading}
+                onConfirm={handleConfirm}
+                onCancel={() => !loading && setConfirmOpen(false)}
+            />
 
             {/* Page header */}
             <div className="mb-6">
@@ -449,9 +537,9 @@ export function RemittancePage() {
             </div>
 
             {/* Two-column layout */}
-            <div className="flex flex-1 items-start gap-8">
+            <div className="flex flex-1 items-start justify-center gap-6">
                 {/* Left — wizard */}
-                <div className="w-full max-w-lg shrink-0">
+                <div className="w-140 shrink-0">
                     <StepIndicator step={step} />
 
                     {step === 'search' && (
@@ -504,8 +592,8 @@ export function RemittancePage() {
                     )}
                 </div>
 
-                {/* Right — context panel */}
-                <div className="flex-1 min-w-0 rounded-xl border bg-card p-6">
+                {/* Right — context panel (fixed compact width) */}
+                <div className="w-72 shrink-0 rounded-xl border bg-card p-5">
                     <ContextPanel
                         step={step}
                         vendorCode={vendorCode}
@@ -513,6 +601,7 @@ export function RemittancePage() {
                         remitterName={remitterName}
                         remitType={remitType}
                         salesData={salesData}
+                        cashAmount={cashAmount}
                         receipt={receipt}
                     />
                 </div>

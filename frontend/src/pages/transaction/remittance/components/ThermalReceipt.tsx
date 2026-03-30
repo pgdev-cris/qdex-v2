@@ -2,9 +2,7 @@ import type { Receipt } from '../types'
 import { fmtAmt, methodLabel } from '../helpers'
 import {
     COMPANY_NAME,
-    EVENT_NAME,
     RECEIPT_TITLE,
-    EVENT_CODE,
     LINE_DASHES,
     LINE_EQUALS,
 } from '../constants'
@@ -34,7 +32,7 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
             {/* Header */}
             <div style={{ textAlign: 'center', marginBottom: '4pt', lineHeight: '1.4' }}>
                 <div style={{ fontWeight: 'bold' }}>{COMPANY_NAME}</div>
-                <div>{EVENT_NAME}</div>
+                <div>{receipt.event_name}</div>
                 <div>{RECEIPT_TITLE}</div>
                 <div>{copyLabel}</div>
             </div>
@@ -46,7 +44,7 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                 <Row label="Trans No:" value={receipt.trans_no} />
                 <div>Verified Date: {receipt.verified_at}</div>
                 <Row label="Ref Code:" value={receipt.ref_code} />
-                <Row label="Event Code:" value={EVENT_CODE} />
+                <Row label="Event Code:" value={receipt.event_code} />
                 <div>
                     Supplier: ({receipt.vendor_code})
                     {receipt.vendor_name ? ` ${receipt.vendor_name}` : ''}

@@ -1,4 +1,4 @@
-import { RotateCcw, AlertCircle, Loader2, BadgeDollarSign } from 'lucide-react'
+import { RotateCcw, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -95,14 +95,11 @@ export function RemittanceForm({
 
                 {/* Partial: current cash total */}
                 {remitType === 'partial' && cashRecord && (
-                    <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
-                        <div>
-                            <p className="text-muted-foreground text-xs">Current Cash Total</p>
-                            <p className="mt-0.5 text-lg font-semibold tabular-nums">
-                                {fmt(cashRecord.total)}
-                            </p>
-                        </div>
-                        <BadgeDollarSign className="text-muted-foreground h-8 w-8" />
+                    <div className="rounded-lg bg-muted/50 px-4 py-3">
+                        <p className="text-muted-foreground text-xs">Current Cash Total</p>
+                        <p className="mt-0.5 text-lg font-semibold tabular-nums">
+                            {fmt(cashRecord.total)}
+                        </p>
                     </div>
                 )}
 

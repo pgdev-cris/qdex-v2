@@ -21,6 +21,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/contexts/AuthContext'
 import type { MenuTreeNode } from '@/types/auth.types'
+import { toTitleCase } from '@/utils/string.utils.ts'
 
 // ─── Icon map (string from DB → lucide component) ────────────────────────────
 
@@ -189,9 +190,7 @@ export function Sidebar() {
             <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
                 {/* Brand header */}
                 <div className="flex items-center gap-2.5 px-4 py-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary">
-                        <LayoutDashboard className="h-4 w-4 text-primary-foreground" />
-                    </div>
+                    <img src="/pg_logo.png" alt="PG Logo" className="size-6" />
                     <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">QDEX</p>
                         <p className="truncate text-xs text-sidebar-foreground/50">
@@ -236,10 +235,10 @@ export function Sidebar() {
                 <div className="flex items-center justify-between gap-2 px-4 py-3">
                     <div className="min-w-0">
                         <p className="truncate text-sm font-medium">
-                            {user?.user_fname} {user?.user_lname}
+                            {toTitleCase(user?.user_fname)} {toTitleCase(user?.user_lname)}
                         </p>
                         <p className="truncate text-xs text-sidebar-foreground/50">
-                            {user?.user_dept}
+                            {user?.user_role.toUpperCase()}
                         </p>
                     </div>
                     <Button

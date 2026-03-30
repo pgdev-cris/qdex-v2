@@ -33,7 +33,9 @@ const getSupplierByCode = async (code: string): Promise<Supplier | null> => {
     return rows?.[0] ?? null;
 };
 
-const createSupplier = async (data: CreateSupplierRequest): Promise<{ insertId: number } | null> => {
+const createSupplier = async (
+    data: CreateSupplierRequest,
+): Promise<{ insertId: number } | null> => {
     const query = `
         INSERT INTO tbl_suppliers (supplier_code, supplier_name, supplier_status)
         VALUES (?, ?, 'active')
@@ -46,8 +48,14 @@ const updateSupplier = async (id: number, data: UpdateSupplierRequest): Promise<
     const fields: string[] = [];
     const params: unknown[] = [];
 
-    if (data.supplier_code !== undefined) { fields.push('supplier_code = ?'); params.push(data.supplier_code); }
-    if (data.supplier_name !== undefined) { fields.push('supplier_name = ?'); params.push(data.supplier_name); }
+    if (data.supplier_code !== undefined) {
+        fields.push('supplier_code = ?');
+        params.push(data.supplier_code);
+    }
+    if (data.supplier_name !== undefined) {
+        fields.push('supplier_name = ?');
+        params.push(data.supplier_name);
+    }
 
     if (fields.length === 0) return false;
 
@@ -57,7 +65,10 @@ const updateSupplier = async (id: number, data: UpdateSupplierRequest): Promise<
     return (result?.affectedRows ?? 0) > 0;
 };
 
-const setSupplierStatus = async (id: number, status: 'active' | 'inactive' | 'deleted'): Promise<boolean> => {
+const setSupplierStatus = async (
+    id: number,
+    status: 'active' | 'inactive' | 'deleted',
+): Promise<boolean> => {
     const query = `UPDATE tbl_suppliers SET supplier_status = ? WHERE supplier_id = ?`;
     const result = await PoolManager.execute(query, [status, id], POOL);
     return (result?.affectedRows ?? 0) > 0;

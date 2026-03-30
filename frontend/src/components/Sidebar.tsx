@@ -23,7 +23,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import type { MenuTreeNode } from '@/types/auth.types'
 import { toTitleCase } from '@/utils/string.utils.ts'
 
-//  Icon map (string from DB → lucide component) 
+//  Icon map (string from DB → lucide component)
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
     home: Home,
@@ -46,7 +46,7 @@ function MenuIcon({ name, className }: { name: string | null; className?: string
     )
 }
 
-//  Shared class helpers 
+//  Shared class helpers
 
 const navItemBase =
     'w-full justify-start gap-2.5 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
@@ -54,7 +54,7 @@ const navItemActive =
     'bg-sidebar-primary/10 font-medium text-sidebar-primary hover:bg-sidebar-primary/10 hover:text-sidebar-primary'
 const navItemChild = 'text-sidebar-foreground/50'
 
-//  Single sidebar item (recursive) 
+//  Single sidebar item (recursive)
 
 function SidebarItem({ node, depth = 0 }: { node: MenuTreeNode; depth?: number }) {
     const [open, setOpen] = useState(true)
@@ -124,7 +124,7 @@ function SidebarItem({ node, depth = 0 }: { node: MenuTreeNode; depth?: number }
     )
 }
 
-//  Logout confirmation modal 
+//  Logout confirmation modal
 
 function LogoutModal({
     open,
@@ -172,7 +172,7 @@ function LogoutModal({
     )
 }
 
-//  Sidebar shell 
+//  Sidebar shell
 
 export function Sidebar() {
     const { user, menu, currentEvent, logout } = useAuth()

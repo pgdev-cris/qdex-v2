@@ -1,6 +1,6 @@
 import { PoolConnection } from 'mysql2/promise';
 
-//  Types 
+//  Types
 
 export interface InsertTransactionData {
     event_id: number;
@@ -23,7 +23,7 @@ export interface InsertDetailData {
     transaction_count: number;
 }
 
-//  Queries 
+//  Queries
 
 const createTransaction = async (
     conn: PoolConnection,

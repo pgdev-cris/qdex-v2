@@ -1,5 +1,9 @@
 import repository from './suppliers.repository';
-import { CreateSupplierRequest, UpdateSupplierRequest, UpdateSupplierStatus } from './suppliers.schema';
+import {
+    CreateSupplierRequest,
+    UpdateSupplierRequest,
+    UpdateSupplierStatus,
+} from './suppliers.schema';
 
 const getSuppliers = async () => {
     return await repository.getSuppliers();

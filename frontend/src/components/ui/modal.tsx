@@ -27,10 +27,7 @@ export function Modal({
     const widths = { sm: 'w-96', md: 'w-[480px]', lg: 'w-[640px]' }
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={onClose}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/50" />
 
@@ -72,7 +69,7 @@ export function Modal({
     )
 }
 
-//  Generic confirm variant 
+//  Generic confirm variant
 
 export interface ConfirmRow {
     label: string
@@ -137,12 +134,7 @@ export function ConfirmModal({
 
                 {/* Footer */}
                 <div className="flex justify-end gap-2 border-t px-6 py-4">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onCancel}
-                        disabled={loading}
-                    >
+                    <Button variant="outline" size="sm" onClick={onCancel} disabled={loading}>
                         Cancel
                     </Button>
                     <Button size="sm" onClick={onConfirm} disabled={loading}>
@@ -161,7 +153,7 @@ export function ConfirmModal({
     )
 }
 
-//  Delete confirmation variant 
+//  Delete confirmation variant
 
 interface DeleteModalProps {
     open: boolean
@@ -174,19 +166,14 @@ export function DeleteModal({ open, label, onConfirm, onCancel }: DeleteModalPro
     if (!open) return null
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={onCancel}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onCancel}>
             <div className="absolute inset-0 bg-black/50" />
             <div
                 className="relative z-10 w-80 rounded-xl border bg-card p-6 shadow-xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 <p className="text-sm font-semibold text-card-foreground">Delete {label}?</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                    This action cannot be undone.
-                </p>
+                <p className="mt-1 text-sm text-muted-foreground">This action cannot be undone.</p>
                 <div className="mt-5 flex justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={onCancel}>
                         Cancel
@@ -200,7 +187,7 @@ export function DeleteModal({ open, label, onConfirm, onCancel }: DeleteModalPro
     )
 }
 
-//  Shared form field helpers 
+//  Shared form field helpers
 
 interface FieldProps {
     label: string

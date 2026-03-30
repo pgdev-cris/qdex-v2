@@ -23,10 +23,6 @@ router.get(
 );
 
 // GET /api/v1/reports/remittances/:id
-router.get(
-    '/remittances/:id',
-    jwtValidator,
-    controller.getRemittanceDetailRequest,
-);
+router.get('/remittances/:id', jwtValidator, controller.getRemittanceDetailRequest);
 
 export default router;

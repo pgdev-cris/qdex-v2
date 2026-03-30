@@ -6,7 +6,7 @@ import type { Receipt } from '../types'
 import { fmtAmt, methodLabel } from '../helpers'
 import { COMPANY_NAME, RECEIPT_TITLE } from '../constants'
 
-//  Screen-only receipt row 
+//  Screen-only receipt row
 
 function ScreenRow({
     label,
@@ -25,7 +25,7 @@ function ScreenRow({
     )
 }
 
-//  Component 
+//  Component
 
 interface Props {
     receipt: Receipt
@@ -74,9 +74,7 @@ export function ReceiptPreview({ receipt, onPrint, onReset }: Props) {
                             Supplier: ({receipt.vendor_code})
                             {receipt.vendor_name ? ` ${receipt.vendor_name}` : ''}
                         </div>
-                        {receipt.remitter_name && (
-                            <div>Remitter: {receipt.remitter_name}</div>
-                        )}
+                        {receipt.remitter_name && <div>Remitter: {receipt.remitter_name}</div>}
 
                         <Separator className="my-2" />
 
@@ -94,7 +92,7 @@ export function ReceiptPreview({ receipt, onPrint, onReset }: Props) {
                                 <p>Cards Breakdown</p>
                                 {cardLines.map((l) => (
                                     <div key={l.method} className="flex justify-between">
-                                        <span>  {methodLabel(l.method)}</span>
+                                        <span> {methodLabel(l.method)}</span>
                                         <span>Amt: {fmtAmt(l.amount)}</span>
                                     </div>
                                 ))}

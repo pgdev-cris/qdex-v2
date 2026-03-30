@@ -1,7 +1,7 @@
 import { apiClient } from './axios'
 import type { AxiosRequestConfig } from 'axios'
 
-//  apiFetch 
+//  apiFetch
 // Thin wrapper around apiClient so existing callers need no changes.
 // - `path`  — relative URL, e.g. '/api/v1/auth/login'
 // - `token` — optional override; if omitted the request interceptor uses the
@@ -27,7 +27,7 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
     const res = await apiClient.request<T>({
         url: path,
         headers,
-        data: body,       // map fetch-style `body` → axios `data`
+        data: body, // map fetch-style `body` → axios `data`
         ...rest,
     })
 

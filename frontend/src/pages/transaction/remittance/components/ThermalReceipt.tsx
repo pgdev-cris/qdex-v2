@@ -1,13 +1,8 @@
 import type { Receipt } from '../types'
 import { fmtAmt, methodLabel } from '../helpers'
-import {
-    COMPANY_NAME,
-    RECEIPT_TITLE,
-    LINE_DASHES,
-    LINE_EQUALS,
-} from '../constants'
+import { COMPANY_NAME, RECEIPT_TITLE, LINE_DASHES, LINE_EQUALS } from '../constants'
 
-//  Row helper 
+//  Row helper
 
 function Row({ label, value }: { label: string; value: string }) {
     return (
@@ -18,7 +13,7 @@ function Row({ label, value }: { label: string; value: string }) {
     )
 }
 
-//  Single copy block 
+//  Single copy block
 
 function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string }) {
     const cashLine = receipt.lines.find((l) => l.method === 'CASH')
@@ -49,9 +44,7 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                     Supplier: ({receipt.vendor_code})
                     {receipt.vendor_name ? ` ${receipt.vendor_name}` : ''}
                 </div>
-                {receipt.remitter_name && (
-                    <div>Remitter: {receipt.remitter_name}</div>
-                )}
+                {receipt.remitter_name && <div>Remitter: {receipt.remitter_name}</div>}
             </div>
 
             {/* Payment Details */}
@@ -74,7 +67,7 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                             key={l.method}
                             style={{ display: 'flex', justifyContent: 'space-between' }}
                         >
-                            <span>  {methodLabel(l.method)}</span>
+                            <span> {methodLabel(l.method)}</span>
                             <span>Amt: {fmtAmt(l.amount)}</span>
                         </div>
                     ))}
@@ -106,9 +99,7 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
             </div>
             <div style={{ textAlign: 'center' }}>{'_'.repeat(39)}</div>
 
-            <div style={{ marginTop: '4pt' }}>
-                Acknowledge by: {receipt.printed_by}
-            </div>
+            <div style={{ marginTop: '4pt' }}>Acknowledge by: {receipt.printed_by}</div>
 
             <div style={{ marginTop: '4pt' }}>{LINE_EQUALS}</div>
 
@@ -117,7 +108,7 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
     )
 }
 
-//  Thermal receipt wrapper (print-only) 
+//  Thermal receipt wrapper (print-only)
 
 interface Props {
     receipt: Receipt

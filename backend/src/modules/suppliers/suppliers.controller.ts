@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import service from './suppliers.service';
 import { HTTP_STATUS } from '../../shared/constants';
-import { CreateSupplierRequest, UpdateSupplierRequest, UpdateSupplierStatus } from './suppliers.schema';
+import {
+    CreateSupplierRequest,
+    UpdateSupplierRequest,
+    UpdateSupplierStatus,
+} from './suppliers.schema';
 
 const getSuppliersRequest = async (req: Request, res: Response) => {
     const suppliers = await service.getSuppliers();

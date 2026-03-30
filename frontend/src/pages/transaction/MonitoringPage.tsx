@@ -1,13 +1,7 @@
 import { Activity, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const COLUMNS = ['Transaction ID', 'Type', 'Amount', 'Channel', 'Status', 'Timestamp', 'Actions']
 
@@ -35,7 +29,9 @@ export function MonitoringPage() {
                     <div className="flex items-center justify-between gap-4">
                         <div>
                             <CardTitle>Transaction Log</CardTitle>
-                            <CardDescription>Live feed of all transaction activity.</CardDescription>
+                            <CardDescription>
+                                Live feed of all transaction activity.
+                            </CardDescription>
                         </div>
                         <div className="relative w-64">
                             <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />

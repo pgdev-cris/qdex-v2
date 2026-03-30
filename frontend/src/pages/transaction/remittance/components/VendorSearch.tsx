@@ -22,8 +22,7 @@ export function VendorSearch({ inputRef, vendorInput, loading, error, onChange, 
                     Find Vendor
                 </CardTitle>
                 <CardDescription>
-                    Scan the QR code with the handheld scanner, or type the vendor code
-                    manually.
+                    Scan the QR code with the handheld scanner, or type the vendor code manually.
                 </CardDescription>
             </CardHeader>
 

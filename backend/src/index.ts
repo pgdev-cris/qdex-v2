@@ -24,14 +24,14 @@ app.use(express.urlencoded({ extended: true }));
 /**
  * Routes
  */
-app.use(`${API_PREFIX}/auth`,       authRoutes);
-app.use(`${API_PREFIX}/users`,      usersRoutes);
-app.use(`${API_PREFIX}/menu`,       menuRoutes);
+app.use(`${API_PREFIX}/auth`, authRoutes);
+app.use(`${API_PREFIX}/users`, usersRoutes);
+app.use(`${API_PREFIX}/menu`, menuRoutes);
 app.use(`${API_PREFIX}/remittance`, remittanceRoutes);
-app.use(`${API_PREFIX}/suppliers`,  suppliersRoutes);
-app.use(`${API_PREFIX}/events`,     eventsRoutes);
-app.use(`${API_PREFIX}/reports`,    reportsRoutes);
-app.use(`${API_PREFIX}/sales`,      salesRoutes);
+app.use(`${API_PREFIX}/suppliers`, suppliersRoutes);
+app.use(`${API_PREFIX}/events`, eventsRoutes);
+app.use(`${API_PREFIX}/reports`, reportsRoutes);
+app.use(`${API_PREFIX}/sales`, salesRoutes);
 
 /**
  * Error Handling

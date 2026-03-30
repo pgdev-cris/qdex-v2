@@ -25,4 +25,4 @@ export const EventIdParamSchema = z.object({
 
 export type CreateEventRequest = z.infer<typeof CreateEventSchema>;
 export type UpdateEventRequest = z.infer<typeof UpdateEventSchema>;
-export type UpdateEventStatus  = z.infer<typeof UpdateEventStatusSchema>;
+export type UpdateEventStatus = z.infer<typeof UpdateEventStatusSchema>;

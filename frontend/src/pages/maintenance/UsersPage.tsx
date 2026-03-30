@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Modal, DeleteModal, FormField, FormRow, FormSelect } from '@/components/ui/modal'
 
-//  Types 
+//  Types
 
 interface User {
     id: number
@@ -29,7 +29,7 @@ const BLANK: Omit<User, 'id' | 'created'> = {
 
 const ROLES = ['Admin', 'Manager', 'Staff', 'Viewer']
 
-//  Status badge 
+//  Status badge
 
 function StatusBadge({ status }: { status: string }) {
     const active = status === 'Active'
@@ -37,9 +37,7 @@ function StatusBadge({ status }: { status: string }) {
         <span
             className={[
                 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                active
-                    ? 'bg-primary/10 text-primary'
-                    : 'bg-muted text-muted-foreground',
+                active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
             ].join(' ')}
         >
             {status}
@@ -47,18 +45,22 @@ function StatusBadge({ status }: { status: string }) {
     )
 }
 
-//  Page 
+//  Page
 
 const COLUMNS = ['Name', 'Username', 'Department', 'Role', 'Status', 'Created', 'Actions']
 
 export function UsersPage() {
     const [rows, setRows] = useState<User[]>([])
     const [search, setSearch] = useState('')
-    const [modal, setModal] = useState<{ mode: 'add' | 'edit'; data: Omit<User, 'id' | 'created'>; id?: number } | null>(null)
+    const [modal, setModal] = useState<{
+        mode: 'add' | 'edit'
+        data: Omit<User, 'id' | 'created'>
+        id?: number
+    } | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
     const [nextId, setNextId] = useState(1)
 
-    //  Helpers 
+    //  Helpers
 
     const filtered = rows.filter((r) => {
         const q = search.toLowerCase()
@@ -80,7 +82,7 @@ export function UsersPage() {
     }
 
     function setField<K extends keyof typeof BLANK>(key: K, value: (typeof BLANK)[K]) {
-        setModal((m) => m ? { ...m, data: { ...m.data, [key]: value } } : m)
+        setModal((m) => (m ? { ...m, data: { ...m.data, [key]: value } } : m))
     }
 
     function handleSave() {
@@ -89,11 +91,15 @@ export function UsersPage() {
         if (!fname.trim() || !lname.trim() || !username.trim()) return
 
         if (modal.mode === 'add') {
-            const now = new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' })
+            const now = new Date().toLocaleDateString('en-PH', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+            })
             setRows((r) => [...r, { id: nextId, ...modal.data, created: now }])
             setNextId((n) => n + 1)
         } else {
-            setRows((r) => r.map((row) => row.id === modal.id ? { ...row, ...modal.data } : row))
+            setRows((r) => r.map((row) => (row.id === modal.id ? { ...row, ...modal.data } : row)))
         }
         setModal(null)
     }
@@ -104,7 +110,7 @@ export function UsersPage() {
         setDeleteTarget(null)
     }
 
-    //  Render 
+    //  Render
 
     return (
         <div className="p-6">
@@ -167,22 +173,31 @@ export function UsersPage() {
                                         colSpan={COLUMNS.length}
                                         className="text-muted-foreground py-16 text-center text-sm"
                                     >
-                                        {search ? 'No users match your search.' : 'No users yet. Click Add User to get started.'}
+                                        {search
+                                            ? 'No users match your search.'
+                                            : 'No users yet. Click Add User to get started.'}
                                     </td>
                                 </tr>
                             ) : (
                                 filtered.map((user) => (
-                                    <tr key={user.id} className="border-b last:border-0 hover:bg-muted/40">
+                                    <tr
+                                        key={user.id}
+                                        className="border-b last:border-0 hover:bg-muted/40"
+                                    >
                                         <td className="px-4 py-3 font-medium">
                                             {user.fname} {user.lname}
                                         </td>
-                                        <td className="px-4 py-3 text-muted-foreground">{user.username}</td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {user.username}
+                                        </td>
                                         <td className="px-4 py-3">{user.dept}</td>
                                         <td className="px-4 py-3">{user.role}</td>
                                         <td className="px-4 py-3">
                                             <StatusBadge status={user.status} />
                                         </td>
-                                        <td className="px-4 py-3 text-muted-foreground">{user.created}</td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {user.created}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1">
                                                 <Button
@@ -269,7 +284,9 @@ export function UsersPage() {
                                     placeholder="Select role..."
                                 >
                                     {ROLES.map((r) => (
-                                        <option key={r} value={r}>{r}</option>
+                                        <option key={r} value={r}>
+                                            {r}
+                                        </option>
                                     ))}
                                 </FormSelect>
                             </FormField>

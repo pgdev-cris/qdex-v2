@@ -76,7 +76,9 @@ const getRemittances = async (query: RemittanceReportQuery): Promise<RemittanceR
     return (await PoolManager.query<RemittanceRecord[]>(sql, params, POOL)) ?? [];
 };
 
-const getRemittanceSummary = async (query: RemittanceReportQuery): Promise<RemittanceSummary | null> => {
+const getRemittanceSummary = async (
+    query: RemittanceReportQuery,
+): Promise<RemittanceSummary | null> => {
     const { clauses, params } = buildFilters(query);
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 

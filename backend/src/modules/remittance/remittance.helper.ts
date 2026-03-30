@@ -7,9 +7,7 @@ export const validateLines = (lines: RemitLine[] | undefined) => {
         throw new BadRequestError('At least one payment line is required.');
     }
 
-    const unknownMethod = lines.find(
-        (l) => TENDER_TYPE[l.method.toUpperCase()] === undefined,
-    );
+    const unknownMethod = lines.find((l) => TENDER_TYPE[l.method.toUpperCase()] === undefined);
     if (unknownMethod) {
         throw new BadRequestError(`Unknown payment method: "${unknownMethod.method}".`);
     }

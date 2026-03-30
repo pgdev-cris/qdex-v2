@@ -7,7 +7,7 @@ interface UserMenuPresetRow extends RowDataPacket {
 }
 
 const getUserByUsername = async (username: string): Promise<User | null> => {
-    const query = `SELECT * FROM tbl_users WHERE user_name = ?`;
+    const query = `SELECT * FROM tbl_users WHERE username = ? AND status = 1`;
 
     const [rows] = await PoolManager.get('auth-pool').query<User[]>(query, [username]);
 

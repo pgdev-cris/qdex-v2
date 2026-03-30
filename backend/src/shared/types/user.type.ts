@@ -1,13 +1,15 @@
 import { RowDataPacket } from 'mysql2/promise';
 
 export interface User extends RowDataPacket {
-    auto_id: number;
-    user_name: string;
-    user_pass: string;
-    user_fname: string;
-    user_lname: string;
-    user_mname: string | null;
-    user_dept: string;
-    user_role: string;
-    user_status: string;
+    id: number;
+    username: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    middle_name: string | null;
+    department: string;
+    role: string;
+    status: number;
+    created_at: Date;
+    employee_no: string | null;
 }

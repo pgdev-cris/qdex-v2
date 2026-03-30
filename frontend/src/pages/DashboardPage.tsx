@@ -27,7 +27,7 @@ export function DashboardPage() {
                 <p className="text-muted-foreground mt-1 text-sm">
                     Welcome back,{' '}
                     <span className="text-foreground font-medium">
-                        {user?.user_fname} {user?.user_lname}
+                        {user?.first_name} {user?.last_name}
                     </span>
                 </p>
             </div>

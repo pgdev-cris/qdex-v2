@@ -7,12 +7,19 @@ const login = async (username: string, password: string) => {
     console.log(username, password);
     const user = await repository.getUserByUsername(username);
     if (!user) {
-        throw new Error('User not found');
+        throw new Error('Invalid username or password');
     }
 
-    const token = signToken(user);
-    const presetId = await repository.getUserMenuPresetId(user.auto_id);
-    const menu = presetId !== null ? await menuService.getMenuPreset(presetId) : [];
+    // Verify password (plain text comparison for now as per users.service.ts TODO)
+    if (user.password !== password) {
+        throw new Error('Invalid username or password');
+    }
+
+    // Create a payload without the password
+    const { password: _, ...payload } = user;
+    const token = signToken(payload);
+    const presetId = await repository.getUserMenuPresetId(user.id);
+    const menu = presetId !== null ? await menuService.getMenuPreset(presetId) : null;
     const currentEvent = await eventsService.getCurrentEvent();
 
     return {

@@ -1,46 +1,76 @@
-import { useState } from 'react'
-import { Users, Search, UserPlus, Pencil, Trash2 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Users, Search, UserPlus, Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Modal, DeleteModal, FormField, FormRow, FormSelect } from '@/components/ui/modal'
+import { apiFetch } from '@/lib/api'
 
 //  Types
 
 interface User {
     id: number
-    fname: string
-    lname: string
+    first_name: string
+    last_name: string
+    middle_name: string | null
     username: string
-    dept: string
+    department: string
     role: string
-    status: 'Active' | 'Inactive'
-    created: string
+    status: number
+    created_at: string
+    employee_no: string | null
 }
 
-const BLANK: Omit<User, 'id' | 'created'> = {
-    fname: '',
-    lname: '',
+interface ApiListResponse {
+    status: number
+    message: string
+    data: User[]
+}
+
+interface ApiSingleResponse {
+    status: number
+    message: string
+    data: User
+}
+
+type FormData = {
+    first_name: string
+    middle_name: string
+    last_name: string
+    username: string
+    department: string
+    role: string
+    employee_no: string
+    password?: string
+}
+
+const BLANK: FormData = {
+    first_name: '',
+    middle_name: '',
+    last_name: '',
     username: '',
-    dept: '',
-    role: '',
-    status: 'Active',
+    department: '',
+    role: 'Staff',
+    employee_no: '',
+    password: '',
 }
 
 const ROLES = ['Admin', 'Manager', 'Staff', 'Viewer']
 
 //  Status badge
 
-function StatusBadge({ status }: { status: string }) {
-    const active = status === 'Active'
+function StatusBadge({ status }: { status: number }) {
+    if (status === 1) {
+        return (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                Active
+            </span>
+        )
+    }
     return (
-        <span
-            className={[
-                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
-            ].join(' ')}
-        >
-            {status}
+        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            Inactive
         </span>
     )
 }
@@ -52,62 +82,173 @@ const COLUMNS = ['Name', 'Username', 'Department', 'Role', 'Status', 'Created', 
 export function UsersPage() {
     const [rows, setRows] = useState<User[]>([])
     const [search, setSearch] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
     const [modal, setModal] = useState<{
         mode: 'add' | 'edit'
-        data: Omit<User, 'id' | 'created'>
+        data: FormData
         id?: number
     } | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
-    const [nextId, setNextId] = useState(1)
+
+    //  Fetch
+
+    const fetchUsers = useCallback(async () => {
+        setLoading(true)
+        setError(null)
+        try {
+            const res = await apiFetch<ApiListResponse>('/api/v1/users')
+            setRows(res.data)
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to load users.')
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        fetchUsers()
+    }, [fetchUsers])
 
     //  Helpers
 
     const filtered = rows.filter((r) => {
         const q = search.toLowerCase()
         return (
-            r.fname.toLowerCase().includes(q) ||
-            r.lname.toLowerCase().includes(q) ||
+            r.first_name.toLowerCase().includes(q) ||
+            r.last_name.toLowerCase().includes(q) ||
             r.username.toLowerCase().includes(q) ||
-            r.dept.toLowerCase().includes(q)
+            r.department.toLowerCase().includes(q)
         )
     })
 
     function openAdd() {
+        setError(null)
         setModal({ mode: 'add', data: { ...BLANK } })
     }
 
     function openEdit(user: User) {
-        const { id, created, ...data } = user
-        setModal({ mode: 'edit', data, id })
+        setError(null)
+        setModal({
+            mode: 'edit',
+            id: user.id,
+            data: {
+                first_name: user.first_name,
+                middle_name: user.middle_name ?? '',
+                last_name: user.last_name,
+                username: user.username,
+                department: user.department,
+                role: user.role,
+                employee_no: user.employee_no ?? '',
+            },
+        })
     }
 
-    function setField<K extends keyof typeof BLANK>(key: K, value: (typeof BLANK)[K]) {
+    function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
         setModal((m) => (m ? { ...m, data: { ...m.data, [key]: value } } : m))
     }
 
-    function handleSave() {
-        if (!modal) return
-        const { fname, lname, username } = modal.data
-        if (!fname.trim() || !lname.trim() || !username.trim()) return
+    //  Save (create / update)
 
-        if (modal.mode === 'add') {
-            const now = new Date().toLocaleDateString('en-PH', {
-                year: 'numeric',
-                month: 'short',
-                day: '2-digit',
-            })
-            setRows((r) => [...r, { id: nextId, ...modal.data, created: now }])
-            setNextId((n) => n + 1)
-        } else {
-            setRows((r) => r.map((row) => (row.id === modal.id ? { ...row, ...modal.data } : row)))
+    async function handleSave() {
+        if (!modal) return
+        const {
+            first_name,
+            last_name,
+            username,
+            department,
+            role,
+            password,
+            middle_name,
+            employee_no,
+        } = modal.data
+        if (!first_name.trim() || !last_name.trim() || !username.trim() || !employee_no.trim())
+            return
+
+        setSaving(true)
+        setError(null)
+        try {
+            const payload: any = {
+                first_name: first_name.trim(),
+                middle_name: middle_name.trim() || undefined,
+                last_name: last_name.trim(),
+                username: username.trim(),
+                department: department.trim(),
+                role,
+                employee_no: employee_no.trim(),
+            }
+
+            if (modal.mode === 'add') {
+                payload.password = password
+                await apiFetch<ApiSingleResponse>('/api/v1/users', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                })
+            } else {
+                await apiFetch<ApiSingleResponse>(`/api/v1/users/${modal.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload),
+                })
+            }
+
+            setModal(null)
+            await fetchUsers()
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to save user.')
+        } finally {
+            setSaving(false)
         }
-        setModal(null)
     }
 
-    function handleDelete() {
+    //  Toggle active / inactive
+
+    async function handleToggleStatus(user: User) {
+        setSaving(true)
+        setError(null)
+        try {
+            const next = user.status === 1 ? 0 : 1
+            await apiFetch(`/api/v1/users/${user.id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: next }),
+            })
+            await fetchUsers()
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to update status.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    //  Delete (soft — sets status to 9)
+
+    async function handleDelete() {
         if (!deleteTarget) return
-        setRows((r) => r.filter((row) => row.id !== deleteTarget.id))
-        setDeleteTarget(null)
+        setSaving(true)
+        setError(null)
+        try {
+            await apiFetch(`/api/v1/users/${deleteTarget.id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 9 }),
+            })
+            setDeleteTarget(null)
+            await fetchUsers()
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to delete user.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    //  Format
+
+    function fmtDate(d: string) {
+        return new Date(d).toLocaleDateString('en-PH', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+        })
     }
 
     //  Render
@@ -118,10 +259,10 @@ export function UsersPage() {
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h1 className="flex items-center gap-2 text-2xl font-semibold">
-                        <Users className="text-muted-foreground h-5 w-5" />
+                        <Users className="h-5 w-5 text-muted-foreground" />
                         Users
                     </h1>
-                    <p className="text-muted-foreground mt-1 text-sm">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Manage system users and their access.
                     </p>
                 </div>
@@ -130,6 +271,13 @@ export function UsersPage() {
                     Add User
                 </Button>
             </div>
+
+            {/* Error banner */}
+            {error && !modal && (
+                <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {error}
+                </div>
+            )}
 
             {/* Table card */}
             <Card>
@@ -142,7 +290,7 @@ export function UsersPage() {
                             </CardDescription>
                         </div>
                         <div className="relative w-64">
-                            <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+                            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 placeholder="Search users..."
                                 className="pl-8"
@@ -159,7 +307,7 @@ export function UsersPage() {
                                 {COLUMNS.map((col) => (
                                     <th
                                         key={col}
-                                        className="text-muted-foreground px-4 py-3 text-left text-xs font-medium tracking-wide"
+                                        className="px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground"
                                     >
                                         {col}
                                     </th>
@@ -167,11 +315,20 @@ export function UsersPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.length === 0 ? (
+                            {loading ? (
                                 <tr>
                                     <td
                                         colSpan={COLUMNS.length}
-                                        className="text-muted-foreground py-16 text-center text-sm"
+                                        className="py-16 text-center text-sm text-muted-foreground"
+                                    >
+                                        Loading users…
+                                    </td>
+                                </tr>
+                            ) : filtered.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={COLUMNS.length}
+                                        className="py-16 text-center text-sm text-muted-foreground"
                                     >
                                         {search
                                             ? 'No users match your search.'
@@ -185,21 +342,38 @@ export function UsersPage() {
                                         className="border-b last:border-0 hover:bg-muted/40"
                                     >
                                         <td className="px-4 py-3 font-medium">
-                                            {user.fname} {user.lname}
+                                            {user.first_name} {user.last_name}
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {user.username}
                                         </td>
-                                        <td className="px-4 py-3">{user.dept}</td>
+                                        <td className="px-4 py-3">{user.department}</td>
                                         <td className="px-4 py-3">{user.role}</td>
                                         <td className="px-4 py-3">
                                             <StatusBadge status={user.status} />
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
-                                            {user.created}
+                                            {fmtDate(user.created_at)}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    title={
+                                                        user.status === 1
+                                                            ? 'Deactivate'
+                                                            : 'Activate'
+                                                    }
+                                                    disabled={saving}
+                                                    onClick={() => handleToggleStatus(user)}
+                                                >
+                                                    {user.status === 1 ? (
+                                                        <ToggleRight className="h-3.5 w-3.5 text-primary" />
+                                                    ) : (
+                                                        <ToggleLeft className="h-3.5 w-3.5" />
+                                                    )}
+                                                </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon-sm"
@@ -235,11 +409,15 @@ export function UsersPage() {
                 description="Fill in the user details below."
                 footer={
                     <>
-                        <Button variant="outline" onClick={() => setModal(null)}>
+                        <Button variant="outline" onClick={() => setModal(null)} disabled={saving}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSave}>
-                            {modal?.mode === 'add' ? 'Add User' : 'Save Changes'}
+                        <Button onClick={handleSave} disabled={saving}>
+                            {saving
+                                ? 'Saving…'
+                                : modal?.mode === 'add'
+                                  ? 'Add User'
+                                  : 'Save Changes'}
                         </Button>
                     </>
                 }
@@ -250,32 +428,51 @@ export function UsersPage() {
                             <FormField label="First Name" required>
                                 <Input
                                     placeholder="Juan"
-                                    value={modal.data.fname}
-                                    onChange={(e) => setField('fname', e.target.value)}
+                                    value={modal.data.first_name}
+                                    onChange={(e) => setField('first_name', e.target.value)}
                                 />
                             </FormField>
                             <FormField label="Last Name" required>
                                 <Input
                                     placeholder="Dela Cruz"
-                                    value={modal.data.lname}
-                                    onChange={(e) => setField('lname', e.target.value)}
+                                    value={modal.data.last_name}
+                                    onChange={(e) => setField('last_name', e.target.value)}
                                 />
                             </FormField>
                         </FormRow>
-                        <FormField label="Username" required>
-                            <Input
-                                placeholder="jdelacruz"
-                                value={modal.data.username}
-                                onChange={(e) => setField('username', e.target.value)}
-                            />
-                        </FormField>
-                        <FormField label="Department">
-                            <Input
-                                placeholder="Finance"
-                                value={modal.data.dept}
-                                onChange={(e) => setField('dept', e.target.value)}
-                            />
-                        </FormField>
+                        <FormRow>
+                            <FormField label="Middle Name">
+                                <Input
+                                    placeholder="Santos"
+                                    value={modal.data.middle_name}
+                                    onChange={(e) => setField('middle_name', e.target.value)}
+                                />
+                            </FormField>
+                            <FormField label="Username" required>
+                                <Input
+                                    placeholder="jdelacruz"
+                                    value={modal.data.username}
+                                    onChange={(e) => setField('username', e.target.value)}
+                                    disabled={modal.mode === 'edit'}
+                                />
+                            </FormField>
+                        </FormRow>
+                        <FormRow>
+                            <FormField label="Department">
+                                <Input
+                                    placeholder="Finance"
+                                    value={modal.data.department}
+                                    onChange={(e) => setField('department', e.target.value)}
+                                />
+                            </FormField>
+                            <FormField label="Employee No." required>
+                                <Input
+                                    placeholder="EMP-001"
+                                    value={modal.data.employee_no}
+                                    onChange={(e) => setField('employee_no', e.target.value)}
+                                />
+                            </FormField>
+                        </FormRow>
                         <FormRow>
                             <FormField label="Role">
                                 <FormSelect
@@ -290,21 +487,20 @@ export function UsersPage() {
                                     ))}
                                 </FormSelect>
                             </FormField>
-                            <FormField label="Status">
-                                <FormSelect
-                                    value={modal.data.status}
-                                    onChange={(v) => setField('status', v as 'Active' | 'Inactive')}
-                                >
-                                    <option value="Active">Active</option>
-                                    <option value="Inactive">Inactive</option>
-                                </FormSelect>
-                            </FormField>
+                            {modal.mode === 'add' ? (
+                                <FormField label="Password" required hint="Min. 8 chars.">
+                                    <Input
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={modal.data.password}
+                                        onChange={(e) => setField('password', e.target.value)}
+                                    />
+                                </FormField>
+                            ) : (
+                                <div className="flex-1" />
+                            )}
                         </FormRow>
-                        {modal.mode === 'add' && (
-                            <FormField label="Password" required hint="Minimum 8 characters.">
-                                <Input type="password" placeholder="••••••••" />
-                            </FormField>
-                        )}
+                        {error && <p className="text-sm text-destructive">{error}</p>}
                     </div>
                 )}
             </Modal>
@@ -312,7 +508,7 @@ export function UsersPage() {
             {/* Delete confirmation */}
             <DeleteModal
                 open={deleteTarget !== null}
-                label={deleteTarget ? `${deleteTarget.fname} ${deleteTarget.lname}` : ''}
+                label={deleteTarget ? `${deleteTarget.first_name} ${deleteTarget.last_name}` : ''}
                 onConfirm={handleDelete}
                 onCancel={() => setDeleteTarget(null)}
             />

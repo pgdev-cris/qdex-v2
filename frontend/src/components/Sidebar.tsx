@@ -223,7 +223,7 @@ export function Sidebar() {
                 {/* Navigation */}
                 <nav className="flex-1 overflow-y-auto px-2 py-3">
                     <div className="flex flex-col gap-0.5">
-                        {menu?.menus.map((node: MenuTreeNode) => (
+                        {menu?.menus?.map((node: MenuTreeNode) => (
                             <SidebarItem key={node.id} node={node} />
                         ))}
                     </div>
@@ -235,10 +235,10 @@ export function Sidebar() {
                 <div className="flex items-center justify-between gap-2 px-4 py-3">
                     <div className="min-w-0">
                         <p className="truncate text-sm font-medium">
-                            {toTitleCase(user?.user_fname)} {toTitleCase(user?.user_lname)}
+                            {toTitleCase(user?.first_name)} {toTitleCase(user?.last_name)}
                         </p>
                         <p className="truncate text-xs text-sidebar-foreground/50">
-                            {user?.user_role.toUpperCase()}
+                            {user?.role.toUpperCase()}
                         </p>
                     </div>
                     <Button

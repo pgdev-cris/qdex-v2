@@ -180,7 +180,7 @@ export function SuppliersPage() {
         }
     }
 
-    //  Delete (soft — sets status to 'deleted')
+    //  Delete (soft — sets status to 9)
 
     async function handleDelete() {
         if (!deleteTarget) return

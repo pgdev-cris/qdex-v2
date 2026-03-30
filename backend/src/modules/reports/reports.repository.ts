@@ -50,7 +50,7 @@ const getRemittances = async (query: RemittanceReportQuery): Promise<RemittanceR
         SELECT
             r.remittance_id,
             r.vendor_code,
-            s.name AS vendor_name,
+            v.name AS vendor_name,
             r.event_code,
             r.total_cash,
             r.total_gcash,
@@ -70,10 +70,9 @@ const getRemittances = async (query: RemittanceReportQuery): Promise<RemittanceR
         INNER JOIN tbl_vendors v ON v.id = t.vendor_id
         ${where}
         ORDER BY r.remitted_at DESC
-        LIMIT ? OFFSET ?
+        LIMIT ${Math.floor(limit)} OFFSET ${Math.floor(offset)}
     `;
 
-    params.push(limit, offset);
     return (await PoolManager.query<RemittanceRecord[]>(sql, params, POOL)) ?? [];
 };
 

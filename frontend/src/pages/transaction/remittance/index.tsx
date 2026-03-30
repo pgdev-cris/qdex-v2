@@ -281,7 +281,7 @@ export function RemittancePage() {
     const cashRecord = salesData.find((r) => r.payment_method === 'CASH')
 
     const printedBy =
-        `${user?.user_fname ?? ''} ${user?.user_lname ?? ''}`.trim().toUpperCase() || 'UNKNOWN'
+        `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim().toUpperCase() || 'UNKNOWN'
     const eventName = currentEvent?.name ?? ''
     const eventCode = currentEvent?.code ?? ''
 

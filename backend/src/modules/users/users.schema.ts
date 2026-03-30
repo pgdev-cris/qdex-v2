@@ -8,6 +8,7 @@ export const CreateUserRequestSchema = z.object({
     department: z.string().min(1),
     role: z.string().min(1),
     password: z.string().min(8),
+    employee_no: z.string().min(1),
 });
 
 export const UpdateUserRequestSchema = z.object({
@@ -16,10 +17,11 @@ export const UpdateUserRequestSchema = z.object({
     last_name: z.string().min(1).optional(),
     department: z.string().min(1).optional(),
     role: z.string().min(1).optional(),
+    employee_no: z.string().min(1).optional(),
 });
 
 export const UpdateUserStatusSchema = z.object({
-    status: z.enum(['active', 'inactive', 'deleted']),
+    status: z.number().int(),
 });
 
 export const UserIdParamSchema = z.object({

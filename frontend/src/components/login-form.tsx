@@ -1,17 +1,17 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { GalleryVerticalEnd } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import {
-    Field,
-    FieldDescription,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
-} from '@/components/ui/field'
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card'
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -23,7 +23,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     const { login, loading } = useAuth()
     const navigate = useNavigate()
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.BaseSyntheticEvent) => {
         e.preventDefault()
         setError(null)
         try {
@@ -41,13 +41,13 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     return (
         <div className={cn('flex flex-col gap-4', className)} {...props}>
             <Card>
-                <CardHeader>
-                    <div className="flex flex-col items-center gap-2 text-center">
-                        <div className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-md">
-                            <GalleryVerticalEnd className="size-5" />
-                        </div>
-                        <h1 className="text-xl font-bold">Welcome to Qdex</h1>
-                        <FieldDescription>Sign in to your account to continue.</FieldDescription>
+                <CardHeader className="text-center">
+                    <div className="flex flex-col items-center gap-2">
+                        <img src="/pg_logo.png" alt="PG Logo" className="size-10" />
+                        <CardTitle className="text-xl text-primary">
+                            Welcome to <span className="font-bold">QDEX</span>
+                        </CardTitle>
+                        <CardDescription>Sign in to your account to continue.</CardDescription>
                     </div>
                 </CardHeader>
 
@@ -92,7 +92,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                 </CardContent>
 
                 <CardFooter>
-                    <FieldDescription className="text-center">
+                    <FieldDescription className="text-center text-gray-400">
                         By logging in, you acknowledge that this is a company system intended for
                         authorized users only. All activities may be logged and monitored.
                     </FieldDescription>

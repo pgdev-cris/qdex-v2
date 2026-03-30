@@ -3,7 +3,7 @@ import { VENDOR_STATUS } from '../../shared/constants';
 import { ConflictError, NotFoundError } from '../../shared/errors';
 
 const getVendorSales = async (vendorCode: number) => {
-    await validateVendorCode(vendorCode);
+    const vendor = await validateVendorCode(vendorCode);
 
     const baseUrl = process.env.SALES_API_URL ?? 'http://192.168.110.90:4003/qdex';
     const url = `${baseUrl}/fetch-sales/${encodeURIComponent(vendorCode)}`;
@@ -18,6 +18,7 @@ const getVendorSales = async (vendorCode: number) => {
         const json: SalesApiResponse = (await response.json()) as SalesApiResponse;
 
         return {
+            vendor: vendor,
             sales: json.data,
             total_amount: getVendorSalesTotalAmount(json.data),
         };

@@ -1,4 +1,11 @@
-import { RotateCcw, ChevronRight, BadgeDollarSign, Layers, Loader2, AlertCircle } from 'lucide-react'
+import {
+    RotateCcw,
+    ChevronRight,
+    BadgeDollarSign,
+    Layers,
+    Loader2,
+    AlertCircle,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -35,7 +42,7 @@ export function SelectType({
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
-                        <CardTitle>Select Remittance Type</CardTitle>
+                        <CardTitle>Remittance Information</CardTitle>
                         <CardDescription>
                             Vendor:{' '}
                             <span className="font-medium text-foreground">{vendorCode}</span>
@@ -80,6 +87,11 @@ export function SelectType({
                         {selectError}
                     </div>
                 )}
+
+                <label className="text-sm font-medium">
+                    Select Remittance Type
+                    <span className="ml-0.5 text-destructive">*</span>
+                </label>
 
                 {/* Partial */}
                 <Button

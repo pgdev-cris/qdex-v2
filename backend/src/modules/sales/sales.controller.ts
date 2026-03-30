@@ -17,7 +17,7 @@ const fetchSalesRequest = async (req: Request, res: Response) => {
         });
     }
 
-    const vendorSales = await service.getVendorSalesMock(vendorCode);
+    const vendorSales = await service.getVendorSales(vendorCode);
 
     return res.json({
         message: 'Sales fetched successfully',

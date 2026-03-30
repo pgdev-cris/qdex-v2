@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import type { ReactNode } from 'react'
-import type { AuthUser, LoginResponse, MenuPreset } from '@/types/auth.types'
+import type { AuthUser, LoginResponse, MenuPreset, AppEvent } from '@/types/auth.types'
 import { apiFetch } from '@/lib/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -9,16 +9,19 @@ interface StoredAuth {
     user: AuthUser
     token: string
     menu: MenuPreset | null
+    currentEvent: AppEvent | null
 }
 
 interface AuthContextType {
     user: AuthUser | null
     token: string | null
     menu: MenuPreset | null
+    currentEvent: AppEvent | null
     initializing: boolean
     loading: boolean
     login: (username: string, password: string) => Promise<void>
     logout: () => void
+    setCurrentEvent: (event: AppEvent | null) => void
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -33,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null)
     const [token, setToken] = useState<string | null>(null)
     const [menu, setMenu] = useState<MenuPreset | null>(null)
+    const [currentEvent, setCurrentEventState] = useState<AppEvent | null>(null)
     const [initializing, setInitializing] = useState(true)
     const [loading, setLoading] = useState(false)
 
@@ -45,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(stored.user)
                 setToken(stored.token)
                 setMenu(stored.menu)
+                setCurrentEventState(stored.currentEvent ?? null)
             } catch {
                 localStorage.removeItem(STORAGE_KEY)
             }
@@ -60,14 +65,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify({ username, password }),
             })
 
-            const { token, menu, ...user } = res.data
+            const { token, menu, currentEvent, ...user } = res.data
 
-            const stored: StoredAuth = { user, token, menu }
+            const stored: StoredAuth = { user, token, menu, currentEvent }
             localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
 
             setUser(user)
             setToken(token)
             setMenu(menu)
+            setCurrentEventState(currentEvent)
         } finally {
             setLoading(false)
         }
@@ -78,10 +84,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null)
         setToken(null)
         setMenu(null)
+        setCurrentEventState(null)
+    }, [])
+
+    // Expose a setter so EventsPage can update the app-level event after activation
+    const setCurrentEvent = useCallback((event: AppEvent | null) => {
+        setCurrentEventState(event)
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (raw) {
+            try {
+                const stored: StoredAuth = JSON.parse(raw)
+                stored.currentEvent = event
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+            } catch { /* ignore */ }
+        }
     }, [])
 
     return (
-        <AuthContext.Provider value={{ user, token, menu, initializing, loading, login, logout }}>
+        <AuthContext.Provider
+            value={{ user, token, menu, currentEvent, initializing, loading, login, logout, setCurrentEvent }}
+        >
             {children}
         </AuthContext.Provider>
     )

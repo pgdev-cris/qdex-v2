@@ -2,57 +2,60 @@ import PoolManager from '../../shared/db/pool.manager';
 import { Event } from '../../shared/types';
 import { CreateEventRequest, UpdateEventRequest } from './events.schema';
 
-const POOL = 'auth-pool';
-
 const getEvents = async (): Promise<Event[]> => {
     const query = `
-        SELECT event_id, event_code, event_name, event_category,
-               event_location, event_start_date, event_end_date, event_status, created_at
+        SELECT id, name, code, period_start, period_end, status
         FROM tbl_events
-        WHERE event_status != 'deleted'
-        ORDER BY event_start_date DESC, event_id DESC
+        ORDER BY status DESC, id DESC
     `;
-    return (await PoolManager.query<Event[]>(query, [], POOL)) ?? [];
+    return (await PoolManager.query<Event[]>(query, [])) ?? [];
 };
 
 const getEventById = async (id: number): Promise<Event | null> => {
     const query = `
-        SELECT event_id, event_code, event_name, event_category,
-               event_location, event_start_date, event_end_date, event_status, created_at
+        SELECT id, name, code, period_start, period_end, status
         FROM tbl_events
-        WHERE event_id = ? AND event_status != 'deleted'
+        WHERE id = ?
         LIMIT 1
     `;
-    const rows = await PoolManager.query<Event[]>(query, [id], POOL);
+    const rows = await PoolManager.query<Event[]>(query, [id]);
     return rows?.[0] ?? null;
 };
 
 const getEventByCode = async (code: string): Promise<Event | null> => {
-    const query = `SELECT event_id FROM tbl_events WHERE event_code = ? LIMIT 1`;
-    const rows = await PoolManager.query<Event[]>(query, [code], POOL);
+    const query = `SELECT id FROM tbl_events WHERE code = ? LIMIT 1`;
+    const rows = await PoolManager.query<Event[]>(query, [code]);
     return rows?.[0] ?? null;
+};
+
+const getCurrentEvent = async (): Promise<Event | null> => {
+    const query = `
+        SELECT id, name, code, period_start, period_end, status
+        FROM tbl_events
+        WHERE status = 1
+        LIMIT 1
+    `;
+    const rows = await PoolManager.query<Event[]>(query, []);
+    return rows?.[0] ?? null;
+};
+
+const deactivateAllEvents = async (): Promise<void> => {
+    const query = `UPDATE tbl_events SET status = 0 WHERE status = 1`;
+    await PoolManager.execute(query, []);
 };
 
 const createEvent = async (data: CreateEventRequest): Promise<{ insertId: number } | null> => {
     const query = `
-        INSERT INTO tbl_events
-            (event_code, event_name, event_category, event_location,
-             event_start_date, event_end_date, event_status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO tbl_events (name, code, period_start, period_end, status)
+        VALUES (?, ?, ?, ?, ?)
     `;
-    const result = await PoolManager.execute(
-        query,
-        [
-            data.event_code,
-            data.event_name,
-            data.event_category ?? null,
-            data.event_location ?? null,
-            data.event_start_date ?? null,
-            data.event_end_date ?? null,
-            data.event_status,
-        ],
-        POOL,
-    );
+    const result = await PoolManager.execute(query, [
+        data.name,
+        data.code,
+        data.period_start ?? null,
+        data.period_end ?? null,
+        data.status ?? 0,
+    ]);
     return result ? { insertId: result.insertId } : null;
 };
 
@@ -60,28 +63,34 @@ const updateEvent = async (id: number, data: UpdateEventRequest): Promise<boolea
     const fields: string[] = [];
     const params: unknown[] = [];
 
-    if (data.event_code !== undefined)       { fields.push('event_code = ?');       params.push(data.event_code); }
-    if (data.event_name !== undefined)       { fields.push('event_name = ?');       params.push(data.event_name); }
-    if (data.event_category !== undefined)   { fields.push('event_category = ?');   params.push(data.event_category); }
-    if (data.event_location !== undefined)   { fields.push('event_location = ?');   params.push(data.event_location); }
-    if (data.event_start_date !== undefined) { fields.push('event_start_date = ?'); params.push(data.event_start_date); }
-    if (data.event_end_date !== undefined)   { fields.push('event_end_date = ?');   params.push(data.event_end_date); }
-    if (data.event_status !== undefined)     { fields.push('event_status = ?');     params.push(data.event_status); }
+    if (data.name !== undefined) {
+        fields.push('name = ?');
+        params.push(data.name);
+    }
+    if (data.code !== undefined) {
+        fields.push('code = ?');
+        params.push(data.code);
+    }
+    if (data.period_start !== undefined) {
+        fields.push('period_start = ?');
+        params.push(data.period_start);
+    }
+    if (data.period_end !== undefined) {
+        fields.push('period_end = ?');
+        params.push(data.period_end);
+    }
 
     if (fields.length === 0) return false;
 
     params.push(id);
-    const query = `UPDATE tbl_events SET ${fields.join(', ')} WHERE event_id = ? AND event_status != 'deleted'`;
-    const result = await PoolManager.execute(query, params, POOL);
+    const query = `UPDATE tbl_events SET ${fields.join(', ')} WHERE id = ?`;
+    const result = await PoolManager.execute(query, params);
     return (result?.affectedRows ?? 0) > 0;
 };
 
-const setEventStatus = async (
-    id: number,
-    status: 'upcoming' | 'active' | 'completed' | 'cancelled' | 'deleted',
-): Promise<boolean> => {
-    const query = `UPDATE tbl_events SET event_status = ? WHERE event_id = ?`;
-    const result = await PoolManager.execute(query, [status, id], POOL);
+const setEventStatus = async (id: number, status: 0 | 1): Promise<boolean> => {
+    const query = `UPDATE tbl_events SET status = ? WHERE id = ?`;
+    const result = await PoolManager.execute(query, [status, id]);
     return (result?.affectedRows ?? 0) > 0;
 };
 
@@ -89,6 +98,8 @@ export default {
     getEvents,
     getEventById,
     getEventByCode,
+    getCurrentEvent,
+    deactivateAllEvents,
     createEvent,
     updateEvent,
     setEventStatus,

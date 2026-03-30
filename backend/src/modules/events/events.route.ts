@@ -11,6 +11,9 @@ import {
 
 const router = Router();
 
+// GET /api/v1/events/current — active event (used to bootstrap app state)
+router.get('/current', jwtValidator, controller.getCurrentEventRequest);
+
 // GET /api/v1/events
 router.get('/', jwtValidator, controller.getEventsRequest);
 
@@ -38,7 +41,7 @@ router.put(
     controller.updateEventRequest,
 );
 
-// PATCH /api/v1/events/:id/status  — soft delete or change status
+// PATCH /api/v1/events/:id/status — activate (1) or deactivate (0)
 router.patch(
     '/:id/status',
     jwtValidator,

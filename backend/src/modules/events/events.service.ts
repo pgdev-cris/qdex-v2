@@ -9,11 +9,21 @@ const getEventById = async (id: number) => {
     return await repository.getEventById(id);
 };
 
+const getCurrentEvent = async () => {
+    return await repository.getCurrentEvent();
+};
+
 const createEvent = async (data: CreateEventRequest) => {
-    const existing = await repository.getEventByCode(data.event_code);
+    const existing = await repository.getEventByCode(data.code);
     if (existing) {
-        throw new Error(`Event code "${data.event_code}" is already in use.`);
+        throw new Error(`Event code "${data.code}" is already in use.`);
     }
+
+    // If creating as active, deactivate all others first
+    if (data.status === 1) {
+        await repository.deactivateAllEvents();
+    }
+
     return await repository.createEvent(data);
 };
 
@@ -21,10 +31,10 @@ const updateEvent = async (id: number, data: UpdateEventRequest) => {
     const exists = await repository.getEventById(id);
     if (!exists) return null;
 
-    if (data.event_code && data.event_code !== exists.event_code) {
-        const duplicate = await repository.getEventByCode(data.event_code);
+    if (data.code && data.code !== exists.code) {
+        const duplicate = await repository.getEventByCode(data.code);
         if (duplicate) {
-            throw new Error(`Event code "${data.event_code}" is already in use.`);
+            throw new Error(`Event code "${data.code}" is already in use.`);
         }
     }
 
@@ -34,15 +44,21 @@ const updateEvent = async (id: number, data: UpdateEventRequest) => {
 
 const setEventStatus = async (id: number, payload: UpdateEventStatus) => {
     const exists = await repository.getEventById(id);
-    // Allow setting deleted even if already soft-deleted (for idempotency via code)
-    if (!exists && payload.status !== 'deleted') return null;
+    if (!exists) return null;
+
+    // When activating an event, deactivate all others first
+    if (payload.status === 1) {
+        await repository.deactivateAllEvents();
+    }
+
     await repository.setEventStatus(id, payload.status);
-    return { id, status: payload.status };
+    return await repository.getEventById(id);
 };
 
 export default {
     getEvents,
     getEventById,
+    getCurrentEvent,
     createEvent,
     updateEvent,
     setEventStatus,

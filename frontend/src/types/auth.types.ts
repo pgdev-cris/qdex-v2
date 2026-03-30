@@ -11,6 +11,17 @@ export interface AuthUser {
     user_status: string
 }
 
+// ─── Event ────────────────────────────────────────────────────────────────────
+
+export interface AppEvent {
+    id: number
+    name: string
+    code: string
+    period_start: string | null
+    period_end: string | null
+    status: 0 | 1 // 0 = inactive, 1 = active
+}
+
 // ─── Menu tree ────────────────────────────────────────────────────────────────
 
 export interface MenuTreeNode {
@@ -40,5 +51,6 @@ export interface LoginResponse {
     data: AuthUser & {
         token: string
         menu: MenuPreset | null
+        currentEvent: AppEvent | null
     }
 }

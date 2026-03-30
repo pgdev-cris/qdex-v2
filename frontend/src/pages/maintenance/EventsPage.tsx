@@ -1,76 +1,91 @@
-import { useState } from 'react'
-import { CalendarDays, Search, Plus, Pencil, Trash2 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { CalendarDays, Search, Plus, Pencil, Trash2, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Modal, DeleteModal, FormField, FormRow, FormSelect } from '@/components/ui/modal'
+import { Modal, DeleteModal, FormField, FormRow } from '@/components/ui/modal'
+import { apiFetch } from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
+import type { AppEvent } from '@/types/auth.types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Event {
-    id: number
-    code: string
-    name: string
-    category: string
-    location: string
-    start_date: string
-    end_date: string
-    status: 'Upcoming' | 'Active' | 'Completed' | 'Cancelled'
+interface ApiListResponse {
+    status: number
+    message: string
+    data: AppEvent[]
 }
 
-const BLANK: Omit<Event, 'id'> = {
-    code: '',
+interface ApiSingleResponse {
+    status: number
+    message: string
+    data: AppEvent
+}
+
+type FormData = Omit<AppEvent, 'id' | 'status'>
+
+const BLANK: FormData = {
     name: '',
-    category: '',
-    location: '',
-    start_date: '',
-    end_date: '',
-    status: 'Upcoming',
+    code: '',
+    period_start: '',
+    period_end: '',
 }
-
-const STATUS_OPTIONS = ['Upcoming', 'Active', 'Completed', 'Cancelled'] as const
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: Event['status'] }) {
-    const styles: Record<Event['status'], string> = {
-        Upcoming: 'bg-blue-50 text-blue-600',
-        Active: 'bg-primary/10 text-primary',
-        Completed: 'bg-muted text-muted-foreground',
-        Cancelled: 'bg-destructive/10 text-destructive',
-    }
-    return (
-        <span
-            className={[
-                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                styles[status],
-            ].join(' ')}
-        >
-            {status}
+function StatusBadge({ status }: { status: 0 | 1 }) {
+    return status === 1 ? (
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            Active
+        </span>
+    ) : (
+        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            Inactive
         </span>
     )
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-const COLUMNS = ['Code', 'Event Name', 'Category', 'Location', 'Start', 'End', 'Status', 'Actions']
+const COLUMNS = ['Code', 'Event Name', 'Period Start', 'Period End', 'Status', 'Actions']
 
 export function EventsPage() {
-    const [rows, setRows] = useState<Event[]>([])
-    const [search, setSearch] = useState('')
-    const [modal, setModal] = useState<{ mode: 'add' | 'edit'; data: Omit<Event, 'id'>; id?: number } | null>(null)
-    const [deleteTarget, setDeleteTarget] = useState<Event | null>(null)
-    const [nextId, setNextId] = useState(1)
+    const { currentEvent, setCurrentEvent } = useAuth()
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    const [rows, setRows] = useState<AppEvent[]>([])
+    const [search, setSearch] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    const [modal, setModal] = useState<{ mode: 'add' | 'edit'; data: FormData; id?: number } | null>(null)
+    const [deleteTarget, setDeleteTarget] = useState<AppEvent | null>(null)
+
+    // ── Fetch ──────────────────────────────────────────────────────────────────
+
+    const fetchEvents = useCallback(async () => {
+        setLoading(true)
+        setError(null)
+        try {
+            const res = await apiFetch<ApiListResponse>('/api/v1/events')
+            setRows(res.data)
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to load events')
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
+    useEffect(() => { fetchEvents() }, [fetchEvents])
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
 
     const filtered = rows.filter((r) => {
         const q = search.toLowerCase()
         return (
             r.code.toLowerCase().includes(q) ||
-            r.name.toLowerCase().includes(q) ||
-            r.category.toLowerCase().includes(q) ||
-            r.location.toLowerCase().includes(q)
+            r.name.toLowerCase().includes(q)
         )
     })
 
@@ -78,41 +93,113 @@ export function EventsPage() {
         setModal({ mode: 'add', data: { ...BLANK } })
     }
 
-    function openEdit(event: Event) {
-        const { id, ...data } = event
-        setModal({ mode: 'edit', data, id })
+    function openEdit(event: AppEvent) {
+        setModal({
+            mode: 'edit',
+            id: event.id,
+            data: {
+                name: event.name,
+                code: event.code,
+                period_start: event.period_start ?? '',
+                period_end: event.period_end ?? '',
+            },
+        })
     }
 
-    function setField<K extends keyof typeof BLANK>(key: K, value: (typeof BLANK)[K]) {
+    function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
         setModal((m) => m ? { ...m, data: { ...m.data, [key]: value } } : m)
     }
 
-    function handleSave() {
+    // ── Save (create / update) ─────────────────────────────────────────────────
+
+    async function handleSave() {
         if (!modal) return
         const { name, code } = modal.data
         if (!name.trim() || !code.trim()) return
 
-        if (modal.mode === 'add') {
-            setRows((r) => [...r, { id: nextId, ...modal.data }])
-            setNextId((n) => n + 1)
-        } else {
-            setRows((r) => r.map((row) => row.id === modal.id ? { ...row, ...modal.data } : row))
+        setSaving(true)
+        setError(null)
+        try {
+            const payload = {
+                name: modal.data.name.trim(),
+                code: modal.data.code.trim().toUpperCase(),
+                period_start: modal.data.period_start || undefined,
+                period_end: modal.data.period_end || undefined,
+            }
+
+            if (modal.mode === 'add') {
+                await apiFetch<ApiSingleResponse>('/api/v1/events', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                })
+            } else {
+                await apiFetch<ApiSingleResponse>(`/api/v1/events/${modal.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload),
+                })
+            }
+
+            setModal(null)
+            await fetchEvents()
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to save event')
+        } finally {
+            setSaving(false)
         }
-        setModal(null)
     }
 
-    function handleDelete() {
+    // ── Delete ─────────────────────────────────────────────────────────────────
+
+    async function handleDelete() {
         if (!deleteTarget) return
-        setRows((r) => r.filter((row) => row.id !== deleteTarget.id))
-        setDeleteTarget(null)
+        setSaving(true)
+        setError(null)
+        try {
+            await apiFetch(`/api/v1/events/${deleteTarget.id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 0 }),
+            })
+            // Clear app-level event if it was the active one
+            if (currentEvent?.id === deleteTarget.id) {
+                setCurrentEvent(null)
+            }
+            setDeleteTarget(null)
+            await fetchEvents()
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to delete event')
+        } finally {
+            setSaving(false)
+        }
     }
 
-    function fmtDate(d: string) {
+    // ── Set Active ─────────────────────────────────────────────────────────────
+
+    async function handleSetActive(event: AppEvent) {
+        setSaving(true)
+        setError(null)
+        try {
+            const res = await apiFetch<ApiSingleResponse>(`/api/v1/events/${event.id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: 1 }),
+            })
+            // Update app-level current event
+            setCurrentEvent(res.data)
+            await fetchEvents()
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to activate event')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    // ── Format ─────────────────────────────────────────────────────────────────
+
+    function fmtDate(d: string | null) {
         if (!d) return '—'
         return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' })
     }
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    // ── Render ─────────────────────────────────────────────────────────────────
 
     return (
         <div className="p-6">
@@ -124,7 +211,12 @@ export function EventsPage() {
                         Events
                     </h1>
                     <p className="text-muted-foreground mt-1 text-sm">
-                        Create and manage system events and schedules.
+                        Create and manage system events.
+                        {currentEvent && (
+                            <span className="text-primary ml-2 font-medium">
+                                Active: {currentEvent.name} ({currentEvent.code})
+                            </span>
+                        )}
                     </p>
                 </div>
                 <Button onClick={openAdd}>
@@ -132,6 +224,13 @@ export function EventsPage() {
                     Create Event
                 </Button>
             </div>
+
+            {/* Error banner */}
+            {error && (
+                <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {error}
+                </div>
+            )}
 
             {/* Table card */}
             <Card>
@@ -169,12 +268,15 @@ export function EventsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.length === 0 ? (
+                            {loading ? (
                                 <tr>
-                                    <td
-                                        colSpan={COLUMNS.length}
-                                        className="text-muted-foreground py-16 text-center text-sm"
-                                    >
+                                    <td colSpan={COLUMNS.length} className="text-muted-foreground py-16 text-center text-sm">
+                                        Loading events…
+                                    </td>
+                                </tr>
+                            ) : filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={COLUMNS.length} className="text-muted-foreground py-16 text-center text-sm">
                                         {search ? 'No events match your search.' : 'No events yet. Click Create Event to get started.'}
                                     </td>
                                 </tr>
@@ -183,15 +285,24 @@ export function EventsPage() {
                                     <tr key={event.id} className="border-b last:border-0 hover:bg-muted/40">
                                         <td className="px-4 py-3 font-mono text-xs font-medium">{event.code}</td>
                                         <td className="px-4 py-3 font-medium">{event.name}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{event.category || '—'}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{event.location || '—'}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{fmtDate(event.start_date)}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{fmtDate(event.end_date)}</td>
+                                        <td className="px-4 py-3 text-muted-foreground">{fmtDate(event.period_start)}</td>
+                                        <td className="px-4 py-3 text-muted-foreground">{fmtDate(event.period_end)}</td>
                                         <td className="px-4 py-3">
                                             <StatusBadge status={event.status} />
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-1">
+                                                {event.status !== 1 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon-sm"
+                                                        onClick={() => handleSetActive(event)}
+                                                        title="Set as active event"
+                                                        disabled={saving}
+                                                    >
+                                                        <Zap className="h-3.5 w-3.5 text-primary" />
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="ghost"
                                                     size="icon-sm"
@@ -227,11 +338,11 @@ export function EventsPage() {
                 description="Fill in the event details below."
                 footer={
                     <>
-                        <Button variant="outline" onClick={() => setModal(null)}>
+                        <Button variant="outline" onClick={() => setModal(null)} disabled={saving}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSave}>
-                            {modal?.mode === 'add' ? 'Create Event' : 'Save Changes'}
+                        <Button onClick={handleSave} disabled={saving}>
+                            {saving ? 'Saving…' : modal?.mode === 'add' ? 'Create Event' : 'Save Changes'}
                         </Button>
                     </>
                 }
@@ -247,16 +358,6 @@ export function EventsPage() {
                                     className="uppercase"
                                 />
                             </FormField>
-                            <FormField label="Status">
-                                <FormSelect
-                                    value={modal.data.status}
-                                    onChange={(v) => setField('status', v as Event['status'])}
-                                >
-                                    {STATUS_OPTIONS.map((s) => (
-                                        <option key={s} value={s}>{s}</option>
-                                    ))}
-                                </FormSelect>
-                            </FormField>
                         </FormRow>
                         <FormField label="Event Name" required>
                             <Input
@@ -266,37 +367,24 @@ export function EventsPage() {
                             />
                         </FormField>
                         <FormRow>
-                            <FormField label="Category">
+                            <FormField label="Period Start">
                                 <Input
-                                    placeholder="Convention"
-                                    value={modal.data.category}
-                                    onChange={(e) => setField('category', e.target.value)}
+                                    type="date"
+                                    value={modal.data.period_start ?? ''}
+                                    onChange={(e) => setField('period_start', e.target.value)}
                                 />
                             </FormField>
-                            <FormField label="Location">
+                            <FormField label="Period End">
                                 <Input
-                                    placeholder="Manila, Philippines"
-                                    value={modal.data.location}
-                                    onChange={(e) => setField('location', e.target.value)}
+                                    type="date"
+                                    value={modal.data.period_end ?? ''}
+                                    onChange={(e) => setField('period_end', e.target.value)}
                                 />
                             </FormField>
                         </FormRow>
-                        <FormRow>
-                            <FormField label="Start Date">
-                                <Input
-                                    type="date"
-                                    value={modal.data.start_date}
-                                    onChange={(e) => setField('start_date', e.target.value)}
-                                />
-                            </FormField>
-                            <FormField label="End Date">
-                                <Input
-                                    type="date"
-                                    value={modal.data.end_date}
-                                    onChange={(e) => setField('end_date', e.target.value)}
-                                />
-                            </FormField>
-                        </FormRow>
+                        {error && (
+                            <p className="text-sm text-destructive">{error}</p>
+                        )}
                     </div>
                 )}
             </Modal>

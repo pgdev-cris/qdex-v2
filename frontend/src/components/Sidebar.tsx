@@ -137,10 +137,7 @@ function LogoutModal({
     if (!open) return null
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            onClick={onCancel}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onCancel}>
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/50" />
 
@@ -165,12 +162,7 @@ function LogoutModal({
                     <Button variant="outline" size="sm" className="flex-1" onClick={onCancel}>
                         Cancel
                     </Button>
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        className="flex-1"
-                        onClick={onConfirm}
-                    >
+                    <Button variant="destructive" size="sm" className="flex-1" onClick={onConfirm}>
                         Sign out
                     </Button>
                 </div>
@@ -182,7 +174,7 @@ function LogoutModal({
 // ─── Sidebar shell ────────────────────────────────────────────────────────────
 
 export function Sidebar() {
-    const { user, menu, logout } = useAuth()
+    const { user, menu, currentEvent, logout } = useAuth()
     const navigate = useNavigate()
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
@@ -206,6 +198,25 @@ export function Sidebar() {
                             {menu?.name ?? 'Dashboard'}
                         </p>
                     </div>
+                </div>
+
+                <Separator className="bg-sidebar-border" />
+
+                {/* Current event */}
+                <div className="px-4 py-3">
+                    <p className="mb-1.5 text-[10px] font-medium uppercase tracking-widest text-sidebar-foreground/40">
+                        Current Event
+                    </p>
+                    {currentEvent ? (
+                        <div className="flex items-center gap-2">
+                            <span className="mt-px h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                            <p className="truncate text-xs font-medium text-sidebar-foreground/80">
+                                {currentEvent.name}
+                            </p>
+                        </div>
+                    ) : (
+                        <p className="text-xs text-sidebar-foreground/35 italic">None set</p>
+                    )}
                 </div>
 
                 <Separator className="bg-sidebar-border" />

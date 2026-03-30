@@ -28,6 +28,21 @@ const getEventRequest = async (req: Request, res: Response) => {
     });
 };
 
+const getCurrentEventRequest = async (req: Request, res: Response) => {
+    const event = await service.getCurrentEvent();
+    if (!event) {
+        return res.status(HTTP_STATUS.NOT_FOUND).json({
+            status: HTTP_STATUS.NOT_FOUND,
+            message: 'No active event found',
+        });
+    }
+    return res.status(HTTP_STATUS.OK).json({
+        status: HTTP_STATUS.OK,
+        message: 'Current event fetched successfully',
+        data: event,
+    });
+};
+
 const createEventRequest = async (req: Request, res: Response) => {
     try {
         const data = req.body as CreateEventRequest;
@@ -83,7 +98,7 @@ const setEventStatusRequest = async (req: Request, res: Response) => {
     }
     return res.status(HTTP_STATUS.OK).json({
         status: HTTP_STATUS.OK,
-        message: `Event status set to ${payload.status}`,
+        message: `Event status set to ${payload.status === 1 ? 'active' : 'inactive'}`,
         data: result,
     });
 };
@@ -91,6 +106,7 @@ const setEventStatusRequest = async (req: Request, res: Response) => {
 export default {
     getEventsRequest,
     getEventRequest,
+    getCurrentEventRequest,
     createEventRequest,
     updateEventRequest,
     setEventStatusRequest,

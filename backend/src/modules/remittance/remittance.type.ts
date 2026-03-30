@@ -5,7 +5,12 @@ export interface RemitLine {
 
 export interface PartialRemitPayload {
     vendor_code: string;
-    vendor_name?: string;
+    remitter_name: string;
+    lines: RemitLine[];
+}
+
+export interface FullRemitPayload {
+    vendor_code: string;
     remitter_name: string;
     lines: RemitLine[];
 }
@@ -16,7 +21,7 @@ export interface RemitResult {
     vendor_code: string;
     vendor_name: string;
     remitter_name: string;
-    remit_type: 'partial';
+    remit_type: 'partial' | 'full';
     lines: RemitLine[];
     remitted_at: string;
 }

@@ -1,13 +1,12 @@
 import axios from 'axios'
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// Config
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000'
 
-// ─── Main API instance ────────────────────────────────────────────────────────
+// Main API instance
 // Used for all qdex-v2 backend calls (/api/v1/...).
 // Auth token is injected per-request via the token helper below.
-
 export const apiClient = axios.create({
     baseURL: API_URL,
     headers: { 'Content-Type': 'application/json' },
@@ -34,5 +33,5 @@ apiClient.interceptors.response.use(
     (err) => {
         const data = err.response?.data
         return Promise.reject(data ?? err)
-    },
+    }
 )

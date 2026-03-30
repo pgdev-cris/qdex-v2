@@ -1,7 +1,7 @@
 import { apiClient } from './axios'
 import type { AxiosRequestConfig } from 'axios'
 
-// ─── apiFetch ─────────────────────────────────────────────────────────────────
+//  apiFetch 
 // Thin wrapper around apiClient so existing callers need no changes.
 // - `path`  — relative URL, e.g. '/api/v1/auth/login'
 // - `token` — optional override; if omitted the request interceptor uses the

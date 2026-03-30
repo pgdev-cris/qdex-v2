@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Modal, DeleteModal, FormField, FormRow, FormSelect } from '@/components/ui/modal'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+//  Types 
 
 interface Supplier {
     id: number
@@ -21,7 +21,7 @@ const BLANK: Omit<Supplier, 'id' | 'registered'> = {
     status: 'Active',
 }
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
+//  Status badge 
 
 function StatusBadge({ status }: { status: string }) {
     const active = status === 'Active'
@@ -37,7 +37,7 @@ function StatusBadge({ status }: { status: string }) {
     )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+//  Page 
 
 const COLUMNS = ['Code', 'Supplier Name', 'Status', 'Registered', 'Actions']
 
@@ -52,7 +52,7 @@ export function SuppliersPage() {
     const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null)
     const [nextId, setNextId] = useState(1)
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    //  Helpers 
 
     const filtered = rows.filter((r) => {
         const q = search.toLowerCase()
@@ -96,7 +96,7 @@ export function SuppliersPage() {
         setDeleteTarget(null)
     }
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    //  Render 
 
     return (
         <div className="p-6">

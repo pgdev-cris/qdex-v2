@@ -20,8 +20,7 @@ import {
     FieldSet,
 } from '@/components/ui/field'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
+// Types
 type MenuType = 'parent' | 'child'
 
 interface Menu {
@@ -66,7 +65,7 @@ interface FormErrors {
     children?: Record<string, { name?: string; url?: string }>
 }
 
-// ─── Mock data – replace with API fetches ────────────────────────────────────
+// Mock data – replace with API fetches
 
 // Used as parent options (top-level) and as existing children to pick from
 const EXISTING_MENUS: Menu[] = [
@@ -146,10 +145,9 @@ const INITIAL_FORM: FormState = {
     children: [],
 }
 
-// ─── Portal dropdown positioning hook ────────────────────────────────────────
+// Portal dropdown positioning hook
 // Calculates position from the trigger element so the dropdown can be rendered
 // on document.body — escaping any overflow:hidden ancestor (e.g. Card).
-
 interface DropdownRect {
     top: number
     left: number
@@ -187,8 +185,7 @@ function useDropdownRect(
     return open ? rect : null
 }
 
-// ─── Reusable: SearchableSelect (single value) ───────────────────────────────
-
+// Reusable: SearchableSelect (single value)
 interface SearchableSelectProps {
     options: { value: string; label: string }[]
     value: string
@@ -338,7 +335,7 @@ function SearchableSelect({
     )
 }
 
-// ─── Reusable: SearchableMultiSelect ─────────────────────────────────────────
+// Reusable: SearchableMultiSelect
 
 interface SearchableMultiSelectProps {
     options: { value: number; label: string }[]
@@ -519,7 +516,7 @@ function SearchableMultiSelect({
     )
 }
 
-// ─── Reusable: Toggle ────────────────────────────────────────────────────────
+// Reusable: Toggle
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
     return (
@@ -544,7 +541,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     )
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// Main Component
 
 export default function MenuForm() {
     const [form, setForm] = useState<FormState>(INITIAL_FORM)
@@ -553,7 +550,7 @@ export default function MenuForm() {
 
     const isParent = form.menu_type === 'parent'
 
-    // ── Field helpers ──────────────────────────────────────────────────────────
+    // Field helpers
 
     const set = (field: keyof FormState, value: unknown) => {
         setForm((prev) => ({ ...prev, [field]: value }))
@@ -581,7 +578,7 @@ export default function MenuForm() {
                 : [...form.existing_child_ids, id]
         )
 
-    // ── Menu type switch ───────────────────────────────────────────────────────
+    // Menu type switch
 
     const switchType = (type: MenuType) => {
         setForm({ ...INITIAL_FORM, menu_type: type })
@@ -589,7 +586,7 @@ export default function MenuForm() {
         setSubmitted(null)
     }
 
-    // ── Children helpers ───────────────────────────────────────────────────────
+    // Children helpers
 
     const addChild = () => set('children', [...form.children, makeChild()])
 
@@ -613,7 +610,7 @@ export default function MenuForm() {
         }))
     }
 
-    // ── Validation ─────────────────────────────────────────────────────────────
+    // Validation
 
     const validate = (): FormErrors => {
         const e: FormErrors = {}
@@ -636,7 +633,7 @@ export default function MenuForm() {
         return e
     }
 
-    // ── Submit ─────────────────────────────────────────────────────────────────
+    // Submit
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -694,12 +691,12 @@ export default function MenuForm() {
     const presetOptions = PRESETS.map((p) => ({ value: p.id, label: p.name }))
     const existingChildOptions = EXISTING_CHILDREN.map((m) => ({ value: m.id, label: m.name }))
 
-    // ── Render ─────────────────────────────────────────────────────────────────
+    // Render
 
     return (
         <div className="flex min-h-screen items-start justify-center bg-muted/40 p-8">
             <form onSubmit={handleSubmit} className="w-full max-w-2xl space-y-4">
-                {/* ── Step 1: Menu type selector ────────────────────────────── */}
+                {/* Step 1: Menu type selector */}
                 <Card>
                     <CardHeader className="border-b">
                         <CardTitle>Create Menu Item</CardTitle>
@@ -765,7 +762,7 @@ export default function MenuForm() {
                     </CardContent>
                 </Card>
 
-                {/* ── Step 2: Main fields ───────────────────────────────────── */}
+                {/* Step 2: Main fields */}
                 <Card>
                     <CardHeader className="border-b">
                         <CardTitle>
@@ -914,7 +911,7 @@ export default function MenuForm() {
                     </CardContent>
                 </Card>
 
-                {/* ── Step 3: Add children inline (parent only) ─────────────── */}
+                {/* Step 3: Add children inline (parent only) */}
                 {isParent && (
                     <Card>
                         <CardHeader className="border-b">
@@ -938,7 +935,7 @@ export default function MenuForm() {
                         </CardHeader>
 
                         <CardContent className="space-y-5 pt-4">
-                            {/* ── Existing children picker ──────────────────── */}
+                            {/*  Existing children picker  */}
                             <Field>
                                 <FieldLabel>Link Existing Children</FieldLabel>
                                 <FieldDescription>
@@ -954,7 +951,7 @@ export default function MenuForm() {
                                 </div>
                             </Field>
 
-                            {/* ── Inline new children ───────────────────────── */}
+                            {/*  Inline new children  */}
                             <Field>
                                 <FieldLabel>Create New Children</FieldLabel>
                                 <FieldDescription>
@@ -1169,7 +1166,7 @@ export default function MenuForm() {
                     </Card>
                 )}
 
-                {/* ── Payload preview ───────────────────────────────────────── */}
+                {/*  Payload preview  */}
                 {submitted && (
                     <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
                         <p className="mb-2 text-sm font-medium text-green-700 dark:text-green-400">
@@ -1181,7 +1178,7 @@ export default function MenuForm() {
                     </div>
                 )}
 
-                {/* ── Actions ───────────────────────────────────────────────── */}
+                {/*  Actions  */}
                 <Card>
                     <CardFooter className="gap-3 pt-4">
                         <Button type="submit" className="flex-1">

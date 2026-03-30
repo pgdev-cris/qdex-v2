@@ -2,9 +2,9 @@ import { PoolConnection, ResultSetHeader } from 'mysql2/promise';
 import PoolManager from '../../shared/db/pool.manager';
 import { MenuPreset, MenuRow } from './menu.type';
 
-// ─────────────────────────────────────────────────────────────
+//
 // Types
-// ─────────────────────────────────────────────────────────────
+//
 
 interface InsertMenuData {
     name: string;
@@ -17,9 +17,9 @@ interface InsertMenuData {
     target_modal: string | null;
 }
 
-// ─────────────────────────────────────────────────────────────
+//
 // Queries
-// ─────────────────────────────────────────────────────────────
+//
 
 /**
  * Inserts a single row into tbl_menu and returns the new auto-increment id.

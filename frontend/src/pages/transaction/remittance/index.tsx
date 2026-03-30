@@ -32,7 +32,7 @@ import { ReceiptPreview } from './components/ReceiptPreview'
 import { ConfirmModal } from '@/components/ui/modal'
 import type { ConfirmRow } from '@/components/ui/modal'
 
-// ─── Context panel ────────────────────────────────────────────────────────────
+// Context panel
 
 interface ContextPanelProps {
     step: Step
@@ -146,45 +146,47 @@ function ContextPanel({
                     </Section>
                 )}
 
-                {salesData.length > 0 && (() => {
-                    const visibleRows = remitType === 'partial'
-                        ? salesData.filter((r) => r.payment_method === 'CASH')
-                        : salesData
+                {salesData.length > 0 &&
+                    (() => {
+                        const visibleRows =
+                            remitType === 'partial'
+                                ? salesData.filter((r) => r.payment_method === 'CASH')
+                                : salesData
 
-                    // On remit step, substitute the typed cash amount for the CASH row
-                    const resolveAmount = (r: SalesRecord) => {
-                        if (step === 'remit' && r.payment_method === 'CASH') {
-                            return encodedCash
+                        // On remit step, substitute the typed cash amount for the CASH row
+                        const resolveAmount = (r: SalesRecord) => {
+                            if (step === 'remit' && r.payment_method === 'CASH') {
+                                return encodedCash
+                            }
+                            return Number(r.total)
                         }
-                        return Number(r.total)
-                    }
 
-                    const visibleTotal = visibleRows.reduce((s, r) => s + resolveAmount(r), 0)
+                        const visibleTotal = visibleRows.reduce((s, r) => s + resolveAmount(r), 0)
 
-                    return (
-                        <Section title="Sales">
-                            <div className="flex flex-col gap-2">
-                                {visibleRows.map((r) => (
-                                    <div
-                                        key={r.payment_method}
-                                        className="flex justify-between text-sm"
-                                    >
-                                        <span className="text-muted-foreground">
-                                            {methodLabel(r.payment_method)}
-                                        </span>
-                                        <span className="font-medium tabular-nums">
-                                            {fmt(resolveAmount(r))}
-                                        </span>
+                        return (
+                            <Section title="Sales">
+                                <div className="flex flex-col gap-2">
+                                    {visibleRows.map((r) => (
+                                        <div
+                                            key={r.payment_method}
+                                            className="flex justify-between text-sm"
+                                        >
+                                            <span className="text-muted-foreground">
+                                                {methodLabel(r.payment_method)}
+                                            </span>
+                                            <span className="font-medium tabular-nums">
+                                                {fmt(resolveAmount(r))}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <div className="mt-1 flex justify-between border-t pt-2 text-sm font-semibold">
+                                        <span>Total</span>
+                                        <span className="tabular-nums">{fmt(visibleTotal)}</span>
                                     </div>
-                                ))}
-                                <div className="mt-1 flex justify-between border-t pt-2 text-sm font-semibold">
-                                    <span>Total</span>
-                                    <span className="tabular-nums">{fmt(visibleTotal)}</span>
                                 </div>
-                            </div>
-                        </Section>
-                    )
-                })()}
+                            </Section>
+                        )
+                    })()}
             </div>
         )
     }
@@ -220,8 +222,7 @@ function ContextPanel({
     return null
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
+// Helpers
 function buildReceiptFromApi(
     apiData: NonNullable<RemittanceApiResponse['data']>,
     remitType: RemitType,
@@ -230,7 +231,7 @@ function buildReceiptFromApi(
     remitterName: string,
     printedBy: string,
     eventName: string,
-    eventCode: string,
+    eventCode: string
 ): Receipt {
     return {
         trans_no: apiData.receipt_no,
@@ -248,12 +249,11 @@ function buildReceiptFromApi(
     }
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
+// Page
 export function RemittancePage() {
     const { token, user, currentEvent } = useAuth()
 
-    // ── Wizard state ──────────────────────────────────────────────────────────
+    // Wizard state
     const [step, setStep] = useState<Step>('search')
     const [vendorCode, setVendorCode] = useState('')
     const [vendorName, setVendorName] = useState('')
@@ -264,7 +264,7 @@ export function RemittancePage() {
     const [cashAmount, setCashAmount] = useState('')
     const [receipt, setReceipt] = useState<Receipt | null>(null)
 
-    // ── Async state ───────────────────────────────────────────────────────────
+    // Async state
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [selectError, setSelectError] = useState<string | null>(null)
@@ -273,7 +273,7 @@ export function RemittancePage() {
     /** Which type button is currently in a pending API call */
     const [pendingType, setPendingType] = useState<RemitType | null>(null)
 
-    // ── Confirm modal ─────────────────────────────────────────────────────────
+    // Confirm modal
     const [confirmOpen, setConfirmOpen] = useState(false)
     const [confirmRows, setConfirmRows] = useState<ConfirmRow[]>([])
 
@@ -293,7 +293,7 @@ export function RemittancePage() {
         }
     }, [step])
 
-    // ── Step 1 — search vendor ────────────────────────────────────────────────
+    // Step 1 — search vendor
     async function handleSearch() {
         const code = vendorInput.trim().toUpperCase()
         if (!code) return
@@ -320,7 +320,7 @@ export function RemittancePage() {
         }
     }
 
-    // ── Step 2 — select type ──────────────────────────────────────────────────
+    // Step 2 — select type
     // • Partial → go to remit form
     // • Full    → show confirm modal first, then execute on approval
     function handleSelectType(type: RemitType) {
@@ -353,7 +353,7 @@ export function RemittancePage() {
         setConfirmOpen(true)
     }
 
-    // ── Full remittance — execute after confirmation ───────────────────────────
+    // Full remittance — execute after confirmation
     async function executeFullRemittance() {
         const cashTotal = cashRecord?.total ?? '0'
         const lines: ReceiptLine[] = salesData.map((r) =>
@@ -393,7 +393,7 @@ export function RemittancePage() {
                     remitterName.trim(),
                     printedBy,
                     eventName,
-                    eventCode,
+                    eventCode
                 )
             )
             setStep('receipt')
@@ -409,7 +409,7 @@ export function RemittancePage() {
         }
     }
 
-    // ── Step 3 — submit partial: validate then open confirm modal ─────────────
+    // Step 3 — submit partial: validate then open confirm modal
     function handleSubmit() {
         setSubmitError(null)
 
@@ -432,7 +432,7 @@ export function RemittancePage() {
         setConfirmOpen(true)
     }
 
-    // ── Partial remittance — execute after confirmation ────────────────────────
+    // Partial remittance — execute after confirmation
     async function executePartialRemittance() {
         const lines: ReceiptLine[] = [{ method: 'CASH', amount: cashAmount }]
 
@@ -466,7 +466,7 @@ export function RemittancePage() {
                     remitterName.trim(),
                     printedBy,
                     eventName,
-                    eventCode,
+                    eventCode
                 )
             )
             setStep('receipt')
@@ -481,13 +481,13 @@ export function RemittancePage() {
         }
     }
 
-    // ── Confirm modal dispatcher ──────────────────────────────────────────────
+    // Confirm modal dispatcher
     function handleConfirm() {
         if (remitType === 'full') executeFullRemittance()
         else if (remitType === 'partial') executePartialRemittance()
     }
 
-    // ── Reset ─────────────────────────────────────────────────────────────────
+    // Reset
     function handleReset() {
         setStep('search')
         setVendorInput('')
@@ -505,8 +505,6 @@ export function RemittancePage() {
         setConfirmOpen(false)
         setConfirmRows([])
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
 
     return (
         <div className="flex min-h-full flex-col p-6">

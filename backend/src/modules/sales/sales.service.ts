@@ -1,9 +1,7 @@
-import vendorRepository from '../../shared/repository/vendor.repository';
-import { VENDOR_STATUS } from '../../shared/constants';
-import { ConflictError, NotFoundError } from '../../shared/errors';
+import vendorProvider from '../../shared/providers/vendor.provider';
 
 const getVendorSales = async (vendorCode: number) => {
-    const vendor = await validateVendorCode(vendorCode);
+    const vendor = await vendorProvider.validateVendor(vendorCode);
 
     const baseUrl = process.env.SALES_API_URL ?? 'http://192.168.110.90:4003/qdex';
     const url = `${baseUrl}/fetch-sales/${encodeURIComponent(vendorCode)}`;
@@ -16,6 +14,8 @@ const getVendorSales = async (vendorCode: number) => {
         });
 
         const json: SalesApiResponse = (await response.json()) as SalesApiResponse;
+
+        console.log(json);
 
         return {
             vendor: vendor,
@@ -31,24 +31,8 @@ const getVendorSales = async (vendorCode: number) => {
     }
 };
 
-const validateVendorCode = async (vendorCode: number) => {
-    const vendor = await vendorRepository.getVendorByCode(vendorCode);
-    if (!vendor) {
-        throw new NotFoundError(
-            'Vendor not found or invalid code. Please check the vendor code and try again.',
-        );
-    }
-
-    if (vendor.status !== VENDOR_STATUS.ACTIVE) {
-        throw new ConflictError('Vendor is not active.');
-    }
-
-    const { name, code } = vendor;
-    return { name, code };
-};
-
 const getVendorSalesMock = async (vendorCode: number) => {
-    const vendor = await validateVendorCode(vendorCode);
+    const vendor = await vendorProvider.validateVendor(vendorCode);
 
     const vendorSales = [
         {

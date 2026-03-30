@@ -7,7 +7,7 @@ import {
     LINE_EQUALS,
 } from '../constants'
 
-// ─── Row helper ───────────────────────────────────────────────────────────────
+//  Row helper 
 
 function Row({ label, value }: { label: string; value: string }) {
     return (
@@ -18,7 +18,7 @@ function Row({ label, value }: { label: string; value: string }) {
     )
 }
 
-// ─── Single copy block ────────────────────────────────────────────────────────
+//  Single copy block 
 
 function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string }) {
     const cashLine = receipt.lines.find((l) => l.method === 'CASH')
@@ -117,7 +117,7 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
     )
 }
 
-// ─── Thermal receipt wrapper (print-only) ─────────────────────────────────────
+//  Thermal receipt wrapper (print-only) 
 
 interface Props {
     receipt: Receipt

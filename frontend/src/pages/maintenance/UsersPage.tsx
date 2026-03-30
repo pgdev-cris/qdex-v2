@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Modal, DeleteModal, FormField, FormRow, FormSelect } from '@/components/ui/modal'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+//  Types 
 
 interface User {
     id: number
@@ -29,7 +29,7 @@ const BLANK: Omit<User, 'id' | 'created'> = {
 
 const ROLES = ['Admin', 'Manager', 'Staff', 'Viewer']
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
+//  Status badge 
 
 function StatusBadge({ status }: { status: string }) {
     const active = status === 'Active'
@@ -47,7 +47,7 @@ function StatusBadge({ status }: { status: string }) {
     )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+//  Page 
 
 const COLUMNS = ['Name', 'Username', 'Department', 'Role', 'Status', 'Created', 'Actions']
 
@@ -58,7 +58,7 @@ export function UsersPage() {
     const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
     const [nextId, setNextId] = useState(1)
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    //  Helpers 
 
     const filtered = rows.filter((r) => {
         const q = search.toLowerCase()
@@ -104,7 +104,7 @@ export function UsersPage() {
         setDeleteTarget(null)
     }
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    //  Render 
 
     return (
         <div className="p-6">

@@ -3,8 +3,7 @@ import type { ReactNode } from 'react'
 import type { AuthUser, LoginResponse, MenuPreset, AppEvent } from '@/types/auth.types'
 import { apiFetch } from '@/lib/api'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
+// Types
 interface StoredAuth {
     user: AuthUser
     token: string
@@ -24,14 +23,12 @@ interface AuthContextType {
     setCurrentEvent: (event: AppEvent | null) => void
 }
 
-// ─── Context ──────────────────────────────────────────────────────────────────
-
+// Context
 const AuthContext = createContext<AuthContextType | null>(null)
 
 const STORAGE_KEY = 'qdex_auth'
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
-
+// Provider
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null)
     const [token, setToken] = useState<string | null>(null)
@@ -96,21 +93,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const stored: StoredAuth = JSON.parse(raw)
                 stored.currentEvent = event
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
-            } catch { /* ignore */ }
+            } catch {
+                /* ignore */
+            }
         }
     }, [])
 
     return (
         <AuthContext.Provider
-            value={{ user, token, menu, currentEvent, initializing, loading, login, logout, setCurrentEvent }}
+            value={{
+                user,
+                token,
+                menu,
+                currentEvent,
+                initializing,
+                loading,
+                login,
+                logout,
+                setCurrentEvent,
+            }}
         >
             {children}
         </AuthContext.Provider>
     )
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
-
+// Hook
 export function useAuth(): AuthContextType {
     const ctx = useContext(AuthContext)
     if (!ctx) throw new Error('useAuth must be used within <AuthProvider>')

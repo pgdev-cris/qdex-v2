@@ -6,7 +6,7 @@ import type { Receipt } from '../types'
 import { fmtAmt, methodLabel } from '../helpers'
 import { COMPANY_NAME, RECEIPT_TITLE } from '../constants'
 
-// ─── Screen-only receipt row ──────────────────────────────────────────────────
+//  Screen-only receipt row 
 
 function ScreenRow({
     label,
@@ -25,7 +25,7 @@ function ScreenRow({
     )
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+//  Component 
 
 interface Props {
     receipt: Receipt

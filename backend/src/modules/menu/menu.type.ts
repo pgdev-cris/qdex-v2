@@ -1,14 +1,13 @@
 import { z } from 'zod';
 import { GetMenuPresetRequestParamsSchema, MenuRequestBodySchema } from './menu.schema';
 
-// ─── Request types ────────────────────────────────────────────────────────────
+// Request types
 
 export type MenuRequestBody = z.infer<typeof MenuRequestBodySchema>;
 
 export type GetMenuPresetRequestParams = z.infer<typeof GetMenuPresetRequestParamsSchema>;
 
-// ─── DB row types ─────────────────────────────────────────────────────────────
-
+// DB row types
 export interface MenuRow {
     id: number;
     parent_id: number | null;
@@ -22,8 +21,7 @@ export interface MenuRow {
     target_modal: string | null;
 }
 
-// ─── Response types ───────────────────────────────────────────────────────────
-
+// Response types
 export interface MenuTreeNode extends MenuRow {
     children: MenuTreeNode[];
 }

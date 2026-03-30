@@ -1,76 +1,79 @@
-// Partial Remittance Process
-//
-// 1. Supplier go to booth
-// 2. TRS scan QR code
-// 3. System will get suppliers info and transactions
-// 4. TRS will encode the actual cash remitted
-// 5. TRS will generate receipt for the transaction
+import PoolManager from '../../shared/db/pool.manager';
+import vendorProvider from '../../shared/providers/vendor.provider';
+import eventProvider from '../../shared/providers/event.provider';
+import SeriesRepository from '../../shared/repository/series.repository';
+import { generateRefCode } from '../../shared/utils/refcode.util';
+import remittanceRepository from './remittance.repository';
+import { validateLines } from './remittance.helper';
+import { BadRequestError } from '../../shared/errors';
+import { TRANSACTION_TYPE, TRANSACTION_STATUS, TENDER_TYPE } from '../../shared/constants';
+import { PartialRemitPayload, RemitResult } from './remittance.type';
 
-// Full remittance process
-// 1. Supplier go to booth
-// 2. TRS scan QR code
-// 3. System will get suppliers info and transactions
-// 4. TRS will encode the actual cash remitted and confirm other transactions
-// 5. TRS will generate receipt for the transaction
+// Series code to use to get the next series number.
+const SERIES_RECEIPT = 'TRX';
 
-export interface CreditPayments {
-    total_gcash: number;
-    total_pwallet: number;
-    total_homecredit: number;
-    total_credit_card: number;
-    total_debit_card: number;
-}
+const partialRemit = async (payload: PartialRemitPayload, userId: number): Promise<RemitResult> => {
+    const vendorCode = Number(payload.vendor_code);
+    const vendor = await vendorProvider.validateVendor(vendorCode);
 
-export interface Remittance {
-    vendor_code: string;
-    event_code: string;
-    // transaction_ids: number[]; // ← which transactions are being remitted
-    total_cash: number;
-    total_credit: number;
-    credit_payments: CreditPayments;
-    grand_total: number;
-    reference_code: string;
-    is_partial: boolean;
-    remitted_by: string;
-    received_by: string;
-    remitted_at: Date;
-}
+    validateLines(payload.lines);
 
-export interface RemittanceReceipt {
-    receipt_no: string;
-    remittance: Remittance;
-    generated_at: Date;
-}
+    const event = await eventProvider.getCurrentEvent();
 
-const saveRemittance = async (payload: Remittance): Promise<RemittanceReceipt> => {
-    // step 4: encode actual cash remitted
+    const totalAmount = payload.lines.reduce((sum, l) => sum + Number(l.amount), 0);
+    const now = new Date();
+    const referenceCode = generateRefCode();
 
-    return await generateReceipt(1);
-};
+    // Persist — series increment and inserts share one transaction
+    //   Keeping everything in one transaction ensures the series number is
+    //   rolled back alongside the inserts if anything fails, preventing gaps.
+    let receiptNo!: string;
 
-const generateReceipt = async (remittance_id: number): Promise<RemittanceReceipt> => {
+    await PoolManager.transaction(async (conn) => {
+        // Increment series inside the transaction so it rolls back on failure
+        const seriesRow = await SeriesRepository.incrementWithConnection(SERIES_RECEIPT, conn);
+        if (!seriesRow) {
+            throw new BadRequestError(`Series "${SERIES_RECEIPT}" not configured.`);
+        }
+
+        // Format for display/receipt only — store the raw int in the DB
+        const paddedSeq = String(seriesRow.last_sequence).padStart(seriesRow.pad_length, '0');
+        receiptNo = seriesRow.prefix ? `${seriesRow.prefix}${paddedSeq}` : paddedSeq;
+
+        const transactionId = await remittanceRepository.createTransaction(conn, {
+            event_id: event.id,
+            vendor_id: vendor.id,
+            transaction_no: seriesRow.last_sequence, // raw int, no prefix/padding
+            transacted_at: now,
+            total_amount: totalAmount,
+            reference_code: referenceCode,
+            remitted_by: payload.remitter_name.trim(),
+            verified_by: userId,
+            verified_at: now,
+            status: TRANSACTION_STATUS.VERIFIED,
+            type: TRANSACTION_TYPE.PARTIAL,
+        });
+
+        const details = payload.lines.map((l) => ({
+            transaction_id: transactionId,
+            tender_type: TENDER_TYPE[l.method.toUpperCase()],
+            amount: Number(l.amount),
+            transaction_count: 1,
+        }));
+
+        await remittanceRepository.createTransactionDetails(conn, details);
+    });
+
     return {
-        receipt_no: 'RCP-20250313-001',
-        remittance: {
-            vendor_code: 'VND-0001',
-            event_code: 'EVT-2025-001',
-            // transaction_ids: [1, 2, 3, 4, 5],
-            total_cash: 5000,
-            total_credit: 3500,
-            credit_payments: {
-                total_gcash: 1500,
-                total_pwallet: 500,
-                total_homecredit: 1000,
-                total_credit_card: 300,
-                total_debit_card: 200,
-            },
-            grand_total: 8500,
-            reference_code: 'REF-20250313-001',
-            is_partial: false,
-            remitted_by: 'Juan Dela Cruz',
-            received_by: 'TRS-001',
-            remitted_at: new Date(),
-        },
-        generated_at: new Date(),
+        receipt_no: receiptNo,
+        reference_code: referenceCode,
+        vendor_code: payload.vendor_code,
+        vendor_name: vendor.name,
+        remitter_name: payload.remitter_name.trim(),
+        remit_type: 'partial',
+        lines: payload.lines,
+        remitted_at: now.toISOString(),
     };
 };
+
+export default { partialRemit };

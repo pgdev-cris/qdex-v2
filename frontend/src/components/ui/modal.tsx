@@ -72,7 +72,7 @@ export function Modal({
     )
 }
 
-// ─── Generic confirm variant ──────────────────────────────────────────────────
+//  Generic confirm variant 
 
 export interface ConfirmRow {
     label: string
@@ -161,7 +161,7 @@ export function ConfirmModal({
     )
 }
 
-// ─── Delete confirmation variant ─────────────────────────────────────────────
+//  Delete confirmation variant 
 
 interface DeleteModalProps {
     open: boolean
@@ -200,7 +200,7 @@ export function DeleteModal({ open, label, onConfirm, onCancel }: DeleteModalPro
     )
 }
 
-// ─── Shared form field helpers ────────────────────────────────────────────────
+//  Shared form field helpers 
 
 interface FieldProps {
     label: string

@@ -1,5 +1,4 @@
-// ─── User ─────────────────────────────────────────────────────────────────────
-
+// User
 export interface AuthUser {
     auto_id: number
     user_name: string
@@ -11,8 +10,7 @@ export interface AuthUser {
     user_status: string
 }
 
-// ─── Event ────────────────────────────────────────────────────────────────────
-
+// Event
 export interface AppEvent {
     id: number
     name: string
@@ -22,8 +20,7 @@ export interface AppEvent {
     status: 0 | 1 // 0 = inactive, 1 = active
 }
 
-// ─── Menu tree ────────────────────────────────────────────────────────────────
-
+// Menu tree
 export interface MenuTreeNode {
     id: number
     parent_id: number | null
@@ -44,8 +41,7 @@ export interface MenuPreset {
     menus: MenuTreeNode[]
 }
 
-// ─── API responses ────────────────────────────────────────────────────────────
-
+// API responses
 export interface LoginResponse {
     message: string
     data: AuthUser & {

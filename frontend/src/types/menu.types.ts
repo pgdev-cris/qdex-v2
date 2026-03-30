@@ -1,9 +1,9 @@
-// ─── Shared primitives ────────────────────────────────────────────────────────
+// Shared primitives
 
 /** Database bit(1) stored as 0 or 1 */
 type ActiveFlag = 0 | 1
 
-// ─── Child item sent inside a parent request ──────────────────────────────────
+// Child item sent inside a parent request
 
 export interface MenuChildPayload {
     name: string
@@ -15,8 +15,7 @@ export interface MenuChildPayload {
     is_active: ActiveFlag
 }
 
-// ─── menu row shape shared by both request types ──────────────────────────────
-
+// menu row shape shared by both request types
 interface BaseMenuFields {
     name: string
     icon: string | null
@@ -37,7 +36,7 @@ interface ChildMenuFields extends BaseMenuFields {
     target: string
 }
 
-// ─── Request body variants ────────────────────────────────────────────────────
+// Request body variants
 
 export interface ParentMenuRequestBody {
     menu: ParentMenuFields
@@ -53,11 +52,11 @@ export interface ChildMenuRequestBody {
     preset_ids: number[]
 }
 
-// ─── Union ────────────────────────────────────────────────────────────────────
+// Union
 
 export type MenuRequestBody = ParentMenuRequestBody | ChildMenuRequestBody
 
-// ─── Type guards ──────────────────────────────────────────────────────────────
+// Type guards
 
 export function isParentMenuRequest(body: MenuRequestBody): body is ParentMenuRequestBody {
     return body.menu.parent_id === null

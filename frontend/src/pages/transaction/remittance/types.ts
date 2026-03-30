@@ -41,7 +41,7 @@ export interface Receipt {
     event_code: string
 }
 
-// ─── Remittance API ───────────────────────────────────────────────────────────
+//  Remittance API 
 
 export interface RemittanceApiData {
     receipt_no: string

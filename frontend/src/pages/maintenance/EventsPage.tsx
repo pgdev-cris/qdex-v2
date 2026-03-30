@@ -8,7 +8,7 @@ import { apiFetch } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import type { AppEvent } from '@/types/auth.types'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types
 
 interface ApiListResponse {
     status: number
@@ -31,7 +31,7 @@ const BLANK: FormData = {
     period_end: '',
 }
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
+// Status badge
 
 function StatusBadge({ status }: { status: 0 | 1 }) {
     return status === 1 ? (
@@ -46,7 +46,7 @@ function StatusBadge({ status }: { status: 0 | 1 }) {
     )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+//  Page
 
 const COLUMNS = ['Code', 'Event Name', 'Period Start', 'Period End', 'Status', 'Actions']
 
@@ -59,10 +59,14 @@ export function EventsPage() {
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    const [modal, setModal] = useState<{ mode: 'add' | 'edit'; data: FormData; id?: number } | null>(null)
+    const [modal, setModal] = useState<{
+        mode: 'add' | 'edit'
+        data: FormData
+        id?: number
+    } | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<AppEvent | null>(null)
 
-    // ── Fetch ──────────────────────────────────────────────────────────────────
+    //  Fetch
 
     const fetchEvents = useCallback(async () => {
         setLoading(true)
@@ -77,16 +81,15 @@ export function EventsPage() {
         }
     }, [])
 
-    useEffect(() => { fetchEvents() }, [fetchEvents])
+    useEffect(() => {
+        fetchEvents()
+    }, [fetchEvents])
 
-    // ── Helpers ────────────────────────────────────────────────────────────────
+    //  Helpers
 
     const filtered = rows.filter((r) => {
         const q = search.toLowerCase()
-        return (
-            r.code.toLowerCase().includes(q) ||
-            r.name.toLowerCase().includes(q)
-        )
+        return r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)
     })
 
     function openAdd() {
@@ -107,10 +110,10 @@ export function EventsPage() {
     }
 
     function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
-        setModal((m) => m ? { ...m, data: { ...m.data, [key]: value } } : m)
+        setModal((m) => (m ? { ...m, data: { ...m.data, [key]: value } } : m))
     }
 
-    // ── Save (create / update) ─────────────────────────────────────────────────
+    //  Save (create / update)
 
     async function handleSave() {
         if (!modal) return
@@ -148,7 +151,7 @@ export function EventsPage() {
         }
     }
 
-    // ── Delete ─────────────────────────────────────────────────────────────────
+    //  Delete
 
     async function handleDelete() {
         if (!deleteTarget) return
@@ -172,7 +175,7 @@ export function EventsPage() {
         }
     }
 
-    // ── Set Active ─────────────────────────────────────────────────────────────
+    //  Set Active
 
     async function handleSetActive(event: AppEvent) {
         setSaving(true)
@@ -192,14 +195,18 @@ export function EventsPage() {
         }
     }
 
-    // ── Format ─────────────────────────────────────────────────────────────────
+    //  Format
 
     function fmtDate(d: string | null) {
         if (!d) return '—'
-        return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: '2-digit' })
+        return new Date(d).toLocaleDateString('en-PH', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+        })
     }
 
-    // ── Render ─────────────────────────────────────────────────────────────────
+    //  Render
 
     return (
         <div className="p-6">
@@ -270,23 +277,40 @@ export function EventsPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={COLUMNS.length} className="text-muted-foreground py-16 text-center text-sm">
+                                    <td
+                                        colSpan={COLUMNS.length}
+                                        className="text-muted-foreground py-16 text-center text-sm"
+                                    >
                                         Loading events…
                                     </td>
                                 </tr>
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={COLUMNS.length} className="text-muted-foreground py-16 text-center text-sm">
-                                        {search ? 'No events match your search.' : 'No events yet. Click Create Event to get started.'}
+                                    <td
+                                        colSpan={COLUMNS.length}
+                                        className="text-muted-foreground py-16 text-center text-sm"
+                                    >
+                                        {search
+                                            ? 'No events match your search.'
+                                            : 'No events yet. Click Create Event to get started.'}
                                     </td>
                                 </tr>
                             ) : (
                                 filtered.map((event) => (
-                                    <tr key={event.id} className="border-b last:border-0 hover:bg-muted/40">
-                                        <td className="px-4 py-3 font-mono text-xs font-medium">{event.code}</td>
+                                    <tr
+                                        key={event.id}
+                                        className="border-b last:border-0 hover:bg-muted/40"
+                                    >
+                                        <td className="px-4 py-3 font-mono text-xs font-medium">
+                                            {event.code}
+                                        </td>
                                         <td className="px-4 py-3 font-medium">{event.name}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{fmtDate(event.period_start)}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{fmtDate(event.period_end)}</td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {fmtDate(event.period_start)}
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {fmtDate(event.period_end)}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <StatusBadge status={event.status} />
                                         </td>
@@ -342,7 +366,11 @@ export function EventsPage() {
                             Cancel
                         </Button>
                         <Button onClick={handleSave} disabled={saving}>
-                            {saving ? 'Saving…' : modal?.mode === 'add' ? 'Create Event' : 'Save Changes'}
+                            {saving
+                                ? 'Saving…'
+                                : modal?.mode === 'add'
+                                  ? 'Create Event'
+                                  : 'Save Changes'}
                         </Button>
                     </>
                 }
@@ -382,9 +410,7 @@ export function EventsPage() {
                                 />
                             </FormField>
                         </FormRow>
-                        {error && (
-                            <p className="text-sm text-destructive">{error}</p>
-                        )}
+                        {error && <p className="text-sm text-destructive">{error}</p>}
                     </div>
                 )}
             </Modal>

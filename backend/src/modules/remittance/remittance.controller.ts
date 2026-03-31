@@ -21,7 +21,7 @@ const validateBody = (body: PartialRemitPayload | FullRemitPayload, res: Respons
 
 const partialRemitRequest = async (req: Request, res: Response) => {
     const body = req.body as PartialRemitPayload;
-    const userId: number = (req as any).user?.auto_id;
+    const userId: number = (req as any).user?.id;
 
     validateBody(body, res);
 
@@ -36,7 +36,7 @@ const partialRemitRequest = async (req: Request, res: Response) => {
 
 const fullRemitRequest = async (req: Request, res: Response) => {
     const body = req.body as FullRemitPayload;
-    const userId: number = (req as any).user?.auto_id;
+    const userId: number = (req as any).user?.id;
 
     validateBody(body, res);
 

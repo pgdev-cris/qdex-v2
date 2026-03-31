@@ -1,8 +1,8 @@
 import type { Receipt } from '../types'
 import { fmtAmt, methodLabel } from '../helpers'
-import { COMPANY_NAME, RECEIPT_TITLE, LINE_DASHES, LINE_EQUALS } from '../constants'
+import { COMPANY_NAME, RECEIPT_TITLE } from '../constants'
 
-//  Row helper
+//  Helpers
 
 function Row({ label, value }: { label: string; value: string }) {
     return (
@@ -13,7 +13,36 @@ function Row({ label, value }: { label: string; value: string }) {
     )
 }
 
+function Divider({ style }: { style?: React.CSSProperties }) {
+    return (
+        <hr
+            style={{
+                border: 'none',
+                borderTop: '1px dashed #000',
+                margin: '5pt 0',
+                ...style,
+            }}
+        />
+    )
+}
+
+function DividerSolid({ style }: { style?: React.CSSProperties }) {
+    return (
+        <hr
+            style={{
+                border: 'none',
+                borderTop: '1px solid #000',
+                margin: '5pt 0',
+                ...style,
+            }}
+        />
+    )
+}
+
 //  Single copy block
+
+const gap = { marginTop: '8pt' }
+const gapSm = { marginTop: '5pt' }
 
 function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string }) {
     const cashLine = receipt.lines.find((l) => l.method === 'CASH')
@@ -25,17 +54,17 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
     return (
         <div>
             {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: '4pt', lineHeight: '1.4' }}>
-                <div style={{ fontWeight: 'bold' }}>{COMPANY_NAME}</div>
+            <div style={{ textAlign: 'center', marginBottom: '8pt', lineHeight: '1.6' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '12pt' }}>{COMPANY_NAME}</div>
                 <div>{receipt.event_name}</div>
                 <div>{RECEIPT_TITLE}</div>
-                <div>{copyLabel}</div>
+                <div style={{ fontWeight: 'bold' }}>{copyLabel}</div>
             </div>
 
-            <div>{LINE_DASHES}</div>
+            <Divider />
 
             {/* Transaction info */}
-            <div style={{ marginTop: '3pt' }}>
+            <div style={{ lineHeight: '1.8' }}>
                 <Row label="Trans No:" value={receipt.trans_no} />
                 <div>Verified Date: {receipt.verified_at}</div>
                 <Row label="Ref Code:" value={receipt.ref_code} />
@@ -47,27 +76,29 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                 {receipt.remitter_name && <div>Remitter: {receipt.remitter_name}</div>}
             </div>
 
+            <Divider />
+
             {/* Payment Details */}
-            <div style={{ marginTop: '4pt' }}>Payment Details:</div>
+            <div style={{ fontWeight: 'bold' }}>Payment Details:</div>
 
             {/* Cash Breakdown */}
             {cashLine && (
-                <div style={{ marginTop: '2pt' }}>
-                    <div>Cash Breakdown</div>
+                <div style={{ ...gapSm, lineHeight: '1.8' }}>
+                    <div style={{ fontWeight: 'bold' }}>Cash Breakdown</div>
                     <Row label="  Cash Amt:" value={fmtAmt(cashTotal)} />
                 </div>
             )}
 
             {/* Cards Breakdown */}
             {cardLines.length > 0 && (
-                <div style={{ marginTop: '2pt' }}>
-                    <div>Cards Breakdown</div>
+                <div style={{ ...gapSm, lineHeight: '1.8' }}>
+                    <div style={{ fontWeight: 'bold' }}>Cards Breakdown</div>
                     {cardLines.map((l) => (
                         <div
                             key={l.method}
                             style={{ display: 'flex', justifyContent: 'space-between' }}
                         >
-                            <span> {methodLabel(l.method)}</span>
+                            <span>  {methodLabel(l.method)}</span>
                             <span>Amt: {fmtAmt(l.amount)}</span>
                         </div>
                     ))}
@@ -75,35 +106,35 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                 </div>
             )}
 
+            <Divider />
+
             {/* Total */}
             <div
                 style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    marginTop: '3pt',
                     fontWeight: 'bold',
+                    fontSize: '12pt',
                 }}
             >
-                <span>Total:</span>
+                <span>TOTAL:</span>
                 <span>{fmtAmt(grandTotal)}</span>
             </div>
 
-            <div style={{ marginTop: '4pt' }}>{LINE_EQUALS}</div>
+            <DividerSolid />
 
             {/* Signatures */}
-            <div style={{ marginTop: '3pt', textAlign: 'center' }}>Trs User</div>
-            <div style={{ textAlign: 'center' }}>{'_'.repeat(39)}</div>
+            <div style={{ ...gap, textAlign: 'center' }}>Trs User</div>
+            <div style={{ textAlign: 'center', marginTop: '20pt' }}>{'_'.repeat(30)}</div>
 
-            <div style={{ marginTop: '4pt', textAlign: 'center' }}>
-                Printed by {receipt.printed_by}
-            </div>
-            <div style={{ textAlign: 'center' }}>{'_'.repeat(39)}</div>
+            <div style={{ ...gap, textAlign: 'center' }}>Printed by {receipt.printed_by}</div>
+            <div style={{ textAlign: 'center', marginTop: '20pt' }}>{'_'.repeat(30)}</div>
 
-            <div style={{ marginTop: '4pt' }}>Acknowledge by: {receipt.printed_by}</div>
+            <div style={{ ...gap }}>Acknowledge by: {receipt.printed_by}</div>
 
-            <div style={{ marginTop: '4pt' }}>{LINE_EQUALS}</div>
+            <DividerSolid />
 
-            <div style={{ marginTop: '3pt' }}>Gen Date: # {receipt.gen_at}</div>
+            <div style={gapSm}>Gen Date: {receipt.gen_at}</div>
         </div>
     )
 }
@@ -131,13 +162,13 @@ export function ThermalReceipt({ receipt }: Props) {
                         position: absolute !important;
                         top: 0; left: 0;
                         width: 4.25in;
-                        padding: 0.12in 0.14in;
+                        padding: 0.18in 0.16in;
                         box-sizing: border-box;
                         background: #fff;
-                        font-family: 'Courier New', Courier, monospace;
-                        font-size: 8pt;
+                        font-family: Arial, Helvetica, sans-serif;
+                        font-size: 10.5pt;
                         color: #000;
-                        line-height: 1.35;
+                        line-height: 1.6;
                     }
 
                     #qdex-thermal * { visibility: visible !important; }

@@ -8,5 +8,5 @@ export const RECEIPT_TITLE = 'Takeout Official Receipt'
 export const SALES_FETCH_PATH = '/api/v1/sales/supplier'
 
 //  Thermal receipt lines
-export const LINE_DASHES = '-'.repeat(45)
-export const LINE_EQUALS = '-'.repeat(41)
+export const LINE_DASHES = '-'.repeat(48)
+export const LINE_EQUALS = '-'.repeat(48)

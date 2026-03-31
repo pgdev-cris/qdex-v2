@@ -1,5 +1,5 @@
 import repository from './reports.repository';
-import { RemittanceReportQuery } from './reports.schema';
+import { RemittanceReportQuery, TransactionReportQuery } from './reports.schema';
 
 const getRemittanceReport = async (query: RemittanceReportQuery) => {
     const [transactions, summary] = await Promise.all([
@@ -17,8 +17,13 @@ const getRemittanceById = async (id: number) => {
     return await repository.getRemittanceById(id);
 };
 
+const getTransactionReport = async (query: TransactionReportQuery) => {
+    return await repository.getTransactions(query);
+};
+
 export default {
     getRemittanceReport,
     getRemittanceSummary,
     getRemittanceById,
+    getTransactionReport,
 };

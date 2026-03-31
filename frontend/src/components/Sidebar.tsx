@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/contexts/AuthContext'
 import type { MenuTreeNode } from '@/types/auth.types'
 import { toTitleCase } from '@/utils/string.utils.ts'
+import { TransactionReportModal } from '@/components/modals/TransactionReportModal'
 
 //  Icon map (string from DB → lucide component)
 
@@ -56,7 +57,15 @@ const navItemChild = 'text-sidebar-foreground/50'
 
 //  Single sidebar item (recursive)
 
-function SidebarItem({ node, depth = 0 }: { node: MenuTreeNode; depth?: number }) {
+function SidebarItem({
+    node,
+    depth = 0,
+    onOpenModal,
+}: {
+    node: MenuTreeNode
+    depth?: number
+    onOpenModal: (target: string) => void
+}) {
     const [open, setOpen] = useState(true)
     const hasChildren = node.children.length > 0
 
@@ -82,7 +91,12 @@ function SidebarItem({ node, depth = 0 }: { node: MenuTreeNode; depth?: number }
                 {open && (
                     <div className="ml-4.5 mt-0.5 flex flex-col gap-0.5 border-l border-sidebar-border pl-2">
                         {node.children.map((child: MenuTreeNode) => (
-                            <SidebarItem key={child.id} node={child} depth={depth + 1} />
+                            <SidebarItem
+                                key={child.id}
+                                node={child}
+                                depth={depth + 1}
+                                onOpenModal={onOpenModal}
+                            />
                         ))}
                     </div>
                 )}
@@ -110,12 +124,12 @@ function SidebarItem({ node, depth = 0 }: { node: MenuTreeNode; depth?: number }
         )
     }
 
-    // Modal-target leaf — placeholder for modal integration
+    // Modal-target leaf — fires onOpenModal with the target_modal key
     return (
         <Button
             variant="ghost"
             size="sm"
-            onClick={() => console.log('[Sidebar] open modal:', node.target_modal)}
+            onClick={() => node.target_modal && onOpenModal(node.target_modal)}
             className={cn(navItemBase, depth > 0 && navItemChild)}
         >
             <MenuIcon name={node.icon} />
@@ -178,6 +192,7 @@ export function Sidebar() {
     const { user, menu, currentEvent, logout } = useAuth()
     const navigate = useNavigate()
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+    const [activeModal, setActiveModal] = useState<string | null>(null)
 
     const handleLogoutConfirm = () => {
         setShowLogoutConfirm(false)
@@ -224,7 +239,11 @@ export function Sidebar() {
                 <nav className="flex-1 overflow-y-auto px-2 py-3">
                     <div className="flex flex-col gap-0.5">
                         {menu?.menus?.map((node: MenuTreeNode) => (
-                            <SidebarItem key={node.id} node={node} />
+                            <SidebarItem
+                                key={node.id}
+                                node={node}
+                                onOpenModal={setActiveModal}
+                            />
                         ))}
                     </div>
                 </nav>
@@ -257,6 +276,12 @@ export function Sidebar() {
                 open={showLogoutConfirm}
                 onConfirm={handleLogoutConfirm}
                 onCancel={() => setShowLogoutConfirm(false)}
+            />
+
+            {/* Modal registry — add new modals here as target_modal keys grow */}
+            <TransactionReportModal
+                open={activeModal === 'generate-transaction-report'}
+                onClose={() => setActiveModal(null)}
             />
         </>
     )

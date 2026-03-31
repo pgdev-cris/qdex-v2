@@ -1,6 +1,6 @@
 import PoolManager from '../../shared/db/pool.manager';
 import { RemittanceRecord, RemittanceSummary } from '../../shared/types';
-import { RemittanceReportQuery } from './reports.schema';
+import { RemittanceReportQuery, TransactionReportQuery } from './reports.schema';
 
 const POOL = 'auth-pool';
 
@@ -115,8 +115,83 @@ const getRemittanceById = async (id: number): Promise<RemittanceRecord | null> =
     return rows?.[0] ?? null;
 };
 
+export interface TransactionReportRow {
+    id: number;
+    receipt_no: string;
+    reference_code: string;
+    supplier_code: number;
+    supplier_name: string;
+    event_code: string;
+    event_name: string;
+    type: number;
+    status: number;
+    total_amount: number;
+    remitted_by: string;
+    transacted_at: string;
+}
+
+const getTransactions = async (query: TransactionReportQuery): Promise<TransactionReportRow[]> => {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    if (query.from) {
+        conditions.push('DATE(t.transacted_at) >= ?');
+        params.push(query.from);
+    }
+    if (query.to) {
+        conditions.push('DATE(t.transacted_at) <= ?');
+        params.push(query.to);
+    }
+    if (query.supplier_code) {
+        conditions.push('v.code = ?');
+        params.push(Number(query.supplier_code));
+    }
+    if (query.event_code) {
+        conditions.push('e.code = ?');
+        params.push(query.event_code.toUpperCase());
+    }
+    if (query.type !== undefined) {
+        conditions.push('t.type = ?');
+        params.push(Number(query.type));
+    }
+    if (query.status !== undefined) {
+        conditions.push('t.status = ?');
+        params.push(Number(query.status));
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const limit = Math.floor(Number(query.limit ?? 5000));
+    const offset = Math.floor(Number(query.offset ?? 0));
+
+    const sql = `
+        SELECT
+            t.id,
+            CONCAT(COALESCE(s.prefix, ''), LPAD(t.transaction_no, COALESCE(s.pad_length, 6), '0')) AS receipt_no,
+            t.reference_code,
+            v.code  AS supplier_code,
+            v.name  AS supplier_name,
+            e.code  AS event_code,
+            e.name  AS event_name,
+            t.type,
+            t.status,
+            t.total_amount,
+            t.remitted_by,
+            t.transacted_at
+        FROM tbl_transactions t
+        INNER JOIN tbl_suppliers v ON v.id = t.supplier_id
+        INNER JOIN tbl_events   e ON e.id = t.event_id
+        LEFT  JOIN tbl_series   s ON s.code = 'TRX'
+        ${where}
+        ORDER BY t.id DESC
+        LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    return (await PoolManager.query<TransactionReportRow[]>(sql, params, POOL)) ?? [];
+};
+
 export default {
     getRemittances,
     getRemittanceSummary,
     getRemittanceById,
+    getTransactions,
 };

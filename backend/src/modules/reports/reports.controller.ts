@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import service from './reports.service';
 import { HTTP_STATUS } from '../../shared/constants';
-import { RemittanceReportQuery } from './reports.schema';
+import { RemittanceReportQuery, TransactionReportQuery } from './reports.schema';
 
 /**
  * GET /api/v1/reports/remittances
@@ -52,8 +52,23 @@ const getRemittanceDetailRequest = async (req: Request, res: Response) => {
     });
 };
 
+/**
+ * GET /api/v1/reports/transactions
+ * Query params: from, to, supplier_code, event_code, type, status, limit, offset
+ */
+const getTransactionReportRequest = async (req: Request, res: Response) => {
+    const query = req.query as TransactionReportQuery;
+    const rows = await service.getTransactionReport(query);
+    return res.status(HTTP_STATUS.OK).json({
+        status: HTTP_STATUS.OK,
+        message: 'Transaction report generated successfully',
+        data: rows,
+    });
+};
+
 export default {
     getRemittanceReportRequest,
     getRemittanceSummaryRequest,
     getRemittanceDetailRequest,
+    getTransactionReportRequest,
 };

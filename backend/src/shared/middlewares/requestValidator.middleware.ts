@@ -24,7 +24,9 @@ export const requestValidator =
 
             if (!result.success) {
                 errors[target] = result.error.issues;
-            } else {
+            } else if (target !== 'query') {
+                // Express v5 makes req.query a getter-only property — skip reassignment.
+                // body and params are writable so we still apply coerced/defaulted values.
                 (req as unknown as Record<string, unknown>)[target] = result.data;
             }
         }

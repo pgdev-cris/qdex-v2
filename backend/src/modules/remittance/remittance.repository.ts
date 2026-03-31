@@ -4,7 +4,7 @@ import { PoolConnection } from 'mysql2/promise';
 
 export interface InsertTransactionData {
     event_id: number;
-    vendor_id: number;
+    supplier_id: number;
     transaction_no: number;
     transacted_at: Date;
     total_amount: number;
@@ -31,12 +31,12 @@ const createTransaction = async (
 ): Promise<number> => {
     const [result] = await conn.execute(
         `INSERT INTO tbl_transactions
-            (event_id, vendor_id, transaction_no, transacted_at, total_amount, reference_code,
+            (event_id, supplier_id, transaction_no, transacted_at, total_amount, reference_code,
              remitted_by, verified_by, verified_at, status, type)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             data.event_id,
-            data.vendor_id,
+            data.supplier_id,
             data.transaction_no,
             data.transacted_at,
             data.total_amount,

@@ -2,8 +2,8 @@ import { RowDataPacket } from 'mysql2/promise';
 
 export interface RemittanceRecord extends RowDataPacket {
     remittance_id: number;
-    vendor_code: string;
-    vendor_name: string | null;
+    supplier_code: string;
+    supplier_name: string | null;
     event_code: string;
     total_cash: number;
     total_gcash: number;

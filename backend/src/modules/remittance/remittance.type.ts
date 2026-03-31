@@ -4,22 +4,37 @@ export interface RemitLine {
 }
 
 export interface PartialRemitPayload {
-    vendor_code: string;
+    supplier_code: string;
     remitter_name: string;
     lines: RemitLine[];
 }
 
 export interface FullRemitPayload {
-    vendor_code: string;
+    supplier_code: string;
     remitter_name: string;
     lines: RemitLine[];
+}
+
+export interface Receipt {
+    trans_no: string;
+    ref_code: string;
+    supplier_code: string;
+    supplier_name: string;
+    remitter_name: string;
+    remit_type: 'partial' | 'full';
+    lines: RemitLine[];
+    verified_at: string;
+    gen_at: string;
+    printed_by: string;
+    event_name: string;
+    event_code: string;
 }
 
 export interface RemitResult {
     receipt_no: string;
     reference_code: string;
-    vendor_code: string;
-    vendor_name: string;
+    supplier_code: string;
+    supplier_name: string;
     remitter_name: string;
     remit_type: 'partial' | 'full';
     lines: RemitLine[];

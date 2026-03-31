@@ -27,7 +27,7 @@ const getSupplierById = async (id: number): Promise<Supplier | null> => {
 
 const getSupplierByCode = async (code: number): Promise<Supplier | null> => {
     const query = `
-        SELECT id FROM tbl_suppliers WHERE code = ? LIMIT 1
+        SELECT * FROM tbl_suppliers WHERE code = ? LIMIT 1
     `;
     const rows = await PoolManager.query<Supplier[]>(query, [code], POOL);
     return rows?.[0] ?? null;

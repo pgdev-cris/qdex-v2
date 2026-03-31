@@ -8,8 +8,8 @@ import { fmt, methodLabel } from '../helpers'
 
 interface Props {
     remitType: RemitType
-    vendorCode: string
-    vendorName: string
+    supplierCode: string
+    supplierName: string
     salesData: SalesRecord[]
     cashRecord: SalesRecord | undefined
     cashAmount: string
@@ -22,8 +22,8 @@ interface Props {
 
 export function RemittanceForm({
     remitType,
-    vendorCode,
-    vendorName,
+    supplierCode,
+    supplierName,
     salesData,
     cashRecord,
     cashAmount,
@@ -42,10 +42,10 @@ export function RemittanceForm({
                             {remitType === 'partial' ? 'Partial Remittance' : 'Full Remittance'}
                         </CardTitle>
                         <CardDescription>
-                            Vendor:{' '}
-                            <span className="font-medium text-foreground">{vendorCode}</span>
-                            {vendorName && (
-                                <span className="ml-1 text-foreground">— {vendorName}</span>
+                            Supplier:{' '}
+                            <span className="font-medium text-foreground">{supplierCode}</span>
+                            {supplierName && (
+                                <span className="ml-1 text-foreground">— {supplierName}</span>
                             )}
                         </CardDescription>
                     </div>

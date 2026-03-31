@@ -6,23 +6,30 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 interface Props {
     inputRef: RefObject<HTMLInputElement | null>
-    vendorInput: string
+    supplierInput: string
     loading: boolean
     error: string | null
     onChange: (value: string) => void
     onSearch: () => void
 }
 
-export function VendorSearch({ inputRef, vendorInput, loading, error, onChange, onSearch }: Props) {
+export function SupplierSearch({
+    inputRef,
+    supplierInput,
+    loading,
+    error,
+    onChange,
+    onSearch,
+}: Props) {
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Search className="h-4 w-4" />
-                    Find Vendor
+                    Find Supplier
                 </CardTitle>
                 <CardDescription>
-                    Scan the QR code with the handheld scanner, or type the vendor code manually.
+                    Scan the QR code with the handheld scanner, or type the supplier code manually.
                 </CardDescription>
             </CardHeader>
 
@@ -58,9 +65,9 @@ export function VendorSearch({ inputRef, vendorInput, loading, error, onChange, 
                     <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
                     <Input
                         ref={inputRef}
-                        placeholder="Vendor code..."
+                        placeholder="Supplier code..."
                         className="pl-8 uppercase"
-                        value={vendorInput}
+                        value={supplierInput}
                         onChange={(e) => onChange(e.target.value.toUpperCase())}
                         onKeyDown={(e) => e.key === 'Enter' && onSearch()}
                         disabled={loading}
@@ -77,7 +84,7 @@ export function VendorSearch({ inputRef, vendorInput, loading, error, onChange, 
                 <Button
                     className="w-full"
                     onClick={onSearch}
-                    disabled={loading || !vendorInput.trim()}
+                    disabled={loading || !supplierInput.trim()}
                 >
                     {loading ? (
                         <>
@@ -87,7 +94,7 @@ export function VendorSearch({ inputRef, vendorInput, loading, error, onChange, 
                     ) : (
                         <>
                             <Search className="h-4 w-4" />
-                            Search Vendor
+                            Search Supplier
                         </>
                     )}
                 </Button>

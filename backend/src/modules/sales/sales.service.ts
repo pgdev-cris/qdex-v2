@@ -1,10 +1,10 @@
-import vendorProvider from '../../shared/providers/vendor.provider';
+import supplierProvider from '../../shared/providers/supplier.provider';
 
-const getVendorSales = async (vendorCode: number) => {
-    const vendor = await vendorProvider.validateVendor(vendorCode);
+const getSupplierSales = async (supplierCode: number) => {
+    const supplier = await supplierProvider.validateSupplier(supplierCode);
 
     const baseUrl = process.env.SALES_API_URL ?? 'http://192.168.110.90:4003/qdex';
-    const url = `${baseUrl}/fetch-sales/${encodeURIComponent(vendorCode)}`;
+    const url = `${baseUrl}/fetch-sales/${encodeURIComponent(supplierCode)}`;
 
     try {
         const response = await fetch(url, {
@@ -18,9 +18,9 @@ const getVendorSales = async (vendorCode: number) => {
         console.log(json);
 
         return {
-            vendor: vendor,
+            supplier: supplier,
             sales: json.data,
-            total_amount: getVendorSalesTotalAmount(json.data),
+            total_amount: getSupplierSalesTotalAmount(json.data),
         };
     } catch (err: unknown) {
         console.error('Error fetching sales:', err);
@@ -31,10 +31,10 @@ const getVendorSales = async (vendorCode: number) => {
     }
 };
 
-const getVendorSalesMock = async (vendorCode: number) => {
-    const vendor = await vendorProvider.validateVendor(vendorCode);
+const getSupplierSalesMock = async (supplierCode: number) => {
+    const supplier = await supplierProvider.validateSupplier(supplierCode);
 
-    const vendorSales = [
+    const supplierSales = [
         {
             payment_method: 'CASH',
             total: '6055.37',
@@ -58,15 +58,15 @@ const getVendorSalesMock = async (vendorCode: number) => {
     ] as SalesRecord[];
 
     return {
-        vendor: vendor,
-        sales: vendorSales,
-        total_amount: getVendorSalesTotalAmount(vendorSales),
+        supplier: supplier,
+        sales: supplierSales,
+        total_amount: getSupplierSalesTotalAmount(supplierSales),
     };
 };
 
-const getVendorSalesTotalAmount = (sales: SalesRecord[]): string => {
+const getSupplierSalesTotalAmount = (sales: SalesRecord[]): string => {
     const totalAmount = sales.reduce((sum, sale) => sum + parseFloat(sale.total), 0);
     return parseFloat(totalAmount.toFixed(2)).toString();
 };
 
-export default { getVendorSales, getVendorSalesMock };
+export default { getSupplierSales, getSupplierSalesMock };

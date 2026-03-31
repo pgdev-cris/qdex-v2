@@ -2,8 +2,8 @@ export interface TransactionRow {
     id: number;
     receipt_no: string;
     reference_code: string;
-    vendor_code: number;
-    vendor_name: string;
+    supplier_code: number;
+    supplier_name: string;
     event_name: string;
     event_code: string;
     type: number;

@@ -25,7 +25,7 @@ import { fmtReceiptDate, fmt, methodLabel } from './helpers'
 
 import { StepIndicator } from './components/StepIndicator'
 import { ThermalReceipt } from './components/ThermalReceipt'
-import { VendorSearch } from './components/VendorSearch'
+import { SupplierSearch } from './components/SupplierSearch.tsx'
 import { SelectType } from './components/SelectType'
 import { RemittanceForm } from './components/RemittanceForm'
 import { ReceiptPreview } from './components/ReceiptPreview'
@@ -36,8 +36,8 @@ import type { ConfirmRow } from '@/components/ui/modal'
 
 interface ContextPanelProps {
     step: Step
-    vendorCode: string
-    vendorName: string
+    supplierCode: string
+    supplierName: string
     remitterName: string
     remitType: RemitType | null
     salesData: SalesRecord[]
@@ -67,8 +67,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function ContextPanel({
     step,
-    vendorCode,
-    vendorName,
+    supplierCode,
+    supplierName,
     remitterName,
     remitType,
     salesData,
@@ -85,11 +85,11 @@ function ContextPanel({
                         {[
                             {
                                 icon: ScanLine,
-                                text: 'Aim the handheld scanner at the vendor QR code',
+                                text: 'Aim the handheld scanner at the supplier QR code',
                             },
                             {
                                 icon: Building2,
-                                text: 'Confirm the vendor and enter the remitter name',
+                                text: 'Confirm the supplier and enter the remitter name',
                             },
                             { icon: BadgeDollarSign, text: 'Choose partial or full remittance' },
                             { icon: ArrowLeftRight, text: 'Enter the cash amount and submit' },
@@ -119,8 +119,8 @@ function ContextPanel({
             <div className="flex flex-col gap-6">
                 <Section title="Remittance Summary">
                     <InfoRow
-                        label="Vendor"
-                        value={vendorName ? `${vendorCode} - ${vendorName}` : vendorCode}
+                        label="Supplier"
+                        value={supplierName ? `${supplierCode} - ${supplierName}` : supplierCode}
                     />
                 </Section>
 
@@ -199,8 +199,8 @@ function ContextPanel({
                     <InfoRow label="Trans No." value={receipt.trans_no} />
                     <InfoRow label="Ref Code" value={receipt.ref_code} />
                     <InfoRow
-                        label="Vendor"
-                        value={`(${receipt.vendor_code}) ${receipt.vendor_name}`}
+                        label="Supplier"
+                        value={`(${receipt.supplier_code}) ${receipt.supplier_name}`}
                     />
                     <InfoRow label="Remitter" value={receipt.remitter_name} />
                     <InfoRow
@@ -226,8 +226,8 @@ function ContextPanel({
 function buildReceiptFromApi(
     apiData: NonNullable<RemittanceApiResponse['data']>,
     remitType: RemitType,
-    vendorCode: string,
-    vendorName: string,
+    supplierCode: string,
+    supplierName: string,
     remitterName: string,
     printedBy: string,
     eventName: string,
@@ -236,8 +236,8 @@ function buildReceiptFromApi(
     return {
         trans_no: apiData.receipt_no,
         ref_code: apiData.reference_code,
-        vendor_code: vendorCode,
-        vendor_name: vendorName,
+        supplier_code: supplierCode,
+        supplier_name: supplierName,
         remitter_name: remitterName,
         remit_type: remitType,
         lines: apiData.lines,
@@ -255,9 +255,9 @@ export function RemittancePage() {
 
     // Wizard state
     const [step, setStep] = useState<Step>('search')
-    const [vendorCode, setVendorCode] = useState('')
-    const [vendorName, setVendorName] = useState('')
-    const [vendorInput, setVendorInput] = useState('')
+    const [supplierCode, setSupplierCode] = useState('')
+    const [supplierName, setSupplierName] = useState('')
+    const [supplierInput, setSupplierInput] = useState('')
     const [remitterName, setRemitterName] = useState('')
     const [remitType, setRemitType] = useState<RemitType | null>(null)
     const [salesData, setSalesData] = useState<SalesRecord[]>([])
@@ -285,7 +285,7 @@ export function RemittancePage() {
     const eventName = currentEvent?.name ?? ''
     const eventCode = currentEvent?.code ?? ''
 
-    // Auto-focus vendor input so handheld scanner fires without a click
+    // Auto-focus supplier input so handheld scanner fires without a click
     useEffect(() => {
         if (step === 'search') {
             const t = setTimeout(() => inputRef.current?.focus(), 50)
@@ -293,9 +293,9 @@ export function RemittancePage() {
         }
     }, [step])
 
-    // Step 1 — search vendor
+    // Step 1 — search supplier
     async function handleSearch() {
-        const code = vendorInput.trim().toUpperCase()
+        const code = supplierInput.trim().toUpperCase()
         if (!code) return
         setError(null)
         setLoading(true)
@@ -305,8 +305,8 @@ export function RemittancePage() {
                 token: token ?? undefined,
             })
             setSalesData(json.data.sales)
-            setVendorCode(code)
-            setVendorName(json.data.vendor.name ?? '')
+            setSupplierCode(code)
+            setSupplierName(json.data.supplier.name ?? '')
             setStep('select-type')
         } catch (err: unknown) {
             console.error('Error fetching sales data:', err)
@@ -339,8 +339,8 @@ export function RemittancePage() {
 
         const rows: ConfirmRow[] = [
             {
-                label: 'Vendor',
-                value: vendorName ? `${vendorCode} - ${vendorName}` : vendorCode,
+                label: 'Supplier',
+                value: supplierName ? `${supplierCode} - ${supplierName}` : supplierCode,
             },
             { label: 'Remitter', value: remitterName.trim() || '—' },
             { label: 'Type', value: 'Full Remittance' },
@@ -370,8 +370,8 @@ export function RemittancePage() {
             const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance', {
                 method: 'POST',
                 body: JSON.stringify({
-                    vendor_code: vendorCode,
-                    vendor_name: vendorName,
+                    supplier_code: supplierCode,
+                    supplier_name: supplierName,
                     remitter_name: remitterName.trim(),
                     remit_type: 'full',
                     lines,
@@ -388,8 +388,8 @@ export function RemittancePage() {
                 buildReceiptFromApi(
                     json.data,
                     'full',
-                    vendorCode,
-                    vendorName,
+                    supplierCode,
+                    supplierName,
                     remitterName.trim(),
                     printedBy,
                     eventName,
@@ -421,8 +421,8 @@ export function RemittancePage() {
 
         const rows: ConfirmRow[] = [
             {
-                label: 'Vendor',
-                value: vendorName ? `${vendorCode} - ${vendorName}` : vendorCode,
+                label: 'Supplier',
+                value: supplierName ? `${supplierCode} - ${supplierName}` : supplierCode,
             },
             { label: 'Remitter', value: remitterName.trim() || '—' },
             { label: 'Type', value: 'Partial Remittance' },
@@ -443,8 +443,8 @@ export function RemittancePage() {
             const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance/partial', {
                 method: 'POST',
                 body: JSON.stringify({
-                    vendor_code: vendorCode,
-                    vendor_name: vendorName,
+                    supplier_code: supplierCode,
+                    supplier_name: supplierName,
                     remitter_name: remitterName.trim(),
                     remit_type: 'partial',
                     lines,
@@ -461,8 +461,8 @@ export function RemittancePage() {
                 buildReceiptFromApi(
                     json.data,
                     'partial',
-                    vendorCode,
-                    vendorName,
+                    supplierCode,
+                    supplierName,
                     remitterName.trim(),
                     printedBy,
                     eventName,
@@ -490,9 +490,9 @@ export function RemittancePage() {
     // Reset
     function handleReset() {
         setStep('search')
-        setVendorInput('')
-        setVendorCode('')
-        setVendorName('')
+        setSupplierInput('')
+        setSupplierCode('')
+        setSupplierName('')
         setRemitterName('')
         setRemitType(null)
         setSalesData([])
@@ -530,7 +530,7 @@ export function RemittancePage() {
                     Remittance
                 </h1>
                 <p className="text-muted-foreground mt-1 text-sm">
-                    Process vendor remittances quickly and accurately.
+                    Process supplier remittances quickly and accurately.
                 </p>
             </div>
 
@@ -541,20 +541,20 @@ export function RemittancePage() {
                     <StepIndicator step={step} />
 
                     {step === 'search' && (
-                        <VendorSearch
+                        <SupplierSearch
                             inputRef={inputRef}
-                            vendorInput={vendorInput}
+                            supplierInput={supplierInput}
                             loading={loading}
                             error={error}
-                            onChange={setVendorInput}
+                            onChange={setSupplierInput}
                             onSearch={handleSearch}
                         />
                     )}
 
                     {step === 'select-type' && (
                         <SelectType
-                            vendorCode={vendorCode}
-                            vendorName={vendorName}
+                            supplierCode={supplierCode}
+                            supplierName={supplierName}
                             remitterName={remitterName}
                             loading={loading}
                             selectError={selectError}
@@ -568,8 +568,8 @@ export function RemittancePage() {
                     {step === 'remit' && remitType && (
                         <RemittanceForm
                             remitType={remitType}
-                            vendorCode={vendorCode}
-                            vendorName={vendorName}
+                            supplierCode={supplierCode}
+                            supplierName={supplierName}
                             salesData={salesData}
                             cashRecord={cashRecord}
                             cashAmount={cashAmount}
@@ -594,8 +594,8 @@ export function RemittancePage() {
                 <div className="w-72 shrink-0 rounded-xl border bg-card p-5">
                     <ContextPanel
                         step={step}
-                        vendorCode={vendorCode}
-                        vendorName={vendorName}
+                        supplierCode={supplierCode}
+                        supplierName={supplierName}
                         remitterName={remitterName}
                         remitType={remitType}
                         salesData={salesData}

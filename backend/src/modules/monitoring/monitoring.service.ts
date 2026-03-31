@@ -62,8 +62,8 @@ const reprintTransaction = async (id: number, printedBy: string): Promise<Receip
     return {
         trans_no: transaction.receipt_no,
         ref_code: transaction.reference_code,
-        vendor_code: String(transaction.vendor_code),
-        vendor_name: transaction.vendor_name,
+        supplier_code: String(transaction.supplier_code),
+        supplier_name: transaction.supplier_name,
         remitter_name: transaction.remitted_by,
         remit_type: transaction.remit_type === TRANSACTION_TYPE.FULL ? 'full' : 'partial',
         lines: transaction.details.map((d) => ({

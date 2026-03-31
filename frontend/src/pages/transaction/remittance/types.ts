@@ -4,13 +4,13 @@ export interface SalesRecord {
     total_count: number
 }
 
-export interface VendorInfo {
+export interface SupplierInfo {
     name: string
     code: number
 }
 
 export interface SalesData {
-    vendor: VendorInfo
+    supplier: SupplierInfo
     sales: SalesRecord[]
     total_amount: number
 }
@@ -29,8 +29,8 @@ export interface ReceiptLine {
 export interface Receipt {
     trans_no: string
     ref_code: string
-    vendor_code: string
-    vendor_name: string
+    supplier_code: string
+    supplier_name: string
     remitter_name: string
     remit_type: 'partial' | 'full'
     lines: ReceiptLine[]
@@ -46,8 +46,8 @@ export interface Receipt {
 export interface RemittanceApiData {
     receipt_no: string
     reference_code: string
-    vendor_code: string
-    vendor_name: string
+    supplier_code: string
+    supplier_name: string
     remitter_name: string
     remit_type: string
     lines: ReceiptLine[]

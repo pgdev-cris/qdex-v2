@@ -71,8 +71,8 @@ export function ReceiptPreview({ receipt, onPrint, onReset }: Props) {
                         <ScreenRow label="Ref Code:" value={receipt.ref_code} />
                         <ScreenRow label="Event Code:" value={receipt.event_code} />
                         <div>
-                            Supplier: ({receipt.vendor_code})
-                            {receipt.vendor_name ? ` ${receipt.vendor_name}` : ''}
+                            Supplier: ({receipt.supplier_code})
+                            {receipt.supplier_name ? ` ${receipt.supplier_name}` : ''}
                         </div>
                         {receipt.remitter_name && <div>Remitter: {receipt.remitter_name}</div>}
 

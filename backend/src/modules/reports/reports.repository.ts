@@ -24,9 +24,9 @@ function buildFilters(query: RemittanceReportQuery): FilterResult {
         clauses.push('DATE(r.remitted_at) <= ?');
         params.push(query.to);
     }
-    if (query.vendor_code) {
+    if (query.supplier_code) {
         clauses.push('v.code = ?');
-        params.push(Number(query.vendor_code));
+        params.push(Number(query.supplier_code));
     }
     if (query.event_code) {
         clauses.push('r.event_code = ?');
@@ -49,8 +49,8 @@ const getRemittances = async (query: RemittanceReportQuery): Promise<RemittanceR
     const sql = `
         SELECT
             r.remittance_id,
-            r.vendor_code,
-            v.name AS vendor_name,
+            r.supplier_code,
+            v.name AS supplier_name,
             r.event_code,
             r.total_cash,
             r.total_gcash,
@@ -67,7 +67,7 @@ const getRemittances = async (query: RemittanceReportQuery): Promise<RemittanceR
             r.created_at
         FROM tbl_remittances r
         INNER JOIN tbl_transactions t ON t.reference_code = r.reference_code
-        INNER JOIN tbl_vendors v ON v.id = t.vendor_id
+        INNER JOIN tbl_suppliers v ON v.id = t.supplier_id
         ${where}
         ORDER BY r.remitted_at DESC
         LIMIT ${Math.floor(limit)} OFFSET ${Math.floor(offset)}
@@ -99,15 +99,15 @@ const getRemittanceSummary = async (
 const getRemittanceById = async (id: number): Promise<RemittanceRecord | null> => {
     const sql = `
         SELECT
-            r.remittance_id, r.vendor_code,
-            v.name AS vendor_name,
+            r.remittance_id, r.supplier_code,
+            v.name AS supplier_name,
             r.event_code, r.total_cash, r.total_gcash, r.total_pwallet,
             r.total_credit_card, r.total_debit_card, r.total_credit,
             r.grand_total, r.reference_code, r.is_partial,
             r.remitted_by, r.received_by, r.remitted_at, r.created_at
         FROM tbl_remittances r
         INNER JOIN tbl_transactions t ON t.reference_code = r.reference_code
-        INNER JOIN tbl_vendors v ON v.id = t.vendor_id
+        INNER JOIN tbl_suppliers v ON v.id = t.supplier_id
         WHERE r.remittance_id = ?
         LIMIT 1
     `;

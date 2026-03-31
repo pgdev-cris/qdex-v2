@@ -4,6 +4,6 @@ import { jwtValidator } from '../../shared/middlewares/jwtValidator';
 
 const router = Router();
 
-router.get('/vendor/:code', jwtValidator, controller.fetchSalesRequest);
+router.get('/supplier/:code', jwtValidator, controller.fetchSalesRequest);
 
 export default router;

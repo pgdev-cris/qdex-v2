@@ -39,7 +39,7 @@ const listTransactions = async (
 
     const baseQuery = `
         FROM tbl_transactions t
-        INNER JOIN tbl_vendors  v ON v.id = t.vendor_id
+        INNER JOIN tbl_suppliers  v ON v.id = t.supplier_id
         INNER JOIN tbl_events   e ON e.id = t.event_id
         LEFT  JOIN tbl_series   s ON s.code = '${SERIES_CODE}'
         ${where}
@@ -54,8 +54,8 @@ const listTransactions = async (
             t.id,
             CONCAT(COALESCE(s.prefix, ''), LPAD(t.transaction_no, COALESCE(s.pad_length, 6), '0')) AS receipt_no,
             t.reference_code,
-            v.code  AS vendor_code,
-            v.name  AS vendor_name,
+            v.code  AS supplier_code,
+            v.name  AS supplier_name,
             e.name  AS event_name,
             e.code  AS event_code,
             t.type,
@@ -80,8 +80,8 @@ const getTransactionById = async (id: number): Promise<TransactionWithDetails | 
             t.id,
             CONCAT(COALESCE(s.prefix, ''), LPAD(t.transaction_no, COALESCE(s.pad_length, 6), '0')) AS receipt_no,
             t.reference_code,
-            v.code  AS vendor_code,
-            v.name  AS vendor_name,
+            v.code  AS supplier_code,
+            v.name  AS supplier_name,
             e.name  AS event_name,
             e.code  AS event_code,
             t.type,
@@ -91,7 +91,7 @@ const getTransactionById = async (id: number): Promise<TransactionWithDetails | 
             t.remitted_by,
             t.transacted_at
         FROM tbl_transactions t
-        INNER JOIN tbl_vendors  v ON v.id = t.vendor_id
+        INNER JOIN tbl_suppliers  v ON v.id = t.supplier_id
         INNER JOIN tbl_events   e ON e.id = t.event_id
         LEFT  JOIN tbl_series   s ON s.code = '${SERIES_CODE}'
         WHERE t.id = ?

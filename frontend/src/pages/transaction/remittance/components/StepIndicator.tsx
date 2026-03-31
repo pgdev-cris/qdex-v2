@@ -2,7 +2,7 @@ import { CheckCircle2 } from 'lucide-react'
 import type { Step } from '../types'
 
 const STEPS: { key: Step; label: string }[] = [
-    { key: 'search', label: 'Vendor' },
+    { key: 'search', label: 'Supplier' },
     { key: 'select-type', label: 'Type' },
     { key: 'remit', label: 'Remittance' },
     { key: 'receipt', label: 'Receipt' },

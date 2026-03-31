@@ -3,8 +3,8 @@ import remittanceService from './remittance.service';
 import { PartialRemitPayload, FullRemitPayload } from './remittance.type';
 
 const validateBody = (body: PartialRemitPayload | FullRemitPayload, res: Response) => {
-    if (!body?.vendor_code) {
-        res.status(400).json({ result: 'error', message: 'vendor_code is required.' });
+    if (!body?.supplier_code) {
+        res.status(400).json({ result: 'error', message: 'supplier_code is required.' });
         return;
     }
 

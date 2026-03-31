@@ -12,8 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import type { RemitType } from '../types'
 
 interface Props {
-    vendorCode: string
-    vendorName: string
+    supplierCode: string
+    supplierName: string
     remitterName: string
     loading: boolean
     selectError: string | null
@@ -25,8 +25,8 @@ interface Props {
 }
 
 export function SelectType({
-    vendorCode,
-    vendorName,
+    supplierCode,
+    supplierName,
     remitterName,
     loading,
     selectError,
@@ -44,10 +44,10 @@ export function SelectType({
                     <div>
                         <CardTitle>Remittance Information</CardTitle>
                         <CardDescription>
-                            Vendor:{' '}
-                            <span className="font-medium text-foreground">{vendorCode}</span>
-                            {vendorName && (
-                                <span className="ml-1 text-foreground">— {vendorName}</span>
+                            Supplier:{' '}
+                            <span className="font-medium text-foreground">{supplierCode}</span>
+                            {supplierName && (
+                                <span className="ml-1 text-foreground">— {supplierName}</span>
                             )}
                         </CardDescription>
                     </div>
@@ -134,7 +134,7 @@ export function SelectType({
                             <p className="text-muted-foreground text-xs font-normal">
                                 {pendingType === 'full'
                                     ? 'Processing…'
-                                    : 'Remit all payment methods for this vendor'}
+                                    : 'Remit all payment methods for this supplier'}
                             </p>
                         </div>
                         {pendingType !== 'full' && (

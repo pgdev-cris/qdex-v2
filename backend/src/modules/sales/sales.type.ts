@@ -7,6 +7,6 @@ interface SalesRecord {
 interface SalesApiResponse {
     result: string;
     data: SalesRecord[];
-    vendor_name?: string;
+    supplier_name?: string;
     message?: string;
 }

@@ -24,7 +24,7 @@ export const HTTP_STATUS = {
     SERVICE_UNAVAILABLE: 503,
 } as const;
 
-export const VENDOR_STATUS = {
+export const SUPPLIER_STATUS = {
     ACTIVE: 1,
     INACTIVE: 0,
 };

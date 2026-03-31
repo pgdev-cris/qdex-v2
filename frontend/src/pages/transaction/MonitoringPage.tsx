@@ -15,8 +15,8 @@ interface TransactionRow {
     id: number
     receipt_no: string
     reference_code: string
-    vendor_code: number
-    vendor_name: string
+    supplier_code: number
+    supplier_name: string
     event_name: string
     type: number
     status: number
@@ -77,7 +77,7 @@ const STATUS_OPTIONS = [
 
 const COLUMNS = [
     'Receipt No',
-    'Vendor',
+    'Supplier',
     'Type',
     'Total Amount',
     'Remitted By',
@@ -169,9 +169,9 @@ function TransactionDetailModal({
                 {/* Meta */}
                 <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                     <div>
-                        <p className="text-xs text-muted-foreground">Vendor</p>
+                        <p className="text-xs text-muted-foreground">Supplier</p>
                         <p className="font-medium">
-                            {transaction.vendor_code} - {transaction.vendor_name}
+                            {transaction.supplier_code} - {transaction.supplier_name}
                         </p>
                     </div>
                     <div>
@@ -368,7 +368,7 @@ export function MonitoringPage() {
                             <div className="relative w-56">
                                 <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
-                                    placeholder="Vendor, ref code..."
+                                    placeholder="Supplier, ref code..."
                                     className="pl-8"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
@@ -452,9 +452,9 @@ export function MonitoringPage() {
                                         <td className="px-4 py-3 max-w-[180px]">
                                             <p
                                                 className="truncate font-medium"
-                                                title={`${row.vendor_code} - ${row.vendor_name}`}
+                                                title={`${row.supplier_code} - ${row.supplier_name}`}
                                             >
-                                                {row.vendor_code} - {row.vendor_name}
+                                                {row.supplier_code} - {row.supplier_name}
                                             </p>
                                         </td>
                                         <td className="px-4 py-3">

@@ -3,25 +3,25 @@ import { HTTP_STATUS } from '../../shared/constants';
 import service from './sales.service';
 
 const fetchSalesRequest = async (req: Request, res: Response) => {
-    const vendorCode = req.params.code ? parseInt(req.params.code as string, 10) : undefined;
+    const supplierCode = req.params.code ? parseInt(req.params.code as string, 10) : undefined;
 
-    if (vendorCode !== undefined && isNaN(vendorCode)) {
+    if (supplierCode !== undefined && isNaN(supplierCode)) {
         return res.status(HTTP_STATUS.BAD_REQUEST).send({
-            message: 'Invalid vendor code',
+            message: 'Invalid supplier code',
         });
     }
 
-    if (!vendorCode) {
+    if (!supplierCode) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({
-            message: 'Vendor is required.',
+            message: 'Supplier is required.',
         });
     }
 
-    const vendorSales = await service.getVendorSales(vendorCode);
+    const supplierSales = await service.getSupplierSales(supplierCode);
 
     return res.json({
         message: 'Sales fetched successfully',
-        data: vendorSales,
+        data: supplierSales,
     });
 };
 

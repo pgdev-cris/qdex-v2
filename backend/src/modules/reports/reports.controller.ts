@@ -5,7 +5,7 @@ import { RemittanceReportQuery } from './reports.schema';
 
 /**
  * GET /api/v1/reports/remittances
- * Query params: from, to, vendor_code, event_code, is_partial, limit, offset
+ * Query params: from, to, supplier_code, event_code, is_partial, limit, offset
  * Returns both the transaction list and an aggregate summary.
  */
 const getRemittanceReportRequest = async (req: Request, res: Response) => {

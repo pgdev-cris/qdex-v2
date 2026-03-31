@@ -1,5 +1,5 @@
 import PoolManager from '../../shared/db/pool.manager';
-import vendorProvider from '../../shared/providers/vendor.provider';
+import supplierProvider from '../../shared/providers/supplier.provider';
 import eventProvider from '../../shared/providers/event.provider';
 import SeriesRepository from '../../shared/repository/series.repository';
 import { generateRefCode } from '../../shared/utils/refcode.util';
@@ -13,8 +13,8 @@ import { PartialRemitPayload, FullRemitPayload, RemitResult } from './remittance
 const SERIES_RECEIPT = 'TRX';
 
 const partialRemit = async (payload: PartialRemitPayload, userId: number): Promise<RemitResult> => {
-    const vendorCode = Number(payload.vendor_code);
-    const vendor = await vendorProvider.validateVendor(vendorCode);
+    const supplierCode = Number(payload.supplier_code);
+    const supplier = await supplierProvider.validateSupplier(supplierCode);
 
     validateLines(payload.lines);
 
@@ -42,7 +42,7 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
 
         const transactionId = await remittanceRepository.createTransaction(conn, {
             event_id: event.id,
-            vendor_id: vendor.id,
+            supplier_id: supplier.id,
             transaction_no: seriesRow.last_sequence, // raw int, no prefix/padding
             transacted_at: now,
             total_amount: totalAmount,
@@ -67,8 +67,8 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
     return {
         receipt_no: receiptNo,
         reference_code: referenceCode,
-        vendor_code: payload.vendor_code,
-        vendor_name: vendor.name,
+        supplier_code: payload.supplier_code,
+        supplier_name: supplier.name,
         remitter_name: payload.remitter_name.trim(),
         remit_type: 'partial',
         lines: payload.lines,
@@ -77,8 +77,8 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
 };
 
 const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<RemitResult> => {
-    const vendorCode = Number(payload.vendor_code);
-    const vendor = await vendorProvider.validateVendor(vendorCode);
+    const supplierCode = Number(payload.supplier_code);
+    const supplier = await supplierProvider.validateSupplier(supplierCode);
 
     validateLines(payload.lines);
 
@@ -101,7 +101,7 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
 
         const transactionId = await remittanceRepository.createTransaction(conn, {
             event_id: event.id,
-            vendor_id: vendor.id,
+            supplier_id: supplier.id,
             transaction_no: seriesRow.last_sequence,
             transacted_at: now,
             total_amount: totalAmount,
@@ -126,8 +126,8 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
     return {
         receipt_no: receiptNo,
         reference_code: referenceCode,
-        vendor_code: payload.vendor_code,
-        vendor_name: vendor.name,
+        supplier_code: payload.supplier_code,
+        supplier_name: supplier.name,
         remitter_name: payload.remitter_name.trim(),
         remit_type: 'full',
         lines: payload.lines,

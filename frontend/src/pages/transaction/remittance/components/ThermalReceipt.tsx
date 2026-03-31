@@ -98,7 +98,7 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                             key={l.method}
                             style={{ display: 'flex', justifyContent: 'space-between' }}
                         >
-                            <span>  {methodLabel(l.method)}</span>
+                            <span> {methodLabel(l.method)}</span>
                             <span>Amt: {fmtAmt(l.amount)}</span>
                         </div>
                     ))}

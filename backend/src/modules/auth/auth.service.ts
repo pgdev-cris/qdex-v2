@@ -18,7 +18,8 @@ const login = async (username: string, password: string) => {
     // Create a payload without the password
     const { password: _, ...payload } = user;
     const token = signToken(payload);
-    const presetId = await repository.getUserMenuPresetId(user.id);
+    // menu_preset_id is now a column on tbl_users — no separate table lookup needed
+    const presetId = user.menu_preset_id ?? null;
     const menu = presetId !== null ? await menuService.getMenuPreset(presetId) : null;
     const currentEvent = await eventsService.getCurrentEvent();
 

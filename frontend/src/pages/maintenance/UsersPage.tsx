@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Modal, DeleteModal, FormField, FormRow, FormSelect } from '@/components/ui/modal'
+import { PresetCombobox, type PresetOption } from '@/components/ui/preset-combobox'
 import { apiFetch } from '@/lib/api'
 
 //  Types
@@ -19,6 +20,7 @@ interface User {
     status: number
     created_at: string
     employee_no: string | null
+    menu_preset_id: number | null
 }
 
 interface ApiListResponse {
@@ -33,6 +35,12 @@ interface ApiSingleResponse {
     data: User
 }
 
+interface ApiPresetsResponse {
+    status: number
+    message: string
+    data: PresetOption[]
+}
+
 type FormData = {
     first_name: string
     middle_name: string
@@ -41,6 +49,7 @@ type FormData = {
     department: string
     role: string
     employee_no: string
+    menu_preset_id: number | null
     password?: string
 }
 
@@ -52,6 +61,7 @@ const BLANK: FormData = {
     department: '',
     role: 'Staff',
     employee_no: '',
+    menu_preset_id: null,
     password: '',
 }
 
@@ -77,10 +87,11 @@ function StatusBadge({ status }: { status: number }) {
 
 //  Page
 
-const COLUMNS = ['Name', 'Username', 'Department', 'Role', 'Status', 'Created', 'Actions']
+const COLUMNS = ['Name', 'Username', 'Department', 'Role', 'Menu Preset', 'Status', 'Created', 'Actions']
 
 export function UsersPage() {
     const [rows, setRows] = useState<User[]>([])
+    const [presets, setPresets] = useState<PresetOption[]>([])
     const [search, setSearch] = useState('')
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
@@ -93,7 +104,7 @@ export function UsersPage() {
     } | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
 
-    //  Fetch
+    //  Fetch users
 
     const fetchUsers = useCallback(async () => {
         setLoading(true)
@@ -108,9 +119,21 @@ export function UsersPage() {
         }
     }, [])
 
+    //  Fetch presets once on mount
+
+    const fetchPresets = useCallback(async () => {
+        try {
+            const res = await apiFetch<ApiPresetsResponse>('/api/v1/menu/presets')
+            setPresets(res.data ?? [])
+        } catch {
+            // non-fatal — combobox stays empty
+        }
+    }, [])
+
     useEffect(() => {
         fetchUsers()
-    }, [fetchUsers])
+        fetchPresets()
+    }, [fetchUsers, fetchPresets])
 
     //  Helpers
 
@@ -123,6 +146,11 @@ export function UsersPage() {
             r.department.toLowerCase().includes(q)
         )
     })
+
+    function presetName(id: number | null) {
+        if (!id) return <span className="text-muted-foreground/50">—</span>
+        return presets.find((p) => p.id === id)?.name ?? `#${id}`
+    }
 
     function openAdd() {
         setError(null)
@@ -142,6 +170,7 @@ export function UsersPage() {
                 department: user.department,
                 role: user.role,
                 employee_no: user.employee_no ?? '',
+                menu_preset_id: user.menu_preset_id,
             },
         })
     }
@@ -154,23 +183,14 @@ export function UsersPage() {
 
     async function handleSave() {
         if (!modal) return
-        const {
-            first_name,
-            last_name,
-            username,
-            department,
-            role,
-            password,
-            middle_name,
-            employee_no,
-        } = modal.data
-        if (!first_name.trim() || !last_name.trim() || !username.trim() || !employee_no.trim())
-            return
+        const { first_name, last_name, username, department, role, password, middle_name, employee_no, menu_preset_id } =
+            modal.data
+        if (!first_name.trim() || !last_name.trim() || !username.trim() || !employee_no.trim()) return
 
         setSaving(true)
         setError(null)
         try {
-            const payload: any = {
+            const payload: Record<string, unknown> = {
                 first_name: first_name.trim(),
                 middle_name: middle_name.trim() || undefined,
                 last_name: last_name.trim(),
@@ -178,6 +198,7 @@ export function UsersPage() {
                 department: department.trim(),
                 role,
                 employee_no: employee_no.trim(),
+                menu_preset_id: menu_preset_id ?? null,
             }
 
             if (modal.mode === 'add') {
@@ -349,6 +370,9 @@ export function UsersPage() {
                                         </td>
                                         <td className="px-4 py-3">{user.department}</td>
                                         <td className="px-4 py-3">{user.role}</td>
+                                        <td className="px-4 py-3 text-sm">
+                                            {presetName(user.menu_preset_id)}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <StatusBadge status={user.status} />
                                         </td>
@@ -360,11 +384,7 @@ export function UsersPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon-sm"
-                                                    title={
-                                                        user.status === 1
-                                                            ? 'Deactivate'
-                                                            : 'Activate'
-                                                    }
+                                                    title={user.status === 1 ? 'Deactivate' : 'Activate'}
                                                     disabled={saving}
                                                     onClick={() => handleToggleStatus(user)}
                                                 >
@@ -500,6 +520,16 @@ export function UsersPage() {
                                 <div className="flex-1" />
                             )}
                         </FormRow>
+
+                        {/* Menu Preset — full-width searchable combobox */}
+                        <FormField label="Menu Preset" hint="Controls which menu items this user sees.">
+                            <PresetCombobox
+                                options={presets}
+                                value={modal.data.menu_preset_id}
+                                onChange={(v) => setField('menu_preset_id', v)}
+                            />
+                        </FormField>
+
                         {error && <p className="text-sm text-destructive">{error}</p>}
                     </div>
                 )}

@@ -28,4 +28,13 @@ const getMenuPresetRequest = async (req: Request, res: Response) => {
     });
 };
 
-export default { createMenuRequest, getMenuPresetRequest };
+const getAllPresetsRequest = async (_req: Request, res: Response) => {
+    const presets = await service.getAllPresets();
+    return res.json({
+        status: 200,
+        message: 'Presets fetched successfully',
+        data: presets,
+    });
+};
+
+export default { createMenuRequest, getMenuPresetRequest, getAllPresetsRequest };

@@ -98,4 +98,8 @@ const getMenuPreset = async (presetId: number): Promise<MenuPreset | null> => {
     return { ...preset, menus: buildMenuTree(rows) };
 };
 
-export default { createMenu, getMenuPreset };
+const getAllPresets = async (): Promise<Pick<MenuPreset, 'id' | 'name'>[]> => {
+    return await repository.getAllPresets();
+};
+
+export default { createMenu, getMenuPreset, getAllPresets };

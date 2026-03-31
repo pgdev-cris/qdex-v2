@@ -124,10 +124,22 @@ const getMenusByPresetId = async (presetId: number): Promise<MenuRow[]> => {
     );
 };
 
+/**
+ * Fetches all presets as a flat id+name list (for dropdowns).
+ */
+const getAllPresets = async (): Promise<Pick<MenuPreset, 'id' | 'name'>[]> => {
+    return await PoolManager.query<Pick<MenuPreset, 'id' | 'name'>[]>(
+        'SELECT id, name FROM tbl_menu_presets ORDER BY name ASC',
+        [],
+        'auth-pool',
+    );
+};
+
 export default {
     insertMenu,
     insertMenuPresetItems,
     assignChildrenToParent,
     getPresetById,
     getMenusByPresetId,
+    getAllPresets,
 };

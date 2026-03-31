@@ -9,6 +9,7 @@ export const CreateUserRequestSchema = z.object({
     role: z.string().min(1),
     password: z.string().min(8),
     employee_no: z.string().min(1),
+    menu_preset_id: z.number().int().positive().optional().nullable(),
 });
 
 export const UpdateUserRequestSchema = z.object({
@@ -18,6 +19,7 @@ export const UpdateUserRequestSchema = z.object({
     department: z.string().min(1).optional(),
     role: z.string().min(1).optional(),
     employee_no: z.string().min(1).optional(),
+    menu_preset_id: z.number().int().positive().optional().nullable(),
 });
 
 export const UpdateUserStatusSchema = z.object({

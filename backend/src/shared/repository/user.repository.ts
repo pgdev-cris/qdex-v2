@@ -5,7 +5,7 @@ import { CreateUserRequest, UpdateUserRequest } from '../../modules/users/users.
 const getUsers = async (limit: number = 100, offset: number = 0): Promise<User[]> => {
     const query = `
         SELECT id, username, first_name, middle_name, last_name,
-               department, role, status, created_at, employee_no
+               department, role, status, created_at, employee_no, menu_preset_id
         FROM tbl_users
         WHERE status != 9
         ORDER BY created_at DESC
@@ -18,7 +18,7 @@ const getUsers = async (limit: number = 100, offset: number = 0): Promise<User[]
 const getUserById = async (id: number): Promise<User | null> => {
     const query = `
         SELECT id, username, first_name, middle_name, last_name,
-               department, role, status, created_at, employee_no
+               department, role, status, created_at, employee_no, menu_preset_id
         FROM tbl_users
         WHERE id = ? AND status != 9
         LIMIT 1
@@ -33,8 +33,8 @@ const createUser = async (
 ): Promise<{ insertId: number } | null> => {
     const query = `
         INSERT INTO tbl_users
-            (username, password, first_name, middle_name, last_name, department, role, status, employee_no)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+            (username, password, first_name, middle_name, last_name, department, role, status, employee_no, menu_preset_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
     `;
     const result = await PoolManager.execute(query, [
         user.username,
@@ -45,6 +45,7 @@ const createUser = async (
         user.department,
         user.role,
         user.employee_no,
+        user.menu_preset_id ?? null,
     ]);
     return result ? { insertId: result.insertId } : null;
 };
@@ -76,6 +77,10 @@ const updateUser = async (id: number, data: UpdateUserRequest): Promise<boolean>
     if (data.employee_no !== undefined) {
         fields.push('employee_no = ?');
         params.push(data.employee_no);
+    }
+    if ('menu_preset_id' in data) {
+        fields.push('menu_preset_id = ?');
+        params.push(data.menu_preset_id ?? null);
     }
 
     if (fields.length === 0) return false;

@@ -12,4 +12,5 @@ export interface User extends RowDataPacket {
     status: number;
     created_at: Date;
     employee_no: string | null;
+    menu_preset_id: number | null;
 }

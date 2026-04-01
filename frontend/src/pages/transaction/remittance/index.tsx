@@ -117,7 +117,7 @@ function ContextPanel({
     if (step === 'select-type' || step === 'remit') {
         return (
             <div className="flex flex-col gap-6">
-                <Section title="Remittance Summary">
+                <Section title="Supplier Sales Summary Today">
                     <InfoRow
                         label="Supplier"
                         value={supplierName ? `${supplierCode} - ${supplierName}` : supplierCode}

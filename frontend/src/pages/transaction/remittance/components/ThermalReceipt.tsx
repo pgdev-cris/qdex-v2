@@ -1,9 +1,9 @@
 import type { Receipt } from '../types'
-import { fmtAmt, methodLabel } from '../helpers'
+import { fmtAmt, fmtReceiptDate, methodLabel } from '../helpers'
 import { COMPANY_NAME, RECEIPT_TITLE } from '../constants'
+import React from 'react'
 
 //  Helpers
-
 function Row({ label, value }: { label: string; value: string }) {
     return (
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -40,7 +40,6 @@ function DividerSolid({ style }: { style?: React.CSSProperties }) {
 }
 
 //  Single copy block
-
 const gap = { marginTop: '8pt' }
 const gapSm = { marginTop: '5pt' }
 
@@ -78,14 +77,14 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
 
             <Divider />
 
-            {/* Payment Details */}
-            <div style={{ fontWeight: 'bold' }}>Payment Details:</div>
+            {/* Remittance Details */}
+            <div style={{ fontWeight: 'bold' }}>Remittance Details:</div>
 
             {/* Cash Breakdown */}
             {cashLine && (
                 <div style={{ ...gapSm, lineHeight: '1.8' }}>
                     <div style={{ fontWeight: 'bold' }}>Cash Breakdown</div>
-                    <Row label="  Cash Amt:" value={fmtAmt(cashTotal)} />
+                    <Row label="  Cash:" value={fmtAmt(cashTotal)} />
                 </div>
             )}
 
@@ -99,10 +98,10 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                             style={{ display: 'flex', justifyContent: 'space-between' }}
                         >
                             <span> {methodLabel(l.method)}</span>
-                            <span>Amt: {fmtAmt(l.amount)}</span>
+                            <span>{fmtAmt(l.amount)}</span>
                         </div>
                     ))}
-                    <Row label="  Cards Amt:" value={fmtAmt(cardsTotal)} />
+                    <Row label="  Cards Total:" value={fmtAmt(cardsTotal)} />
                 </div>
             )}
 
@@ -124,23 +123,30 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
             <DividerSolid />
 
             {/* Signatures */}
-            <div style={{ ...gap, textAlign: 'center' }}>Trs User</div>
-            <div style={{ textAlign: 'center', marginTop: '20pt' }}>{'_'.repeat(30)}</div>
+            <div style={{ ...gap, textAlign: 'center', marginTop: '40px' }}>
+                {receipt.printed_by}
+            </div>
+            <div style={{ textAlign: 'center', marginTop: '-8px', marginBottom: '-8px' }}>
+                {'_'.repeat(30)}
+            </div>
+            <div style={{ ...gap, textAlign: 'center' }}>Printed by</div>
 
-            <div style={{ ...gap, textAlign: 'center' }}>Printed by {receipt.printed_by}</div>
-            <div style={{ textAlign: 'center', marginTop: '20pt' }}>{'_'.repeat(30)}</div>
-
-            <div style={{ ...gap }}>Acknowledge by: {receipt.printed_by}</div>
+            <div style={{ ...gap, textAlign: 'center', marginTop: '40px' }}>
+                {receipt.remitter_name}
+            </div>
+            <div style={{ textAlign: 'center', marginTop: '-8px', marginBottom: '-8px' }}>
+                {'_'.repeat(30)}
+            </div>
+            <div style={{ ...gap, textAlign: 'center', marginBottom: '40px' }}>Acknowledged by</div>
 
             <DividerSolid />
 
-            <div style={gapSm}>Gen Date: {receipt.gen_at}</div>
+            <div style={gapSm}>Gen Date: {fmtReceiptDate(new Date())}</div>
         </div>
     )
 }
 
 //  Thermal receipt wrapper (print-only)
-
 interface Props {
     receipt: Receipt
 }

@@ -254,6 +254,7 @@ export function MonitoringPage() {
     const [pages, setPages] = useState(1)
 
     const [search, setSearch] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
     const [typeFilter, setTypeFilter] = useState('')
     const [statusFilter, setStatusFilter] = useState('')
 
@@ -263,6 +264,12 @@ export function MonitoringPage() {
     const [reprintData, setReprintData] = useState<Receipt | null>(null)
     const [reprintLoadingId, setReprintLoadingId] = useState<number | null>(null)
 
+    // Debounce: wait 400 ms after the last keystroke before triggering a fetch
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(search), 400)
+        return () => clearTimeout(t)
+    }, [search])
+
     const fetchTransactions = useCallback(
         async (p = 1) => {
             setLoading(true)
@@ -270,7 +277,7 @@ export function MonitoringPage() {
                 const params = new URLSearchParams()
                 params.set('page', String(p))
                 params.set('limit', String(PAGE_LIMIT))
-                if (search.trim()) params.set('search', search.trim())
+                if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
                 if (typeFilter) params.set('type', typeFilter)
                 if (statusFilter) params.set('status', statusFilter)
 
@@ -289,11 +296,11 @@ export function MonitoringPage() {
                 setLoading(false)
             }
         },
-        [search, typeFilter, statusFilter]
+        [debouncedSearch, typeFilter, statusFilter]
     )
 
     useEffect(() => {
-        fetchTransactions(1)
+        void fetchTransactions(1)
     }, [fetchTransactions])
 
     const openDetail = async (id: number) => {
@@ -402,7 +409,17 @@ export function MonitoringPage() {
                 </CardHeader>
 
                 <CardContent className="p-0">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                        <colgroup>
+                            <col style={{ width: '154px' }} /> {/* Receipt No */}
+                            <col style={{ width: '200px' }} /> {/* Supplier */}
+                            <col style={{ width: '90px' }}  /> {/* Type */}
+                            <col style={{ width: '120px' }} /> {/* Total Amount */}
+                            <col style={{ width: '140px' }} /> {/* Remitted By */}
+                            <col style={{ width: '100px' }} /> {/* Status */}
+                            <col style={{ width: '160px' }} /> {/* Date */}
+                            <col style={{ width: '76px' }}  /> {/* Actions */}
+                        </colgroup>
                         <thead>
                             <tr className="border-b">
                                 {COLUMNS.map((col) => (
@@ -450,7 +467,7 @@ export function MonitoringPage() {
                                                 {row.reference_code}
                                             </p>
                                         </td>
-                                        <td className="px-4 py-3 max-w-[180px]">
+                                        <td className="overflow-hidden px-4 py-3">
                                             <p
                                                 className="truncate font-medium"
                                                 title={`${row.supplier_code} - ${row.supplier_name}`}

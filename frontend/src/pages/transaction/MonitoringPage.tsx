@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/api'
 import { fmt } from '@/pages/transaction/remittance/helpers'
 import { ThermalReceipt } from '@/pages/transaction/remittance/components/ThermalReceipt'
 import type { Receipt } from '@/pages/transaction/remittance/types'
+import { toTitleCase } from '@/utils/string.utils.ts'
 
 //  Types
 
@@ -188,7 +189,7 @@ function TransactionDetailModal({
                     </div>
                     <div>
                         <p className="text-xs text-muted-foreground">Remitted By</p>
-                        <p className="font-medium">{transaction.remitted_by}</p>
+                        <p className="font-medium">{toTitleCase(transaction.remitted_by)}</p>
                     </div>
                     <div>
                         <p className="text-xs text-muted-foreground">Date</p>
@@ -464,7 +465,7 @@ export function MonitoringPage() {
                                             {fmt(row.total_amount)}
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
-                                            {row.remitted_by}
+                                            {toTitleCase(row.remitted_by)}
                                         </td>
                                         <td className="px-4 py-3">
                                             <StatusBadge status={row.status} />

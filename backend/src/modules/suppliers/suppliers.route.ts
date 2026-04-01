@@ -11,10 +11,10 @@ import {
 
 const router = Router();
 
-// GET /api/v1/suppliers
+// GET /suppliers - Get all suppliers
 router.get('/', jwtValidator, controller.getSuppliersRequest);
 
-// GET /api/v1/suppliers/:id
+// GET /suppliers/:id - Get supplier by ID
 router.get(
     '/:id',
     jwtValidator,
@@ -22,7 +22,7 @@ router.get(
     controller.getSupplierRequest,
 );
 
-// POST /api/v1/suppliers
+// POST /suppliers - Create a new supplier
 router.post(
     '/',
     jwtValidator,
@@ -30,7 +30,7 @@ router.post(
     controller.createSupplierRequest,
 );
 
-// PUT /api/v1/suppliers/:id
+// PUT /suppliers/:id - Update an existing supplier
 router.put(
     '/:id',
     jwtValidator,
@@ -38,7 +38,7 @@ router.put(
     controller.updateSupplierRequest,
 );
 
-// PATCH /api/v1/suppliers/:id/status  — soft delete or toggle active/inactive
+// PATCH /suppliers/:id/status  — soft delete or toggle active/inactive
 router.patch(
     '/:id/status',
     jwtValidator,

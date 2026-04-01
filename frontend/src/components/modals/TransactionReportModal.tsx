@@ -80,7 +80,8 @@ interface Props {
 const BLANK: Filters = { from: '', to: '', supplier_code: '', event_code: '', type: '', status: '' }
 
 export function TransactionReportModal({ open, onClose }: Props) {
-    const [filters, setFilters] = useState<Filters>({ ...BLANK })
+    const today = new Date().toISOString().slice(0, 10)
+    const [filters, setFilters] = useState<Filters>({ ...BLANK, from: today, to: today })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [resultCount, setResultCount] = useState<number | null>(null)

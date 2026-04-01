@@ -2,6 +2,7 @@ import type { Receipt } from '../types'
 import { fmtAmt, fmtReceiptDate, methodLabel } from '../helpers'
 import { COMPANY_NAME, RECEIPT_TITLE } from '../constants'
 import React from 'react'
+import { toTitleCase } from '@/utils/string.utils.ts'
 
 //  Helpers
 function Row({ label, value }: { label: string; value: string }) {
@@ -23,6 +24,34 @@ function Divider({ style }: { style?: React.CSSProperties }) {
                 ...style,
             }}
         />
+    )
+}
+
+function Signature({
+    name,
+    label,
+    style,
+    marginTop = '40px',
+    marginBottom = '40px',
+}: {
+    name: string
+    label: string
+    style?: React.CSSProperties
+    marginTop?: string
+    marginBottom?: string
+}) {
+    return (
+        <>
+            <div style={{ ...gap, textAlign: 'center', marginTop, ...style }}>
+                {toTitleCase(name)}
+            </div>
+            <div style={{ textAlign: 'center', marginTop: '-8px', marginBottom: '-8px' }}>
+                {'_'.repeat(30)}
+            </div>
+            <div style={{ ...gap, textAlign: 'center', marginBottom, fontWeight: 'bold' }}>
+                {label}
+            </div>
+        </>
     )
 }
 
@@ -72,7 +101,7 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                     Supplier: ({receipt.supplier_code})
                     {receipt.supplier_name ? ` ${receipt.supplier_name}` : ''}
                 </div>
-                {receipt.remitter_name && <div>Remitter: {receipt.remitter_name}</div>}
+                {receipt.remitter_name && <div>Remitter: {toTitleCase(receipt.remitter_name)}</div>}
             </div>
 
             <Divider />
@@ -83,8 +112,7 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
             {/* Cash Breakdown */}
             {cashLine && (
                 <div style={{ ...gapSm, lineHeight: '1.8' }}>
-                    <div style={{ fontWeight: 'bold' }}>Cash Breakdown</div>
-                    <Row label="  Cash:" value={fmtAmt(cashTotal)} />
+                    <Row label="  Cash Total" value={fmtAmt(cashTotal)} />
                 </div>
             )}
 
@@ -95,7 +123,11 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                     {cardLines.map((l) => (
                         <div
                             key={l.method}
-                            style={{ display: 'flex', justifyContent: 'space-between' }}
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                marginLeft: '8px',
+                            }}
                         >
                             <span> {methodLabel(l.method)}</span>
                             <span>{fmtAmt(l.amount)}</span>
@@ -123,21 +155,8 @@ function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
             <DividerSolid />
 
             {/* Signatures */}
-            <div style={{ ...gap, textAlign: 'center', marginTop: '40px' }}>
-                {receipt.printed_by}
-            </div>
-            <div style={{ textAlign: 'center', marginTop: '-8px', marginBottom: '-8px' }}>
-                {'_'.repeat(30)}
-            </div>
-            <div style={{ ...gap, textAlign: 'center' }}>Printed by</div>
-
-            <div style={{ ...gap, textAlign: 'center', marginTop: '40px' }}>
-                {receipt.remitter_name}
-            </div>
-            <div style={{ textAlign: 'center', marginTop: '-8px', marginBottom: '-8px' }}>
-                {'_'.repeat(30)}
-            </div>
-            <div style={{ ...gap, textAlign: 'center', marginBottom: '40px' }}>Acknowledged by</div>
+            <Signature name={receipt.printed_by} label="Printed By" />
+            <Signature name={receipt.remitter_name} label="Acknowledged By" />
 
             <DividerSolid />
 
@@ -172,7 +191,7 @@ export function ThermalReceipt({ receipt }: Props) {
                         box-sizing: border-box;
                         background: #fff;
                         font-family: Arial, Helvetica, sans-serif;
-                        font-size: 10.5pt;
+                        font-size: 12pt;
                         color: #000;
                         line-height: 1.6;
                     }

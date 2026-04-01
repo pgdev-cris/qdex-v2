@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator'
 import type { Receipt } from '../types'
 import { fmtAmt, methodLabel } from '../helpers'
 import { COMPANY_NAME, RECEIPT_TITLE } from '../constants'
+import { toTitleCase } from '@/utils/string.utils.ts'
 
 //  Screen-only receipt row
 
@@ -74,16 +75,17 @@ export function ReceiptPreview({ receipt, onPrint, onReset }: Props) {
                             Supplier: ({receipt.supplier_code})
                             {receipt.supplier_name ? ` ${receipt.supplier_name}` : ''}
                         </div>
-                        {receipt.remitter_name && <div>Remitter: {receipt.remitter_name}</div>}
+                        {receipt.remitter_name && (
+                            <div>Remitter: {toTitleCase(receipt.remitter_name)}</div>
+                        )}
 
                         <Separator className="my-2" />
 
-                        <p className="mb-1 font-semibold">Payment Details:</p>
+                        <p className="mb-1 font-semibold">Remittance Details:</p>
 
                         {cashLine && (
                             <div className="mb-2">
-                                <p>Cash Breakdown</p>
-                                <ScreenRow label="  Cash Amt:" value={fmtAmt(cashLine.amount)} />
+                                <ScreenRow label="  Cash Total" value={fmtAmt(cashLine.amount)} />
                             </div>
                         )}
 
@@ -91,12 +93,12 @@ export function ReceiptPreview({ receipt, onPrint, onReset }: Props) {
                             <div className="mb-2">
                                 <p>Cards Breakdown</p>
                                 {cardLines.map((l) => (
-                                    <div key={l.method} className="flex justify-between">
-                                        <span> {methodLabel(l.method)}</span>
-                                        <span>Amt: {fmtAmt(l.amount)}</span>
+                                    <div key={l.method} className="flex justify-between ml-4">
+                                        <span>{methodLabel(l.method)}</span>
+                                        <span>{fmtAmt(l.amount)}</span>
                                     </div>
                                 ))}
-                                <ScreenRow label="  Cards Amt:" value={fmtAmt(cardsTotal)} />
+                                <ScreenRow label="  Cards Total" value={fmtAmt(cardsTotal)} />
                             </div>
                         )}
 
@@ -107,27 +109,21 @@ export function ReceiptPreview({ receipt, onPrint, onReset }: Props) {
                         <Separator className="my-2" />
 
                         <div className="flex flex-col gap-2">
-                            <div className="text-center">
-                                <p className="text-muted-foreground">Trs User</p>
-                                <p>{'_'.repeat(37)}</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-muted-foreground">
-                                    Printed by {receipt.printed_by}
+                            <div className="text-center mt-8">
+                                <p className="text-muted-foreground -mt-4">
+                                    {toTitleCase(receipt.printed_by)}
                                 </p>
-                                <p>{'_'.repeat(37)}</p>
+                                <p className="-mt-2">{'_'.repeat(37)}</p>
+                                <p className="text-muted-foreground">Printed By</p>
                             </div>
-                            <div>
+                            <div className="text-center mt-8">
                                 <p className="text-muted-foreground">
-                                    Acknowledge by: {receipt.printed_by}
+                                    {toTitleCase(receipt.remitter_name)}
                                 </p>
+                                <p className="-mt-2">{'_'.repeat(37)}</p>
+                                <p className="text-muted-foreground">Acknowledge By</p>
                             </div>
-                        </div>
-
-                        <Separator className="my-2" />
-
-                        <div className="text-[11px] text-muted-foreground">
-                            Gen Date: # {receipt.gen_at}
+                            <div></div>
                         </div>
                     </div>
                 </div>

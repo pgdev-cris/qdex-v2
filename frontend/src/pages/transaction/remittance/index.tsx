@@ -117,7 +117,7 @@ function ContextPanel({
     if (step === 'select-type' || step === 'remit') {
         return (
             <div className="flex flex-col gap-6">
-                <Section title="Supplier Sales Summary Today">
+                <Section title="Summary">
                     <InfoRow
                         label="Supplier"
                         value={supplierName ? `${supplierCode} - ${supplierName}` : supplierCode}
@@ -405,9 +405,7 @@ export function RemittancePage() {
             return
         }
 
-        const supplierLabel = supplierName
-            ? `${supplierCode} - ${supplierName}`
-            : supplierCode
+        const supplierLabel = supplierName ? `${supplierCode} - ${supplierName}` : supplierCode
 
         let rows: ConfirmRow[]
 

@@ -76,15 +76,15 @@ const STATUS_OPTIONS = [
     { value: '2', label: 'Voided' },
 ]
 
-const COLUMNS = [
-    'Receipt No',
-    'Supplier',
-    'Type',
-    'Total Amount',
-    'Remitted By',
-    'Status',
-    'Date',
-    '',
+const COLUMNS: { label: string; center?: boolean }[] = [
+    { label: 'Receipt No' },
+    { label: 'Supplier' },
+    { label: 'Type', center: true },
+    { label: 'Total Amount' },
+    { label: 'Remitted By' },
+    { label: 'Status', center: true },
+    { label: 'Date' },
+    { label: '' },
 ]
 
 //  Badges
@@ -424,10 +424,13 @@ export function MonitoringPage() {
                             <tr className="border-b">
                                 {COLUMNS.map((col) => (
                                     <th
-                                        key={col}
-                                        className="px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground"
+                                        key={col.label}
+                                        className={[
+                                            'px-4 py-3 text-xs font-medium tracking-wide text-muted-foreground',
+                                            col.center ? 'text-center' : 'text-left',
+                                        ].join(' ')}
                                     >
-                                        {col}
+                                        {col.label}
                                     </th>
                                 ))}
                             </tr>
@@ -475,7 +478,7 @@ export function MonitoringPage() {
                                                 {row.supplier_code} - {row.supplier_name}
                                             </p>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 text-center">
                                             <TypeBadge type={row.type} />
                                         </td>
                                         <td className="px-4 py-3 font-mono">
@@ -484,7 +487,7 @@ export function MonitoringPage() {
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {toTitleCase(row.remitted_by)}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-4 py-3 text-center">
                                             <StatusBadge status={row.status} />
                                         </td>
                                         <td className="px-4 py-3 text-xs text-muted-foreground">

@@ -66,9 +66,25 @@ const getTransactionReportRequest = async (req: Request, res: Response) => {
     });
 };
 
+/**
+ * GET /api/v1/reports/supplier-per-tender
+ * Groups tender totals per supplier (and event).
+ * Query params: from, to, supplier_code, event_code, status
+ */
+const getSupplierPerTenderRequest = async (req: Request, res: Response) => {
+    const query = req.query as TransactionReportQuery;
+    const rows = await service.getSupplierPerTenderReport(query);
+    return res.status(HTTP_STATUS.OK).json({
+        status: HTTP_STATUS.OK,
+        message: 'Supplier per tender report generated successfully',
+        data: rows,
+    });
+};
+
 export default {
     getRemittanceReportRequest,
     getRemittanceSummaryRequest,
     getRemittanceDetailRequest,
     getTransactionReportRequest,
+    getSupplierPerTenderRequest,
 };

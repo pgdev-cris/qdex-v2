@@ -6,19 +6,18 @@ import { apiClient } from '@/lib/axios'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface TransactionRow {
-    id: number
-    receipt_no: string
-    reference_code: string
+interface PivotedRow {
     supplier_code: number
     supplier_name: string
     event_code: string
     event_name: string
-    type: number
-    status: number
-    total_amount: number
-    remitted_by: string
-    transacted_at: string
+    tenders: Record<string, number>  // tender_name → total
+    grand_total: number
+}
+
+interface ApiReport {
+    tender_names: string[]
+    rows: PivotedRow[]
 }
 
 interface Filters {
@@ -26,43 +25,59 @@ interface Filters {
     to: string
     supplier_code: string
     event_code: string
-    type: string
     status: string
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-const TYPE_LABEL: Record<number, string> = { 1: 'Partial', 2: 'Full' }
-const STATUS_LABEL: Record<number, string> = { 0: 'Pending', 1: 'Verified', 2: 'Voided' }
 
 function fileSuffix(filters: Filters) {
     const today = new Date().toISOString().slice(0, 10)
     return filters.from && filters.to ? `_${filters.from}_to_${filters.to}` : `_${today}`
 }
 
-function exportToExcel(rows: TransactionRow[], filters: Filters) {
-    const ws = XLSX.utils.json_to_sheet(
-        rows.map((r) => ({
-            'Receipt No':    r.receipt_no,
-            'Ref Code':      r.reference_code,
-            'Supplier Code': r.supplier_code,
-            'Supplier Name': r.supplier_name,
+function exportToExcel(report: ApiReport, filters: Filters) {
+    const { tender_names, rows } = report
+
+    const sheetData = rows.map((r) => {
+        const base: Record<string, string | number> = {
             'Event Code':    r.event_code,
             'Event Name':    r.event_name,
-            'Type':          TYPE_LABEL[r.type] ?? r.type,
-            'Status':        STATUS_LABEL[r.status] ?? r.status,
-            'Total Amount':  Number(r.total_amount),
-            'Remitted By':   r.remitted_by,
-            'Transacted At': r.transacted_at,
-        })),
-    )
+            'Supplier Code': r.supplier_code,
+            'Supplier Name': r.supplier_name,
+        }
+        // Dynamic tender columns — one per tender type from tbl_tender_types
+        for (const name of tender_names) {
+            base[name] = Number(r.tenders[name] ?? 0)
+        }
+        base['Grand Total'] = Number(r.grand_total)
+        return base
+    })
+
+    // Totals row at the bottom
+    const totalsRow: Record<string, string | number> = {
+        'Event Code':    '',
+        'Event Name':    '',
+        'Supplier Code': '',
+        'Supplier Name': 'TOTAL',
+    }
+    for (const name of tender_names) {
+        totalsRow[name] = rows.reduce((sum, r) => sum + Number(r.tenders[name] ?? 0), 0)
+    }
+    totalsRow['Grand Total'] = rows.reduce((sum, r) => sum + Number(r.grand_total), 0)
+    sheetData.push(totalsRow)
+
+    const ws = XLSX.utils.json_to_sheet(sheetData)
+
+    // Fixed cols + one per tender + Grand Total
     ws['!cols'] = [
-        { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 30 }, { wch: 12 },
-        { wch: 25 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 20 },
+        { wch: 12 }, { wch: 25 }, { wch: 14 }, { wch: 30 },
+        ...tender_names.map(() => ({ wch: 16 })),
+        { wch: 16 },
     ]
+
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Transactions')
-    XLSX.writeFile(wb, `transaction_report${fileSuffix(filters)}.xlsx`)
+    XLSX.utils.book_append_sheet(wb, ws, 'Supplier Per Tender')
+    XLSX.writeFile(wb, `supplier_per_tender${fileSuffix(filters)}.xlsx`)
 }
 
 // ── Field helpers ─────────────────────────────────────────────────────────────
@@ -77,9 +92,9 @@ interface Props {
     onClose: () => void
 }
 
-const BLANK: Filters = { from: '', to: '', supplier_code: '', event_code: '', type: '', status: '' }
+const BLANK: Filters = { from: '', to: '', supplier_code: '', event_code: '', status: '' }
 
-export function TransactionReportModal({ open, onClose }: Props) {
+export function SupplierPerTenderModal({ open, onClose }: Props) {
     const [filters, setFilters] = useState<Filters>({ ...BLANK })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -103,14 +118,16 @@ export function TransactionReportModal({ open, onClose }: Props) {
             if (filters.to)            p.to            = filters.to
             if (filters.supplier_code) p.supplier_code = filters.supplier_code.trim()
             if (filters.event_code)    p.event_code    = filters.event_code.trim().toUpperCase()
-            if (filters.type)          p.type          = filters.type
             if (filters.status)        p.status        = filters.status
 
-            const res = await apiClient.get<{ data: TransactionRow[] }>('/api/v1/reports/transactions', { params: p })
-            const rows = res.data.data
-            if (!rows.length) { setError('No transactions found for the selected filters.'); return }
-            setResultCount(rows.length)
-            exportToExcel(rows, filters)
+            const res = await apiClient.get<{ data: ApiReport }>(
+                '/api/v1/reports/supplier-per-tender',
+                { params: p },
+            )
+            const report = res.data.data
+            if (!report.rows.length) { setError('No data found for the selected filters.'); return }
+            setResultCount(report.rows.length)
+            exportToExcel(report, filters)
         } catch (e: unknown) {
             setError((e as { message?: string })?.message ?? 'Failed to generate report.')
         } finally {
@@ -128,8 +145,10 @@ export function TransactionReportModal({ open, onClose }: Props) {
                 {/* Header */}
                 <div className="mb-5 flex items-center justify-between">
                     <div>
-                        <h2 className="text-base font-semibold text-card-foreground">Transaction Report</h2>
-                        <p className="mt-0.5 text-xs text-muted-foreground">Apply filters then generate Excel.</p>
+                        <h2 className="text-base font-semibold text-card-foreground">Supplier Per Tender</h2>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                            Totals grouped by supplier × event, broken down per tender type.
+                        </p>
                     </div>
                     <button onClick={onClose} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
                         <X className="h-4 w-4" />
@@ -154,15 +173,7 @@ export function TransactionReportModal({ open, onClose }: Props) {
                         <label className="text-xs font-medium text-muted-foreground">Supplier Code</label>
                         <input type="number" placeholder="e.g. 12345" value={filters.supplier_code} onChange={(e) => patch('supplier_code', e.target.value)} className={inputCls} />
                     </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-muted-foreground">Type</label>
-                        <select value={filters.type} onChange={(e) => patch('type', e.target.value)} className={inputCls}>
-                            <option value="">All Types</option>
-                            <option value="1">Partial</option>
-                            <option value="2">Full</option>
-                        </select>
-                    </div>
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 col-span-2">
                         <label className="text-xs font-medium text-muted-foreground">Status</label>
                         <select value={filters.status} onChange={(e) => patch('status', e.target.value)} className={inputCls}>
                             <option value="">All Statuses</option>
@@ -177,7 +188,7 @@ export function TransactionReportModal({ open, onClose }: Props) {
                 {error && <p className="mt-3 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</p>}
                 {resultCount !== null && !error && (
                     <p className="mt-3 rounded-md bg-green-500/10 px-3 py-2 text-xs text-green-700 dark:text-green-400">
-                        {resultCount} transaction{resultCount !== 1 ? 's' : ''} exported successfully.
+                        {resultCount} supplier row{resultCount !== 1 ? 's' : ''} exported successfully.
                     </p>
                 )}
 

@@ -23,6 +23,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import type { MenuTreeNode } from '@/types/auth.types'
 import { toTitleCase } from '@/utils/string.utils.ts'
 import { TransactionReportModal } from '@/components/modals/TransactionReportModal'
+import { SupplierPerTenderModal } from '@/components/modals/SupplierPerTenderModal'
 
 //  Icon map (string from DB → lucide component)
 
@@ -278,9 +279,13 @@ export function Sidebar() {
                 onCancel={() => setShowLogoutConfirm(false)}
             />
 
-            {/* Modal registry — add new modals here as target_modal keys grow */}
+            {/* Modal registry — keyed by target_modal values from tbl_menu */}
             <TransactionReportModal
                 open={activeModal === 'generate-transaction-report'}
+                onClose={() => setActiveModal(null)}
+            />
+            <SupplierPerTenderModal
+                open={activeModal === 'supplier-per-tender'}
                 onClose={() => setActiveModal(null)}
             />
         </>

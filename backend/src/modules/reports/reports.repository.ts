@@ -189,9 +189,71 @@ const getTransactions = async (query: TransactionReportQuery): Promise<Transacti
     return (await PoolManager.query<TransactionReportRow[]>(sql, params, POOL)) ?? [];
 };
 
+// Raw row returned by the SQL — one row per supplier × event × tender_type
+export interface SupplierTenderRawRow {
+    supplier_code: number;
+    supplier_name: string;
+    event_code: string;
+    event_name: string;
+    tender_type_id: number;
+    tender_name: string;
+    total: number;
+}
+
+const getSupplierPerTender = async (query: TransactionReportQuery): Promise<SupplierTenderRawRow[]> => {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    if (query.from) {
+        conditions.push('DATE(t.transacted_at) >= ?');
+        params.push(query.from);
+    }
+    if (query.to) {
+        conditions.push('DATE(t.transacted_at) <= ?');
+        params.push(query.to);
+    }
+    if (query.supplier_code) {
+        conditions.push('v.code = ?');
+        params.push(Number(query.supplier_code));
+    }
+    if (query.event_code) {
+        conditions.push('e.code = ?');
+        params.push(query.event_code.toUpperCase());
+    }
+    if (query.status !== undefined) {
+        conditions.push('t.status = ?');
+        params.push(Number(query.status));
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // One row per supplier × event × tender_type — pivoting is done in the service layer
+    const sql = `
+        SELECT
+            v.code       AS supplier_code,
+            v.name       AS supplier_name,
+            e.code       AS event_code,
+            e.name       AS event_name,
+            tt.id        AS tender_type_id,
+            tt.label     AS tender_name,
+            COALESCE(SUM(td.amount), 0) AS total
+        FROM tbl_transactions t
+        INNER JOIN tbl_suppliers           v  ON v.id  = t.supplier_id
+        INNER JOIN tbl_events              e  ON e.id  = t.event_id
+        INNER JOIN tbl_transaction_details td ON td.transaction_id = t.id
+        INNER JOIN tbl_tender_types        tt ON tt.id = td.tender_type
+        ${where}
+        GROUP BY v.id, v.code, v.name, e.id, e.code, e.name, tt.id, tt.label
+        ORDER BY e.code ASC, v.code ASC, tt.id ASC
+    `;
+
+    return (await PoolManager.query<SupplierTenderRawRow[]>(sql, params, POOL)) ?? [];
+};
+
 export default {
     getRemittances,
     getRemittanceSummary,
     getRemittanceById,
     getTransactions,
+    getSupplierPerTender,
 };

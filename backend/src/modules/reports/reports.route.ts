@@ -33,4 +33,12 @@ router.get(
     controller.getTransactionReportRequest,
 );
 
+// GET /api/v1/reports/supplier-per-tender
+router.get(
+    '/supplier-per-tender',
+    jwtValidator,
+    requestValidator({ query: TransactionReportQuerySchema }),
+    controller.getSupplierPerTenderRequest,
+);
+
 export default router;

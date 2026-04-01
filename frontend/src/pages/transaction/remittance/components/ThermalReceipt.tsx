@@ -5,7 +5,7 @@ import React from 'react'
 import { toTitleCase } from '@/utils/string.utils.ts'
 
 //  Helpers
-function Row({ label, value }: { label: string; value: string }) {
+const Row = ({ label, value }: { label: string; value: string }) => {
     return (
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>{label}</span>
@@ -14,7 +14,7 @@ function Row({ label, value }: { label: string; value: string }) {
     )
 }
 
-function Divider({ style }: { style?: React.CSSProperties }) {
+const Divider = ({ style }: { style?: React.CSSProperties }) => {
     return (
         <hr
             style={{
@@ -27,7 +27,7 @@ function Divider({ style }: { style?: React.CSSProperties }) {
     )
 }
 
-function Signature({
+const Signature = ({
     name,
     label,
     style,
@@ -39,7 +39,7 @@ function Signature({
     style?: React.CSSProperties
     marginTop?: string
     marginBottom?: string
-}) {
+}) => {
     return (
         <>
             <div style={{ ...gap, textAlign: 'center', marginTop, ...style }}>
@@ -55,7 +55,7 @@ function Signature({
     )
 }
 
-function DividerSolid({ style }: { style?: React.CSSProperties }) {
+const DividerSolid = ({ style }: { style?: React.CSSProperties }) => {
     return (
         <hr
             style={{
@@ -72,7 +72,7 @@ function DividerSolid({ style }: { style?: React.CSSProperties }) {
 const gap = { marginTop: '8pt' }
 const gapSm = { marginTop: '5pt' }
 
-function CopyBlock({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string }) {
+const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string }) => {
     const cashLine = receipt.lines.find((l) => l.method === 'CASH')
     const cardLines = receipt.lines.filter((l) => l.method !== 'CASH')
     const cashTotal = Number(cashLine?.amount ?? 0)
@@ -170,7 +170,7 @@ interface Props {
     receipt: Receipt
 }
 
-export function ThermalReceipt({ receipt }: Props) {
+export const ThermalReceipt = ({ receipt }: Props) => {
     return (
         <>
             <style>{`

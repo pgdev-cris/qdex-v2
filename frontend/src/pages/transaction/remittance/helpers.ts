@@ -1,5 +1,5 @@
 /** Amount without currency symbol: 12,345.67 */
-export function fmtAmt(val: string | number): string {
+export const fmtAmt = (val: string | number): string => {
     return Number(val).toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -7,7 +7,7 @@ export function fmtAmt(val: string | number): string {
 }
 
 /** Amount with ₱ symbol for on-screen display */
-export function fmt(val: string | number): string {
+export const fmt = (val: string | number): string => {
     return Number(val).toLocaleString('en-PH', {
         style: 'currency',
         currency: 'PHP',
@@ -16,7 +16,7 @@ export function fmt(val: string | number): string {
 }
 
 /** "Mar. 23,2026 11:09:11" */
-export function fmtReceiptDate(d: Date): string {
+export const fmtReceiptDate = (d: Date): string => {
     const months = [
         'Jan',
         'Feb',
@@ -37,7 +37,7 @@ export function fmtReceiptDate(d: Date): string {
     return `${months[d.getMonth()]}. ${d.getDate()},${d.getFullYear()} ${h}:${m}:${s}`
 }
 
-export function genTransIds(): { transNo: string; refCode: string } {
+export const genTransIds = (): { transNo: string; refCode: string } => {
     const ts = Date.now()
     const transNo = String(ts).slice(-6)
     const refCode =
@@ -46,7 +46,7 @@ export function genTransIds(): { transNo: string; refCode: string } {
     return { transNo, refCode }
 }
 
-export function methodLabel(code: string): string {
+export const methodLabel = (code: string): string => {
     const map: Record<string, string> = {
         CASH: 'Cash',
         GCASH: 'GCash',

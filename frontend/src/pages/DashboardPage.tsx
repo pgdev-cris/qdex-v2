@@ -44,7 +44,7 @@ const tenderChartConfig = {
     },
 } satisfies ChartConfig
 
-export function DashboardPage() {
+export const DashboardPage = () => {
     const { user } = useAuth()
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [loading, setLoading] = useState(true)

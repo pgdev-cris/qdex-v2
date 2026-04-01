@@ -39,7 +39,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
     layers: Layers,
 }
 
-function MenuIcon({ name, className }: { name: string | null; className?: string }) {
+const MenuIcon = ({ name, className }: { name: string | null; className?: string }) => {
     const Icon = name ? ICON_MAP[name.toLowerCase()] : null
     return Icon ? (
         <Icon className={cn('h-4 w-4 shrink-0', className)} />
@@ -58,7 +58,8 @@ const navItemChild = 'text-sidebar-foreground/50'
 
 //  Single sidebar item (recursive)
 
-function SidebarItem({
+//  Single sidebar item (recursive)
+const SidebarItem = ({
     node,
     depth = 0,
     onOpenModal,
@@ -66,7 +67,7 @@ function SidebarItem({
     node: MenuTreeNode
     depth?: number
     onOpenModal: (target: string) => void
-}) {
+}) => {
     const [open, setOpen] = useState(true)
     const hasChildren = node.children.length > 0
 
@@ -141,7 +142,8 @@ function SidebarItem({
 
 //  Logout confirmation modal
 
-function LogoutModal({
+//  Logout confirmation modal
+const LogoutModal = ({
     open,
     onConfirm,
     onCancel,
@@ -149,7 +151,7 @@ function LogoutModal({
     open: boolean
     onConfirm: () => void
     onCancel: () => void
-}) {
+}) => {
     if (!open) return null
 
     return (
@@ -189,7 +191,8 @@ function LogoutModal({
 
 //  Sidebar shell
 
-export function Sidebar() {
+//  Sidebar shell
+export const Sidebar = () => {
     const { user, menu, currentEvent, logout } = useAuth()
     const navigate = useNavigate()
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)

@@ -89,7 +89,7 @@ const COLUMNS: { label: string; center?: boolean }[] = [
 
 //  Badges
 
-function TypeBadge({ type }: { type: number }) {
+const TypeBadge = ({ type }: { type: number }) => {
     const isPartial = type === 1
     return (
         <span
@@ -103,7 +103,7 @@ function TypeBadge({ type }: { type: number }) {
     )
 }
 
-function StatusBadge({ status }: { status: number }) {
+const StatusBadge = ({ status }: { status: number }) => {
     const colors: Record<number, string> = {
         0: 'bg-yellow-50 text-yellow-700',
         1: 'bg-green-50 text-green-700',
@@ -123,7 +123,8 @@ function StatusBadge({ status }: { status: number }) {
 
 //  Detail modal
 
-function TransactionDetailModal({
+//  Detail modal
+const TransactionDetailModal = ({
     open,
     transaction,
     onClose,
@@ -135,7 +136,7 @@ function TransactionDetailModal({
     onClose: () => void
     onReprint: (id: number) => void
     reprinting: boolean
-}) {
+}) => {
     if (!transaction) return null
 
     return (
@@ -246,7 +247,7 @@ function TransactionDetailModal({
 
 const PAGE_LIMIT = 20
 
-export function MonitoringPage() {
+export const MonitoringPage = () => {
     const [rows, setRows] = useState<TransactionRow[]>([])
     const [loading, setLoading] = useState(false)
     const [total, setTotal] = useState(0)
@@ -413,12 +414,12 @@ export function MonitoringPage() {
                         <colgroup>
                             <col style={{ width: '154px' }} /> {/* Receipt No */}
                             <col style={{ width: '200px' }} /> {/* Supplier */}
-                            <col style={{ width: '90px' }}  /> {/* Type */}
+                            <col style={{ width: '90px' }} /> {/* Type */}
                             <col style={{ width: '120px' }} /> {/* Total Amount */}
                             <col style={{ width: '140px' }} /> {/* Remitted By */}
                             <col style={{ width: '100px' }} /> {/* Status */}
                             <col style={{ width: '160px' }} /> {/* Date */}
-                            <col style={{ width: '76px' }}  /> {/* Actions */}
+                            <col style={{ width: '76px' }} /> {/* Actions */}
                         </colgroup>
                         <thead>
                             <tr className="border-b">

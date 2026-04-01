@@ -33,7 +33,7 @@ const BLANK: FormData = {
 
 // Status badge
 
-function StatusBadge({ status }: { status: 0 | 1 }) {
+const StatusBadge = ({ status }: { status: 0 | 1 }) => {
     return status === 1 ? (
         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -50,7 +50,7 @@ function StatusBadge({ status }: { status: 0 | 1 }) {
 
 const COLUMNS = ['Code', 'Event Name', 'Period Start', 'Period End', 'Status', 'Actions']
 
-export function EventsPage() {
+export const EventsPage = () => {
     const { currentEvent, setCurrentEvent } = useAuth()
 
     const [rows, setRows] = useState<AppEvent[]>([])
@@ -92,11 +92,11 @@ export function EventsPage() {
         return r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)
     })
 
-    function openAdd() {
+    const openAdd = () => {
         setModal({ mode: 'add', data: { ...BLANK } })
     }
 
-    function openEdit(event: AppEvent) {
+    const openEdit = (event: AppEvent) => {
         setModal({
             mode: 'edit',
             id: event.id,
@@ -109,13 +109,14 @@ export function EventsPage() {
         })
     }
 
-    function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
+    const setField = <K extends keyof FormData>(key: K, value: FormData[K]) => {
         setModal((m) => (m ? { ...m, data: { ...m.data, [key]: value } } : m))
     }
 
     //  Save (create / update)
 
-    async function handleSave() {
+    //  Save (create / update)
+    const handleSave = async () => {
         if (!modal) return
         const { name, code } = modal.data
         if (!name.trim() || !code.trim()) return
@@ -153,7 +154,8 @@ export function EventsPage() {
 
     //  Delete
 
-    async function handleDelete() {
+    //  Delete
+    const handleDelete = async () => {
         if (!deleteTarget) return
         setSaving(true)
         setError(null)
@@ -177,7 +179,8 @@ export function EventsPage() {
 
     //  Set Active
 
-    async function handleSetActive(event: AppEvent) {
+    //  Set Active
+    const handleSetActive = async (event: AppEvent) => {
         setSaving(true)
         setError(null)
         try {
@@ -197,7 +200,8 @@ export function EventsPage() {
 
     //  Format
 
-    function fmtDate(d: string | null) {
+    //  Format
+    const fmtDate = (d: string | null) => {
         if (!d) return '—'
         return new Date(d).toLocaleDateString('en-PH', {
             year: 'numeric',

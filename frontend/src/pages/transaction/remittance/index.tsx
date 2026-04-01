@@ -45,7 +45,7 @@ interface ContextPanelProps {
     receipt: Receipt | null
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+const InfoRow = ({ label, value }: { label: string; value: string }) => {
     return (
         <div className="flex flex-col gap-0.5">
             <span className="text-xs text-muted-foreground">{label}</span>
@@ -54,7 +54,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => {
     return (
         <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -65,7 +65,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     )
 }
 
-function ContextPanel({
+const ContextPanel = ({
     step,
     supplierCode,
     supplierName,
@@ -74,7 +74,7 @@ function ContextPanel({
     salesData,
     cashAmount,
     receipt,
-}: ContextPanelProps) {
+}: ContextPanelProps) => {
     const encodedCash = Number(cashAmount) || 0
 
     if (step === 'search') {
@@ -223,16 +223,8 @@ function ContextPanel({
 }
 
 // Helpers
-function buildReceiptFromApi(
-    apiData: NonNullable<RemittanceApiResponse['data']>,
-    remitType: RemitType,
-    supplierCode: string,
-    supplierName: string,
-    remitterName: string,
-    printedBy: string,
-    eventName: string,
-    eventCode: string
-): Receipt {
+// Helpers
+const buildReceiptFromApi = (apiData: NonNullable<RemittanceApiResponse['data']>, remitType: RemitType, supplierCode: string, supplierName: string, remitterName: string, printedBy: string, eventName: string, eventCode: string): Receipt => {
     return {
         trans_no: apiData.receipt_no,
         ref_code: apiData.reference_code,
@@ -250,7 +242,8 @@ function buildReceiptFromApi(
 }
 
 // Page
-export function RemittancePage() {
+// Page
+export const RemittancePage = () => {
     const { token, user, currentEvent } = useAuth()
 
     // Wizard state
@@ -294,218 +287,228 @@ export function RemittancePage() {
     }, [step])
 
     // Step 1 — search supplier
-    async function handleSearch() {
-        const code = supplierInput.trim().toUpperCase()
-        if (!code) return
-        setError(null)
-        setLoading(true)
-        try {
-            const json = await apiFetch<SalesResponse>(`${SALES_FETCH_PATH}/${code}`, {
-                method: 'GET',
-                token: token ?? undefined,
-            })
-            setSalesData(json.data.sales)
-            setSupplierCode(code)
-            setSupplierName(json.data.supplier.name ?? '')
-            setStep('select-type')
-        } catch (err: unknown) {
-            console.error('Error fetching sales data:', err)
-            const msg =
-                err && typeof err === 'object' && 'message' in err
-                    ? String((err as { message: unknown }).message)
-                    : null
-            setError(msg ?? 'Could not reach the sales service. Check your connection.')
-        } finally {
-            setLoading(false)
+    // Step 1 — search supplier
+    const handleSearch = async () => {
+            const code = supplierInput.trim().toUpperCase()
+            if (!code) return
+            setError(null)
+            setLoading(true)
+            try {
+                const json = await apiFetch<SalesResponse>(`${SALES_FETCH_PATH}/${code}`, {
+                    method: 'GET',
+                    token: token ?? undefined,
+                })
+                setSalesData(json.data.sales)
+                setSupplierCode(code)
+                setSupplierName(json.data.supplier.name ?? '')
+                setStep('select-type')
+            } catch (err: unknown) {
+                console.error('Error fetching sales data:', err)
+                const msg =
+                    err && typeof err === 'object' && 'message' in err
+                        ? String((err as { message: unknown }).message)
+                        : null
+                setError(msg ?? 'Could not reach the sales service. Check your connection.')
+            } finally {
+                setLoading(false)
+            }
         }
-    }
 
     // Step 2 — select type
     // Both partial and full go to the remit form so the operator can
     // manually encode the actual cash amount collected.
     // Full pre-fills cash with the POS total as a starting point.
-    function handleSelectType(type: RemitType) {
-        setRemitType(type)
-        setSelectError(null)
-        setSubmitError(null)
+    // Step 2 — select type
+    // Both partial and full go to the remit form so the operator can
+    // manually encode the actual cash amount collected.
+    // Full pre-fills cash with the POS total as a starting point.
+    const handleSelectType = (type: RemitType) => {
+            setRemitType(type)
+            setSelectError(null)
+            setSubmitError(null)
 
-        if (type === 'partial') {
-            setCashAmount('')
-        } else {
-            // Pre-fill with POS cash total; operator adjusts if needed
-            setCashAmount(cashRecord?.total ?? '')
+            if (type === 'partial') {
+                setCashAmount('')
+            } else {
+                // Pre-fill with POS cash total; operator adjusts if needed
+                setCashAmount(cashRecord?.total ?? '')
+            }
+
+            setStep('remit')
         }
-
-        setStep('remit')
-    }
 
     // Full remittance — execute after confirmation
-    async function executeFullRemittance() {
-        // Use the operator-entered cashAmount, not the raw POS total
-        const lines: ReceiptLine[] = salesData.map((r) =>
-            r.payment_method === 'CASH'
-                ? { method: r.payment_method, amount: cashAmount }
-                : { method: r.payment_method, amount: r.total }
-        )
-
-        setConfirmOpen(false)
-        setPendingType('full')
-        setLoading(true)
-
-        try {
-            const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance', {
-                method: 'POST',
-                body: JSON.stringify({
-                    supplier_code: supplierCode,
-                    supplier_name: supplierName,
-                    remitter_name: remitterName.trim(),
-                    remit_type: 'full',
-                    lines,
-                }),
-                token: token ?? undefined,
-            })
-
-            if (json.result !== 'success' || !json.data) {
-                setSelectError(json.message ?? 'Failed to process full remittance.')
-                return
-            }
-
-            setReceipt(
-                buildReceiptFromApi(
-                    json.data,
-                    'full',
-                    supplierCode,
-                    supplierName,
-                    remitterName.trim(),
-                    printedBy,
-                    eventName,
-                    eventCode
-                )
+    // Full remittance — execute after confirmation
+    const executeFullRemittance = async () => {
+            // Use the operator-entered cashAmount, not the raw POS total
+            const lines: ReceiptLine[] = salesData.map((r) =>
+                r.payment_method === 'CASH'
+                    ? { method: r.payment_method, amount: cashAmount }
+                    : { method: r.payment_method, amount: r.total }
             )
-            setStep('receipt')
-        } catch (err: unknown) {
-            const msg =
-                err && typeof err === 'object' && 'message' in err
-                    ? String((err as { message: unknown }).message)
-                    : null
-            setSelectError(msg ?? 'Could not process remittance. Check your connection.')
-        } finally {
-            setPendingType(null)
-            setLoading(false)
+
+            setConfirmOpen(false)
+            setPendingType('full')
+            setLoading(true)
+
+            try {
+                const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        supplier_code: supplierCode,
+                        supplier_name: supplierName,
+                        remitter_name: remitterName.trim(),
+                        remit_type: 'full',
+                        lines,
+                    }),
+                    token: token ?? undefined,
+                })
+
+                if (json.result !== 'success' || !json.data) {
+                    setSelectError(json.message ?? 'Failed to process full remittance.')
+                    return
+                }
+
+                setReceipt(
+                    buildReceiptFromApi(
+                        json.data,
+                        'full',
+                        supplierCode,
+                        supplierName,
+                        remitterName.trim(),
+                        printedBy,
+                        eventName,
+                        eventCode
+                    )
+                )
+                setStep('receipt')
+            } catch (err: unknown) {
+                const msg =
+                    err && typeof err === 'object' && 'message' in err
+                        ? String((err as { message: unknown }).message)
+                        : null
+                setSelectError(msg ?? 'Could not process remittance. Check your connection.')
+            } finally {
+                setPendingType(null)
+                setLoading(false)
+            }
         }
-    }
 
     // Step 3 — validate cash amount then open confirm modal (partial + full)
-    function handleSubmit() {
-        setSubmitError(null)
+    // Step 3 — validate cash amount then open confirm modal (partial + full)
+    const handleSubmit = () => {
+            setSubmitError(null)
 
-        const cashVal = Number(cashAmount)
-        if (!cashAmount || isNaN(cashVal) || cashVal <= 0) {
-            setSubmitError('Please enter a valid cash amount.')
-            return
-        }
-
-        const supplierLabel = supplierName ? `${supplierCode} - ${supplierName}` : supplierCode
-
-        let rows: ConfirmRow[]
-
-        if (remitType === 'full') {
-            // Full: show every payment method — cash uses the operator-entered amount
-            rows = [
-                { label: 'Supplier', value: supplierLabel },
-                { label: 'Remitter', value: remitterName.trim() || '—' },
-                { label: 'Type', value: 'Full Remittance' },
-                ...salesData.map((r) => ({
-                    label: methodLabel(r.payment_method),
-                    value: fmt(r.payment_method === 'CASH' ? cashVal : Number(r.total)),
-                })),
-            ]
-        } else {
-            rows = [
-                { label: 'Supplier', value: supplierLabel },
-                { label: 'Remitter', value: remitterName.trim() || '—' },
-                { label: 'Type', value: 'Partial Remittance' },
-                { label: 'Cash to Remit', value: fmt(cashVal) },
-            ]
-        }
-
-        setConfirmRows(rows)
-        setConfirmOpen(true)
-    }
-
-    // Partial remittance — execute after confirmation
-    async function executePartialRemittance() {
-        const lines: ReceiptLine[] = [{ method: 'CASH', amount: cashAmount }]
-
-        setConfirmOpen(false)
-        setLoading(true)
-
-        try {
-            const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance/partial', {
-                method: 'POST',
-                body: JSON.stringify({
-                    supplier_code: supplierCode,
-                    supplier_name: supplierName,
-                    remitter_name: remitterName.trim(),
-                    remit_type: 'partial',
-                    lines,
-                }),
-                token: token ?? undefined,
-            })
-
-            if (json.result !== 'success' || !json.data) {
-                setSubmitError(json.message ?? 'Failed to process partial remittance.')
+            const cashVal = Number(cashAmount)
+            if (!cashAmount || isNaN(cashVal) || cashVal <= 0) {
+                setSubmitError('Please enter a valid cash amount.')
                 return
             }
 
-            setReceipt(
-                buildReceiptFromApi(
-                    json.data,
-                    'partial',
-                    supplierCode,
-                    supplierName,
-                    remitterName.trim(),
-                    printedBy,
-                    eventName,
-                    eventCode
-                )
-            )
-            setStep('receipt')
-        } catch (err: unknown) {
-            const msg =
-                err && typeof err === 'object' && 'message' in err
-                    ? String((err as { message: unknown }).message)
-                    : null
-            setSubmitError(msg ?? 'Could not process remittance. Check your connection.')
-        } finally {
-            setLoading(false)
+            const supplierLabel = supplierName ? `${supplierCode} - ${supplierName}` : supplierCode
+
+            let rows: ConfirmRow[]
+
+            if (remitType === 'full') {
+                // Full: show every payment method — cash uses the operator-entered amount
+                rows = [
+                    { label: 'Supplier', value: supplierLabel },
+                    { label: 'Remitter', value: remitterName.trim() || '—' },
+                    { label: 'Type', value: 'Full Remittance' },
+                    ...salesData.map((r) => ({
+                        label: methodLabel(r.payment_method),
+                        value: fmt(r.payment_method === 'CASH' ? cashVal : Number(r.total)),
+                    })),
+                ]
+            } else {
+                rows = [
+                    { label: 'Supplier', value: supplierLabel },
+                    { label: 'Remitter', value: remitterName.trim() || '—' },
+                    { label: 'Type', value: 'Partial Remittance' },
+                    { label: 'Cash to Remit', value: fmt(cashVal) },
+                ]
+            }
+
+            setConfirmRows(rows)
+            setConfirmOpen(true)
         }
-    }
+
+    // Partial remittance — execute after confirmation
+    // Partial remittance — execute after confirmation
+    const executePartialRemittance = async () => {
+            const lines: ReceiptLine[] = [{ method: 'CASH', amount: cashAmount }]
+
+            setConfirmOpen(false)
+            setLoading(true)
+
+            try {
+                const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance/partial', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        supplier_code: supplierCode,
+                        supplier_name: supplierName,
+                        remitter_name: remitterName.trim(),
+                        remit_type: 'partial',
+                        lines,
+                    }),
+                    token: token ?? undefined,
+                })
+
+                if (json.result !== 'success' || !json.data) {
+                    setSubmitError(json.message ?? 'Failed to process partial remittance.')
+                    return
+                }
+
+                setReceipt(
+                    buildReceiptFromApi(
+                        json.data,
+                        'partial',
+                        supplierCode,
+                        supplierName,
+                        remitterName.trim(),
+                        printedBy,
+                        eventName,
+                        eventCode
+                    )
+                )
+                setStep('receipt')
+            } catch (err: unknown) {
+                const msg =
+                    err && typeof err === 'object' && 'message' in err
+                        ? String((err as { message: unknown }).message)
+                        : null
+                setSubmitError(msg ?? 'Could not process remittance. Check your connection.')
+            } finally {
+                setLoading(false)
+            }
+        }
 
     // Confirm modal dispatcher
-    function handleConfirm() {
-        if (remitType === 'full') executeFullRemittance()
-        else if (remitType === 'partial') executePartialRemittance()
-    }
+    // Confirm modal dispatcher
+    const handleConfirm = () => {
+            if (remitType === 'full') executeFullRemittance()
+            else if (remitType === 'partial') executePartialRemittance()
+        }
 
     // Reset
-    function handleReset() {
-        setStep('search')
-        setSupplierInput('')
-        setSupplierCode('')
-        setSupplierName('')
-        setRemitterName('')
-        setRemitType(null)
-        setSalesData([])
-        setCashAmount('')
-        setReceipt(null)
-        setError(null)
-        setSelectError(null)
-        setSubmitError(null)
-        setPendingType(null)
-        setConfirmOpen(false)
-        setConfirmRows([])
-    }
+    // Reset
+    const handleReset = () => {
+            setStep('search')
+            setSupplierInput('')
+            setSupplierCode('')
+            setSupplierName('')
+            setRemitterName('')
+            setRemitType(null)
+            setSalesData([])
+            setCashAmount('')
+            setReceipt(null)
+            setError(null)
+            setSelectError(null)
+            setSubmitError(null)
+            setPendingType(null)
+            setConfirmOpen(false)
+            setConfirmRows([])
+        }
 
     return (
         <div className="flex min-h-full flex-col p-6">

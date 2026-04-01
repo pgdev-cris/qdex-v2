@@ -40,7 +40,7 @@ const BLANK: FormData = {
 
 //  Status badge
 
-function StatusBadge({ status }: { status: number }) {
+const StatusBadge = ({ status }: { status: number }) => {
     if (status === 1) {
         return (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -60,7 +60,7 @@ function StatusBadge({ status }: { status: number }) {
 
 const COLUMNS = ['Code', 'Supplier Name', 'Status', 'Registered', 'Actions']
 
-export function SuppliersPage() {
+export const SuppliersPage = () => {
     const [rows, setRows] = useState<Supplier[]>([])
     const [search, setSearch] = useState('')
     const [loading, setLoading] = useState(true)
@@ -100,12 +100,12 @@ export function SuppliersPage() {
         return String(r.code).toLowerCase().includes(q) || r.name.toLowerCase().includes(q)
     })
 
-    function openAdd() {
+    const openAdd = () => {
         setError(null)
         setModal({ mode: 'add', data: { ...BLANK } })
     }
 
-    function openEdit(supplier: Supplier) {
+    const openEdit = (supplier: Supplier) => {
         setError(null)
         setModal({
             mode: 'edit',
@@ -117,13 +117,14 @@ export function SuppliersPage() {
         })
     }
 
-    function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
+    const setField = <K extends keyof FormData>(key: K, value: FormData[K]) => {
         setModal((m) => (m ? { ...m, data: { ...m.data, [key]: value } } : m))
     }
 
     //  Save (create / update)
 
-    async function handleSave() {
+    //  Save (create / update)
+    const handleSave = async () => {
         if (!modal) return
         const { code, name } = modal.data
         if (!code.trim() || !name.trim()) return
@@ -163,7 +164,8 @@ export function SuppliersPage() {
 
     //  Toggle active / inactive
 
-    async function handleToggleStatus(supplier: Supplier) {
+    //  Toggle active / inactive
+    const handleToggleStatus = async (supplier: Supplier) => {
         setSaving(true)
         setError(null)
         try {
@@ -182,7 +184,8 @@ export function SuppliersPage() {
 
     //  Delete (soft — sets status to 9)
 
-    async function handleDelete() {
+    //  Delete (soft — sets status to 9)
+    const handleDelete = async () => {
         if (!deleteTarget) return
         setSaving(true)
         setError(null)
@@ -202,7 +205,8 @@ export function SuppliersPage() {
 
     //  Format
 
-    function fmtDate(d: string) {
+    //  Format
+    const fmtDate = (d: string) => {
         return new Date(d).toLocaleDateString('en-PH', {
             year: 'numeric',
             month: 'short',

@@ -15,7 +15,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/c
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 
-export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) {
+export const LoginForm = ({ className, ...props }: React.ComponentProps<'div'>) => {
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState<string | null>(null)

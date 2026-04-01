@@ -10,7 +10,7 @@ import { UsersPage } from '@/pages/maintenance/UsersPage'
 import { SuppliersPage } from '@/pages/maintenance/SuppliersPage'
 import { EventsPage } from '@/pages/maintenance/EventsPage'
 
-function App() {
+const App = () => {
     return (
         <BrowserRouter>
             <AuthProvider>

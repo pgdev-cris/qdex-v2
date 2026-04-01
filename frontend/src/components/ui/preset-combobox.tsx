@@ -25,13 +25,13 @@ interface Props {
     disabled?: boolean
 }
 
-export function PresetCombobox({
+export const PresetCombobox = ({
     options,
     value,
     onChange,
     placeholder = 'Select menu preset...',
     disabled = false,
-}: Props) {
+}: Props) => {
     const [open, setOpen] = useState(false)
 
     const selected = options.find((o) => o.id === value)

@@ -12,7 +12,7 @@ interface FilterResult {
 /**
  * Builds shared WHERE clauses from the report query filters.
  */
-function buildFilters(query: RemittanceReportQuery): FilterResult {
+const buildFilters = (query: RemittanceReportQuery): FilterResult => {
     const clauses: string[] = [];
     const params: unknown[] = [];
 

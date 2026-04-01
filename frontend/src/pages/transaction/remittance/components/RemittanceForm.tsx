@@ -20,7 +20,7 @@ interface Props {
     onBack: () => void
 }
 
-export function RemittanceForm({
+export const RemittanceForm = ({
     remitType,
     supplierCode,
     supplierName,
@@ -32,7 +32,7 @@ export function RemittanceForm({
     onCashChange,
     onSubmit,
     onBack,
-}: Props) {
+}: Props) => {
     return (
         <Card>
             <CardHeader>

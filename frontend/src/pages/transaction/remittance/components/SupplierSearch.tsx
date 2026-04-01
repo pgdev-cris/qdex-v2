@@ -13,14 +13,14 @@ interface Props {
     onSearch: () => void
 }
 
-export function SupplierSearch({
+export const SupplierSearch = ({
     inputRef,
     supplierInput,
     loading,
     error,
     onChange,
     onSearch,
-}: Props) {
+}: Props) => {
     return (
         <Card>
             <CardHeader>

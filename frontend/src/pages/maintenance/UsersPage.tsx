@@ -69,7 +69,7 @@ const ROLES = ['Admin', 'Manager', 'Staff', 'Viewer']
 
 //  Status badge
 
-function StatusBadge({ status }: { status: number }) {
+const StatusBadge = ({ status }: { status: number }) => {
     if (status === 1) {
         return (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -87,9 +87,18 @@ function StatusBadge({ status }: { status: number }) {
 
 //  Page
 
-const COLUMNS = ['Name', 'Username', 'Department', 'Role', 'Menu Preset', 'Status', 'Created', 'Actions']
+const COLUMNS = [
+    'Name',
+    'Username',
+    'Department',
+    'Role',
+    'Menu Preset',
+    'Status',
+    'Created',
+    'Actions',
+]
 
-export function UsersPage() {
+export const UsersPage = () => {
     const [rows, setRows] = useState<User[]>([])
     const [presets, setPresets] = useState<PresetOption[]>([])
     const [search, setSearch] = useState('')
@@ -147,17 +156,17 @@ export function UsersPage() {
         )
     })
 
-    function presetName(id: number | null) {
+    const presetName = (id: number | null) => {
         if (!id) return <span className="text-muted-foreground/50">—</span>
         return presets.find((p) => p.id === id)?.name ?? `#${id}`
     }
 
-    function openAdd() {
+    const openAdd = () => {
         setError(null)
         setModal({ mode: 'add', data: { ...BLANK } })
     }
 
-    function openEdit(user: User) {
+    const openEdit = (user: User) => {
         setError(null)
         setModal({
             mode: 'edit',
@@ -175,17 +184,28 @@ export function UsersPage() {
         })
     }
 
-    function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
+    const setField = <K extends keyof FormData>(key: K, value: FormData[K]) => {
         setModal((m) => (m ? { ...m, data: { ...m.data, [key]: value } } : m))
     }
 
     //  Save (create / update)
 
-    async function handleSave() {
+    //  Save (create / update)
+    const handleSave = async () => {
         if (!modal) return
-        const { first_name, last_name, username, department, role, password, middle_name, employee_no, menu_preset_id } =
-            modal.data
-        if (!first_name.trim() || !last_name.trim() || !username.trim() || !employee_no.trim()) return
+        const {
+            first_name,
+            last_name,
+            username,
+            department,
+            role,
+            password,
+            middle_name,
+            employee_no,
+            menu_preset_id,
+        } = modal.data
+        if (!first_name.trim() || !last_name.trim() || !username.trim() || !employee_no.trim())
+            return
 
         setSaving(true)
         setError(null)
@@ -225,7 +245,8 @@ export function UsersPage() {
 
     //  Toggle active / inactive
 
-    async function handleToggleStatus(user: User) {
+    //  Toggle active / inactive
+    const handleToggleStatus = async (user: User) => {
         setSaving(true)
         setError(null)
         try {
@@ -244,7 +265,8 @@ export function UsersPage() {
 
     //  Delete (soft — sets status to 9)
 
-    async function handleDelete() {
+    //  Delete (soft — sets status to 9)
+    const handleDelete = async () => {
         if (!deleteTarget) return
         setSaving(true)
         setError(null)
@@ -264,7 +286,8 @@ export function UsersPage() {
 
     //  Format
 
-    function fmtDate(d: string) {
+    //  Format
+    const fmtDate = (d: string) => {
         return new Date(d).toLocaleDateString('en-PH', {
             year: 'numeric',
             month: 'short',
@@ -384,7 +407,11 @@ export function UsersPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon-sm"
-                                                    title={user.status === 1 ? 'Deactivate' : 'Activate'}
+                                                    title={
+                                                        user.status === 1
+                                                            ? 'Deactivate'
+                                                            : 'Activate'
+                                                    }
                                                     disabled={saving}
                                                     onClick={() => handleToggleStatus(user)}
                                                 >
@@ -522,7 +549,10 @@ export function UsersPage() {
                         </FormRow>
 
                         {/* Menu Preset — full-width searchable combobox */}
-                        <FormField label="Menu Preset" hint="Controls which menu items this user sees.">
+                        <FormField
+                            label="Menu Preset"
+                            hint="Controls which menu items this user sees."
+                        >
                             <PresetCombobox
                                 options={presets}
                                 value={modal.data.menu_preset_id}

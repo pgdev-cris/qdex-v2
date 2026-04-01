@@ -12,7 +12,7 @@ interface FetchOptions extends Omit<AxiosRequestConfig, 'url' | 'baseURL'> {
     body?: string // convenience alias for axios `data`
 }
 
-export async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
+export const apiFetch = async <T>(path: string, options: FetchOptions = {}): Promise<T> => {
     const { token, body, headers: extraHeaders, ...rest } = options
 
     const headers: Record<string, string> = {

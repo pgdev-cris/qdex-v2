@@ -11,12 +11,16 @@
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "format:backend": "prettier --write backend/src",
-        "format:frontend": "prettier --write frontend/src"
+        "format:frontend": "prettier --write frontend/src",
+        "lint": "npm run lint --prefix frontend && npm run lint --prefix backend",
+        "lint:fix": "npm run lint:fix --prefix frontend && npm run lint:fix --prefix backend",
+        "migrate:to-arrow": "node scripts/to-arrow.mjs"
     },
     "devDependencies": {
         "@types/jsonwebtoken": "^9.0.10",
         "concurrently": "^8.0.0",
-        "prettier": "^3.8.1"
+        "prettier": "^3.8.1",
+        "ts-morph": "^27.0.2"
     },
     "author": "",
     "license": "ISC",

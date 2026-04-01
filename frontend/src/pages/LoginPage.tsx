@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { LoginForm } from '@/components/login-form'
 import { useAuth } from '@/contexts/AuthContext'
 
-export function LoginPage() {
+export const LoginPage = () => {
     const { token } = useAuth()
     const navigate = useNavigate()
 

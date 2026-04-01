@@ -34,12 +34,12 @@ interface Filters {
 const TYPE_LABEL: Record<number, string> = { 1: 'Partial', 2: 'Full' }
 const STATUS_LABEL: Record<number, string> = { 0: 'Pending', 1: 'Verified', 2: 'Voided' }
 
-function fileSuffix(filters: Filters) {
+const fileSuffix = (filters: Filters) => {
     const today = new Date().toISOString().slice(0, 10)
     return filters.from && filters.to ? `_${filters.from}_to_${filters.to}` : `_${today}`
 }
 
-function exportToExcel(rows: TransactionRow[], filters: Filters) {
+const exportToExcel = (rows: TransactionRow[], filters: Filters) => {
     const ws = XLSX.utils.json_to_sheet(
         rows.map((r) => ({
             'Receipt No':    r.receipt_no,
@@ -78,7 +78,7 @@ interface Props {
 
 const BLANK: Filters = { from: '', to: '', supplier_code: '', type: '', status: '' }
 
-export function TransactionReportModal({ open, onClose }: Props) {
+export const TransactionReportModal = ({ open, onClose }: Props) => {
     const today = new Date().toISOString().slice(0, 10)
     const [filters, setFilters] = useState<Filters>({ ...BLANK, from: today, to: today })
     const [loading, setLoading] = useState(false)
@@ -87,35 +87,35 @@ export function TransactionReportModal({ open, onClose }: Props) {
 
     if (!open) return null
 
-    function patch(key: keyof Filters, value: string) {
-        setFilters((f) => ({ ...f, [key]: value }))
-        setError(null)
-        setResultCount(null)
-    }
-
-    async function handleGenerate() {
-        setLoading(true)
-        setError(null)
-        setResultCount(null)
-        try {
-            const p: Record<string, string> = {}
-            if (filters.from)          p.from          = filters.from
-            if (filters.to)            p.to            = filters.to
-            if (filters.supplier_code) p.supplier_code = filters.supplier_code.trim()
-            if (filters.type)          p.type          = filters.type
-            if (filters.status)        p.status        = filters.status
-
-            const res = await apiClient.get<{ data: TransactionRow[] }>('/api/v1/reports/transactions', { params: p })
-            const rows = res.data.data
-            if (!rows.length) { setError('No transactions found for the selected filters.'); return }
-            setResultCount(rows.length)
-            exportToExcel(rows, filters)
-        } catch (e: unknown) {
-            setError((e as { message?: string })?.message ?? 'Failed to generate report.')
-        } finally {
-            setLoading(false)
+    const patch = (key: keyof Filters, value: string) => {
+            setFilters((f) => ({ ...f, [key]: value }))
+            setError(null)
+            setResultCount(null)
         }
-    }
+
+    const handleGenerate = async () => {
+            setLoading(true)
+            setError(null)
+            setResultCount(null)
+            try {
+                const p: Record<string, string> = {}
+                if (filters.from)          p.from          = filters.from
+                if (filters.to)            p.to            = filters.to
+                if (filters.supplier_code) p.supplier_code = filters.supplier_code.trim()
+                if (filters.type)          p.type          = filters.type
+                if (filters.status)        p.status        = filters.status
+
+                const res = await apiClient.get<{ data: TransactionRow[] }>('/api/v1/reports/transactions', { params: p })
+                const rows = res.data.data
+                if (!rows.length) { setError('No transactions found for the selected filters.'); return }
+                setResultCount(rows.length)
+                exportToExcel(rows, filters)
+            } catch (e: unknown) {
+                setError((e as { message?: string })?.message ?? 'Failed to generate report.')
+            } finally {
+                setLoading(false)
+            }
+        }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>

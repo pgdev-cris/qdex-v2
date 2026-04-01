@@ -12,7 +12,7 @@ interface Props {
     step: Step
 }
 
-export function StepIndicator({ step }: Props) {
+export const StepIndicator = ({ step }: Props) => {
     const idx = STEPS.findIndex((s) => s.key === step)
 
     return (

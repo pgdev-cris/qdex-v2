@@ -58,10 +58,10 @@ export type MenuRequestBody = ParentMenuRequestBody | ChildMenuRequestBody
 
 // Type guards
 
-export function isParentMenuRequest(body: MenuRequestBody): body is ParentMenuRequestBody {
+export const isParentMenuRequest = (body: MenuRequestBody): body is ParentMenuRequestBody => {
     return body.menu.parent_id === null
 }
 
-export function isChildMenuRequest(body: MenuRequestBody): body is ChildMenuRequestBody {
+export const isChildMenuRequest = (body: MenuRequestBody): body is ChildMenuRequestBody => {
     return body.menu.parent_id !== null
 }

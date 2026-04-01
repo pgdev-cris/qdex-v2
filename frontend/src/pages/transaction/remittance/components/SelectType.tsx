@@ -24,7 +24,7 @@ interface Props {
     onBack: () => void
 }
 
-export function SelectType({
+export const SelectType = ({
     supplierCode,
     supplierName,
     remitterName,
@@ -34,7 +34,7 @@ export function SelectType({
     onRemitterChange,
     onSelectType,
     onBack,
-}: Props) {
+}: Props) => {
     const canProceed = remitterName.trim().length > 0 && !loading
 
     return (

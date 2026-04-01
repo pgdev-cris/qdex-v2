@@ -9,7 +9,7 @@ import { toTitleCase } from '@/utils/string.utils.ts'
 
 //  Screen-only receipt row
 
-function ScreenRow({
+const ScreenRow = ({
     label,
     value,
     bold = false,
@@ -17,7 +17,7 @@ function ScreenRow({
     label: string
     value: string
     bold?: boolean
-}) {
+}) => {
     return (
         <div className={`flex justify-between ${bold ? 'font-bold' : ''}`}>
             <span>{label}</span>
@@ -34,7 +34,7 @@ interface Props {
     onReset: () => void
 }
 
-export function ReceiptPreview({ receipt, onPrint, onReset }: Props) {
+export const ReceiptPreview = ({ receipt, onPrint, onReset }: Props) => {
     const cashLine = receipt.lines.find((l) => l.method === 'CASH')
     const cardLines = receipt.lines.filter((l) => l.method !== 'CASH')
     const grandTotal = receipt.lines.reduce((s, l) => s + Number(l.amount), 0)

@@ -29,7 +29,7 @@ const AuthContext = createContext<AuthContextType | null>(null)
 const STORAGE_KEY = 'qdex_auth'
 
 // Provider
-export function AuthProvider({ children }: { children: ReactNode }) {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<AuthUser | null>(null)
     const [token, setToken] = useState<string | null>(null)
     const [menu, setMenu] = useState<MenuPreset | null>(null)
@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 // Hook
-export function useAuth(): AuthContextType {
+export const useAuth = (): AuthContextType => {
     const ctx = useContext(AuthContext)
     if (!ctx) throw new Error('useAuth must be used within <AuthProvider>')
     return ctx

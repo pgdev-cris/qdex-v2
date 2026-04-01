@@ -154,10 +154,7 @@ interface DropdownRect {
     width: number
 }
 
-function useDropdownRect(
-    triggerRef: React.RefObject<HTMLElement | null>,
-    open: boolean
-): DropdownRect | null {
+const useDropdownRect = (triggerRef: React.RefObject<HTMLElement | null>, open: boolean): DropdownRect | null => {
     const [rect, setRect] = useState<DropdownRect | null>(null)
 
     const compute = () => {
@@ -194,13 +191,13 @@ interface SearchableSelectProps {
     error?: boolean
 }
 
-function SearchableSelect({
+const SearchableSelect = ({
     options,
     value,
     onChange,
     placeholder = '— Select —',
     error,
-}: SearchableSelectProps) {
+}: SearchableSelectProps) => {
     const [open, setOpen] = useState(false)
     const [query, setQuery] = useState('')
     const triggerRef = useRef<HTMLButtonElement>(null)
@@ -344,12 +341,12 @@ interface SearchableMultiSelectProps {
     placeholder?: string
 }
 
-function SearchableMultiSelect({
+const SearchableMultiSelect = ({
     options,
     selected,
     onToggle,
     placeholder = 'Search and select...',
-}: SearchableMultiSelectProps) {
+}: SearchableMultiSelectProps) => {
     const [open, setOpen] = useState(false)
     const [query, setQuery] = useState('')
     const triggerRef = useRef<HTMLButtonElement>(null)
@@ -518,7 +515,8 @@ function SearchableMultiSelect({
 
 // Reusable: Toggle
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+// Reusable: Toggle
+const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => {
     return (
         <button
             type="button"
@@ -543,7 +541,8 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 // Main Component
 
-export default function MenuForm() {
+// Main Component
+const MenuForm = () => {
     const [form, setForm] = useState<FormState>(INITIAL_FORM)
     const [errors, setErrors] = useState<FormErrors>({})
     const [submitted, setSubmitted] = useState<object | null>(null)
@@ -1193,3 +1192,4 @@ export default function MenuForm() {
         </div>
     )
 }
+export default MenuForm

@@ -13,7 +13,7 @@ interface ModalProps {
     size?: 'sm' | 'md' | 'lg'
 }
 
-export function Modal({
+export const Modal = ({
     open,
     onClose,
     title,
@@ -21,7 +21,7 @@ export function Modal({
     children,
     footer,
     size = 'md',
-}: ModalProps) {
+}: ModalProps) => {
     if (!open) return null
 
     const widths = { sm: 'w-96', md: 'w-[480px]', lg: 'w-[640px]' }
@@ -87,7 +87,7 @@ interface ConfirmModalProps {
     onCancel: () => void
 }
 
-export function ConfirmModal({
+export const ConfirmModal = ({
     open,
     title,
     description,
@@ -96,7 +96,7 @@ export function ConfirmModal({
     loading = false,
     onConfirm,
     onCancel,
-}: ConfirmModalProps) {
+}: ConfirmModalProps) => {
     if (!open) return null
 
     return (
@@ -162,7 +162,7 @@ interface DeleteModalProps {
     onCancel: () => void
 }
 
-export function DeleteModal({ open, label, onConfirm, onCancel }: DeleteModalProps) {
+export const DeleteModal = ({ open, label, onConfirm, onCancel }: DeleteModalProps) => {
     if (!open) return null
 
     return (
@@ -196,7 +196,7 @@ interface FieldProps {
     hint?: string
 }
 
-export function FormField({ label, required, children, hint }: FieldProps) {
+export const FormField = ({ label, required, children, hint }: FieldProps) => {
     return (
         <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-foreground">
@@ -209,7 +209,7 @@ export function FormField({ label, required, children, hint }: FieldProps) {
     )
 }
 
-export function FormSelect({
+export const FormSelect = ({
     value,
     onChange,
     children,
@@ -219,7 +219,7 @@ export function FormSelect({
     onChange: (v: string) => void
     children: ReactNode
     placeholder?: string
-}) {
+}) => {
     return (
         <select
             value={value}
@@ -236,6 +236,6 @@ export function FormSelect({
     )
 }
 
-export function FormRow({ children }: { children: ReactNode }) {
+export const FormRow = ({ children }: { children: ReactNode }) => {
     return <div className="grid grid-cols-2 gap-4">{children}</div>
 }

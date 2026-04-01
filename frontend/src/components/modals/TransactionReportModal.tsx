@@ -25,7 +25,6 @@ interface Filters {
     from: string
     to: string
     supplier_code: string
-    event_code: string
     type: string
     status: string
 }
@@ -77,7 +76,7 @@ interface Props {
     onClose: () => void
 }
 
-const BLANK: Filters = { from: '', to: '', supplier_code: '', event_code: '', type: '', status: '' }
+const BLANK: Filters = { from: '', to: '', supplier_code: '', type: '', status: '' }
 
 export function TransactionReportModal({ open, onClose }: Props) {
     const today = new Date().toISOString().slice(0, 10)
@@ -103,7 +102,6 @@ export function TransactionReportModal({ open, onClose }: Props) {
             if (filters.from)          p.from          = filters.from
             if (filters.to)            p.to            = filters.to
             if (filters.supplier_code) p.supplier_code = filters.supplier_code.trim()
-            if (filters.event_code)    p.event_code    = filters.event_code.trim().toUpperCase()
             if (filters.type)          p.type          = filters.type
             if (filters.status)        p.status        = filters.status
 
@@ -146,10 +144,6 @@ export function TransactionReportModal({ open, onClose }: Props) {
                     <div className="flex flex-col gap-1">
                         <label className="text-xs font-medium text-muted-foreground">Date To</label>
                         <input type="date" value={filters.to} onChange={(e) => patch('to', e.target.value)} className={inputCls} />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-muted-foreground">Event Code</label>
-                        <input type="text" placeholder="e.g. EVT001" value={filters.event_code} onChange={(e) => patch('event_code', e.target.value)} className={inputCls} />
                     </div>
                     <div className="flex flex-col gap-1">
                         <label className="text-xs font-medium text-muted-foreground">Supplier Code</label>

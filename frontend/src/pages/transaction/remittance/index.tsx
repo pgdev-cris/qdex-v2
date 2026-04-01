@@ -321,44 +321,30 @@ export function RemittancePage() {
     }
 
     // Step 2 — select type
-    // • Partial → go to remit form
-    // • Full    → show confirm modal first, then execute on approval
+    // Both partial and full go to the remit form so the operator can
+    // manually encode the actual cash amount collected.
+    // Full pre-fills cash with the POS total as a starting point.
     function handleSelectType(type: RemitType) {
         setRemitType(type)
         setSelectError(null)
+        setSubmitError(null)
 
         if (type === 'partial') {
             setCashAmount('')
-            setStep('remit')
-            return
+        } else {
+            // Pre-fill with POS cash total; operator adjusts if needed
+            setCashAmount(cashRecord?.total ?? '')
         }
 
-        // Full remittance: build summary rows and open confirm modal
-        const cashTotal = cashRecord?.total ?? '0'
-        setCashAmount(cashTotal)
-
-        const rows: ConfirmRow[] = [
-            {
-                label: 'Supplier',
-                value: supplierName ? `${supplierCode} - ${supplierName}` : supplierCode,
-            },
-            { label: 'Remitter', value: remitterName.trim() || '—' },
-            { label: 'Type', value: 'Full Remittance' },
-            ...salesData.map((r) => ({
-                label: methodLabel(r.payment_method),
-                value: fmt(r.payment_method === 'CASH' ? cashTotal : r.total),
-            })),
-        ]
-        setConfirmRows(rows)
-        setConfirmOpen(true)
+        setStep('remit')
     }
 
     // Full remittance — execute after confirmation
     async function executeFullRemittance() {
-        const cashTotal = cashRecord?.total ?? '0'
+        // Use the operator-entered cashAmount, not the raw POS total
         const lines: ReceiptLine[] = salesData.map((r) =>
             r.payment_method === 'CASH'
-                ? { method: r.payment_method, amount: cashTotal }
+                ? { method: r.payment_method, amount: cashAmount }
                 : { method: r.payment_method, amount: r.total }
         )
 
@@ -409,7 +395,7 @@ export function RemittancePage() {
         }
     }
 
-    // Step 3 — submit partial: validate then open confirm modal
+    // Step 3 — validate cash amount then open confirm modal (partial + full)
     function handleSubmit() {
         setSubmitError(null)
 
@@ -419,15 +405,32 @@ export function RemittancePage() {
             return
         }
 
-        const rows: ConfirmRow[] = [
-            {
-                label: 'Supplier',
-                value: supplierName ? `${supplierCode} - ${supplierName}` : supplierCode,
-            },
-            { label: 'Remitter', value: remitterName.trim() || '—' },
-            { label: 'Type', value: 'Partial Remittance' },
-            { label: 'Cash to Remit', value: fmt(cashVal) },
-        ]
+        const supplierLabel = supplierName
+            ? `${supplierCode} - ${supplierName}`
+            : supplierCode
+
+        let rows: ConfirmRow[]
+
+        if (remitType === 'full') {
+            // Full: show every payment method — cash uses the operator-entered amount
+            rows = [
+                { label: 'Supplier', value: supplierLabel },
+                { label: 'Remitter', value: remitterName.trim() || '—' },
+                { label: 'Type', value: 'Full Remittance' },
+                ...salesData.map((r) => ({
+                    label: methodLabel(r.payment_method),
+                    value: fmt(r.payment_method === 'CASH' ? cashVal : Number(r.total)),
+                })),
+            ]
+        } else {
+            rows = [
+                { label: 'Supplier', value: supplierLabel },
+                { label: 'Remitter', value: remitterName.trim() || '—' },
+                { label: 'Type', value: 'Partial Remittance' },
+                { label: 'Cash to Remit', value: fmt(cashVal) },
+            ]
+        }
+
         setConfirmRows(rows)
         setConfirmOpen(true)
     }

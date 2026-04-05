@@ -50,7 +50,7 @@ const fullRemitRequest = async (req: Request, res: Response) => {
 };
 
 const getPartialSummaryRequest = async (req: Request, res: Response) => {
-    const supplierCode = req.params.supplier_code;
+    const supplierCode = req.params.supplier_code as string;
     if (!supplierCode) {
         return res.status(400).json({ result: 'error', message: 'supplier_code is required.' });
     }

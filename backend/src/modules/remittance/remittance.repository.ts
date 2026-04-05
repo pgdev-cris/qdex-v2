@@ -127,7 +127,7 @@ const getPartialCashSummary = async (
         INNER JOIN tbl_suppliers   s  ON s.id  = t.supplier_id
         INNER JOIN tbl_transaction_details td ON td.transaction_id = t.id
         LEFT  JOIN tbl_series      sr ON sr.code = '${SERIES_CODE}'
-        WHERE s.code            = ?
+        WHERE s.id            = ?
           AND t.event_id        = ?
           AND t.type            = 1       -- PARTIAL
           AND t.status         != 2       -- not VOIDED
@@ -145,4 +145,9 @@ const getPartialCashSummary = async (
     return { total_cash, count, transactions };
 };
 
-export default { createTransaction, createTransactionDetails, createOverrideLog, getPartialCashSummary };
+export default {
+    createTransaction,
+    createTransactionDetails,
+    createOverrideLog,
+    getPartialCashSummary,
+};

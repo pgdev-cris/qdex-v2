@@ -595,12 +595,16 @@ export const UsersPage = () => {
                                     setField('can_override', modal.data.can_override === 1 ? 0 : 1)
                                 }
                                 className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                                    modal.data.can_override === 1 ? 'bg-amber-500' : 'bg-muted-foreground/30'
+                                    modal.data.can_override === 1
+                                        ? 'bg-amber-500'
+                                        : 'bg-muted-foreground/30'
                                 }`}
                             >
                                 <span
                                     className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                                        modal.data.can_override === 1 ? 'translate-x-5' : 'translate-x-0'
+                                        modal.data.can_override === 1
+                                            ? 'translate-x-5'
+                                            : 'translate-x-0'
                                     }`}
                                 />
                             </button>

@@ -31,11 +31,13 @@ export interface PivotedSupplierRow {
 }
 
 export interface SupplierPerTenderReport {
-    tender_names: string[];          // ordered by tender_type_id
+    tender_names: string[]; // ordered by tender_type_id
     rows: PivotedSupplierRow[];
 }
 
-const getSupplierPerTenderReport = async (query: TransactionReportQuery): Promise<SupplierPerTenderReport> => {
+const getSupplierPerTenderReport = async (
+    query: TransactionReportQuery,
+): Promise<SupplierPerTenderReport> => {
     const rawRows = await repository.getSupplierPerTender(query);
 
     // Track tender name order (SQL is ordered by tt.id ASC so insertion order is correct)

@@ -69,7 +69,7 @@ export const PresetCombobox = ({
                                 <Check
                                     className={cn(
                                         'mr-2 h-4 w-4',
-                                        value === null ? 'opacity-100' : 'opacity-0',
+                                        value === null ? 'opacity-100' : 'opacity-0'
                                     )}
                                 />
                                 <span className="text-muted-foreground italic">None</span>
@@ -86,7 +86,7 @@ export const PresetCombobox = ({
                                     <Check
                                         className={cn(
                                             'mr-2 h-4 w-4',
-                                            value === opt.id ? 'opacity-100' : 'opacity-0',
+                                            value === opt.id ? 'opacity-100' : 'opacity-0'
                                         )}
                                     />
                                     {opt.name}

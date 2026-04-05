@@ -38,7 +38,7 @@ const buildFilters = (query: RemittanceReportQuery): FilterResult => {
     }
 
     return { clauses, params };
-}
+};
 
 const getRemittances = async (query: RemittanceReportQuery): Promise<RemittanceRecord[]> => {
     const { clauses, params } = buildFilters(query);
@@ -200,7 +200,9 @@ export interface SupplierTenderRawRow {
     total: number;
 }
 
-const getSupplierPerTender = async (query: TransactionReportQuery): Promise<SupplierTenderRawRow[]> => {
+const getSupplierPerTender = async (
+    query: TransactionReportQuery,
+): Promise<SupplierTenderRawRow[]> => {
     const conditions: string[] = [];
     const params: unknown[] = [];
 

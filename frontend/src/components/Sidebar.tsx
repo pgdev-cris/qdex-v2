@@ -243,11 +243,7 @@ export const Sidebar = () => {
                 <nav className="flex-1 overflow-y-auto px-2 py-3">
                     <div className="flex flex-col gap-0.5">
                         {menu?.menus?.map((node: MenuTreeNode) => (
-                            <SidebarItem
-                                key={node.id}
-                                node={node}
-                                onOpenModal={setActiveModal}
-                            />
+                            <SidebarItem key={node.id} node={node} onOpenModal={setActiveModal} />
                         ))}
                     </div>
                 </nav>

@@ -14,11 +14,11 @@ export type RemittanceReportQuery = z.infer<typeof RemittanceReportQuerySchema>;
 
 // Transaction report query (used by GET /api/v1/reports/transactions)
 export const TransactionReportQuerySchema = z.object({
-    from: z.string().optional(),         // YYYY-MM-DD — start of transacted_at
-    to: z.string().optional(),           // YYYY-MM-DD — end of transacted_at
+    from: z.string().optional(), // YYYY-MM-DD — start of transacted_at
+    to: z.string().optional(), // YYYY-MM-DD — end of transacted_at
     supplier_code: z.string().optional(),
     event_code: z.string().optional(),
-    type: z.string().regex(/^\d+$/).optional(),   // 1=Partial, 2=Full
+    type: z.string().regex(/^\d+$/).optional(), // 1=Partial, 2=Full
     status: z.string().regex(/^\d+$/).optional(), // 0=Pending,1=Verified,2=Voided
     limit: z.string().regex(/^\d+$/).optional().default('5000'),
     offset: z.string().regex(/^\d+$/).optional().default('0'),

@@ -154,7 +154,10 @@ interface DropdownRect {
     width: number
 }
 
-const useDropdownRect = (triggerRef: React.RefObject<HTMLElement | null>, open: boolean): DropdownRect | null => {
+const useDropdownRect = (
+    triggerRef: React.RefObject<HTMLElement | null>,
+    open: boolean
+): DropdownRect | null => {
     const [rect, setRect] = useState<DropdownRect | null>(null)
 
     const compute = () => {

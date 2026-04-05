@@ -23,10 +23,16 @@ const loginRequest = async (req: Request<{}, {}, LoginRequestBody>, res: Respons
 const overrideRequest = async (req: Request, res: Response) => {
     const { username, password } = req.body as { username: string; password: string };
     if (!username?.trim() || !password) {
-        return res.status(400).json({ result: 'error', message: 'username and password are required.' });
+        return res
+            .status(400)
+            .json({ result: 'error', message: 'username and password are required.' });
     }
     const approverId = await service.verifyOverride(username.trim(), password);
-    return res.json({ result: 'success', message: 'Override approved.', data: { approver_id: approverId } });
+    return res.json({
+        result: 'success',
+        message: 'Override approved.',
+        data: { approver_id: approverId },
+    });
 };
 
 export default {

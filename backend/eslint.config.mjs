@@ -1,9 +1,9 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
-import prettier from 'eslint-config-prettier'
-import preferArrow from 'eslint-plugin-prefer-arrow'
+import js from '@eslint/js';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import prettier from 'eslint-config-prettier';
+import preferArrow from 'eslint-plugin-prefer-arrow';
 
 export default defineConfig([
     globalIgnores(['dist']),
@@ -33,4 +33,4 @@ export default defineConfig([
             ],
         },
     },
-])
+]);

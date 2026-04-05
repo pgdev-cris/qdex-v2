@@ -46,9 +46,7 @@ for (const { tsConfig, srcDir } of TARGETS) {
 
         // Collect FunctionDeclarations in reverse order (bottom → top) so that
         // replacing one node doesn't invalidate positions of earlier nodes.
-        const funcs = sourceFile
-            .getDescendantsOfKind(SyntaxKind.FunctionDeclaration)
-            .reverse()
+        const funcs = sourceFile.getDescendantsOfKind(SyntaxKind.FunctionDeclaration).reverse()
 
         if (funcs.length === 0) continue
 
@@ -56,7 +54,7 @@ for (const { tsConfig, srcDir } of TARGETS) {
 
         for (const func of funcs) {
             const name = func.getName()
-            if (!name) continue          // skip anonymous function declarations
+            if (!name) continue // skip anonymous function declarations
             if (func.isGenerator()) continue // generators can't be arrow fns
 
             const isAsync = func.isAsync()
@@ -70,7 +68,8 @@ for (const { tsConfig, srcDir } of TARGETS) {
                 : ''
 
             // Parameters
-            const paramsText = func.getParameters()
+            const paramsText = func
+                .getParameters()
                 .map((p) => p.getText())
                 .join(', ')
 
@@ -106,8 +105,7 @@ for (const { tsConfig, srcDir } of TARGETS) {
                     `export default ${name}`
             } else {
                 const exportKw = isExported ? 'export ' : ''
-                replacement =
-                    `${commentPrefix}${exportKw}const ${name} = ${asyncKw}${typeParamsText}(${paramsText})${returnTypeText} => ${bodyText}`
+                replacement = `${commentPrefix}${exportKw}const ${name} = ${asyncKw}${typeParamsText}(${paramsText})${returnTypeText} => ${bodyText}`
             }
 
             func.replaceWithText(replacement)

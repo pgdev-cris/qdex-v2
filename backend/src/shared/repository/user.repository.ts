@@ -35,8 +35,8 @@ const createUser = async (
 ): Promise<{ insertId: number } | null> => {
     const query = `
         INSERT INTO tbl_users
-            (username, password, first_name, middle_name, last_name, department, role, status, employee_no, menu_preset_id, can_override)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+            (username, password, first_name, middle_name, last_name, department, role, status, employee_no, menu_preset_id, can_override, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, NOW())
     `;
     const result = await PoolManager.execute(query, [
         user.username,

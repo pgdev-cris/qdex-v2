@@ -153,4 +153,22 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
     };
 };
 
-export default { partialRemit, fullRemit };
+const getPartialSummary = async (supplierCodeStr: string) => {
+    const supplierCode = Number(supplierCodeStr);
+    const supplier = await supplierProvider.validateSupplier(supplierCode);
+    const event = await eventProvider.getCurrentEvent();
+    const summary = await remittanceRepository.getPartialCashSummary(supplier.id, event.id);
+    return {
+        supplier_code: supplierCodeStr,
+        total_cash: Number(summary.total_cash),
+        count: Number(summary.count),
+        transactions: summary.transactions.map((t) => ({
+            receipt_no: t.receipt_no,
+            reference_code: t.reference_code,
+            cash_amount: Number(t.cash_amount),
+            transacted_at: t.transacted_at,
+        })),
+    };
+};
+
+export default { partialRemit, fullRemit, getPartialSummary };

@@ -20,6 +20,8 @@ import type {
     SalesResponse,
     RemittanceApiResponse,
     OverrideApproval,
+    PartialSummary,
+    PartialSummaryResponse,
 } from './types'
 import { SALES_FETCH_PATH } from './constants'
 import { fmtReceiptDate, fmt, methodLabel } from './helpers'
@@ -232,7 +234,7 @@ const buildReceiptFromApi = (
     remitterName: string,
     printedBy: string,
     eventName: string,
-    eventCode: string,
+    eventCode: string
 ): Receipt => {
     return {
         trans_no: apiData.receipt_no,
@@ -266,6 +268,10 @@ export const RemittancePage = () => {
     // edited non-CASH amounts keyed by payment_method; seeded with POS values on type select
     const [otherAmounts, setOtherAmounts] = useState<Record<string, string>>({})
     const [receipt, setReceipt] = useState<Receipt | null>(null)
+
+    // Today's partial remittance summary for this supplier (full remittance only)
+    const [partialSummary, setPartialSummary] = useState<PartialSummary | null>(null)
+    const [partialSummaryLoading, setPartialSummaryLoading] = useState(false)
 
     // Async state
     const [loading, setLoading] = useState(false)
@@ -326,18 +332,19 @@ export const RemittancePage = () => {
     }
 
     // Step 2 — select type
-    const handleSelectType = (type: RemitType) => {
+    const handleSelectType = async (type: RemitType) => {
         setRemitType(type)
         setSelectError(null)
         setSubmitError(null)
         setOverrideApproval(null)
+        setPartialSummary(null)
 
         if (type === 'partial') {
             setCashAmount('')
             setOtherAmounts({})
+            setStep('remit')
         } else {
-            // Pre-fill cash with POS cash total; seed non-CASH with their POS amounts
-            setCashAmount(cashRecord?.total ?? '')
+            // Seed non-CASH amounts from POS
             const others: Record<string, string> = {}
             salesData
                 .filter((r) => r.payment_method !== 'CASH')
@@ -345,21 +352,59 @@ export const RemittancePage = () => {
                     others[r.payment_method] = r.total
                 })
             setOtherAmounts(others)
-        }
+            setStep('remit')
 
-        setStep('remit')
+            // Fetch today's partial remittances to compute remaining cash balance
+            setPartialSummaryLoading(true)
+            try {
+                const res = await apiFetch<PartialSummaryResponse>(
+                    `/api/v1/remittance/partial-summary/${supplierCode}`,
+                    { token: token ?? undefined }
+                )
+                if (res.result === 'success' && res.data) {
+                    setPartialSummary(res.data)
+                    const posCash = Number(cashRecord?.total ?? 0)
+                    const balance = Math.max(0, posCash - res.data.total_cash)
+                    // Pre-fill with the remaining balance (zero it out if already fully covered)
+                    setCashAmount(balance > 0 ? String(balance) : '0')
+                } else {
+                    // Fallback: pre-fill with full POS cash if summary unavailable
+                    setCashAmount(cashRecord?.total ?? '')
+                }
+            } catch {
+                // Non-fatal — fall back to POS cash total
+                setCashAmount(cashRecord?.total ?? '')
+            } finally {
+                setPartialSummaryLoading(false)
+            }
+        }
     }
 
-    // Determine whether any non-CASH amount was changed from the POS value
+    // Computed cash balance: POS cash minus today's partial remittances
+    const computedBalance =
+        remitType === 'full'
+            ? Math.max(0, Number(cashRecord?.total ?? 0) - (partialSummary?.total_cash ?? 0))
+            : Number(cashRecord?.total ?? 0)
+
+    // True when the operator typed a cash amount that differs from the computed balance
+    // For full: must match exact balance. For partial: must be <= current cash total.
+    const cashOverrideNeeded =
+        remitType === 'full'
+            ? !partialSummaryLoading && cashAmount !== '' && Number(cashAmount) !== computedBalance
+            : cashAmount !== '' && Number(cashAmount) > computedBalance
+
+    // Determine whether any non-CASH amount was changed from the POS value, or cash differs from balance
     const detectOverrideNeeded = (): boolean => {
-        if (remitType !== 'full') return false
-        return salesData
+        if (remitType === 'partial') return cashOverrideNeeded
+
+        const nonCashChanged = salesData
             .filter((r) => r.payment_method !== 'CASH')
             .some((r) => {
                 const edited = otherAmounts[r.payment_method]
                 if (edited === undefined) return false
                 return Number(edited) !== Number(r.total)
             })
+        return nonCashChanged || cashOverrideNeeded
     }
 
     // Build confirm rows for the modal
@@ -374,7 +419,11 @@ export const RemittancePage = () => {
                 { label: 'Type', value: 'Full Remittance' },
                 ...salesData.map((r) => {
                     if (r.payment_method === 'CASH') {
-                        return { label: methodLabel(r.payment_method), value: fmt(cashVal) }
+                        return {
+                            label: methodLabel(r.payment_method),
+                            value: fmt(cashVal),
+                            overridden: !!approval && cashOverrideNeeded,
+                        }
                     }
                     const editedVal = Number(otherAmounts[r.payment_method] ?? r.total)
                     const wasChanged = editedVal !== Number(r.total)
@@ -391,7 +440,11 @@ export const RemittancePage = () => {
             { label: 'Supplier', value: supplierLabel },
             { label: 'Remitter', value: remitterName.trim() || '—' },
             { label: 'Type', value: 'Partial Remittance' },
-            { label: 'Cash to Remit', value: fmt(cashVal) },
+            {
+                label: 'Cash to Remit',
+                value: fmt(cashVal),
+                overridden: !!approval && cashOverrideNeeded,
+            },
         ]
     }
 
@@ -479,8 +532,8 @@ export const RemittancePage = () => {
                     remitterName.trim(),
                     printedBy,
                     eventName,
-                    eventCode,
-                ),
+                    eventCode
+                )
             )
             setStep('receipt')
         } catch (err: unknown) {
@@ -537,8 +590,8 @@ export const RemittancePage = () => {
                     remitterName.trim(),
                     printedBy,
                     eventName,
-                    eventCode,
-                ),
+                    eventCode
+                )
             )
             setStep('receipt')
         } catch (err: unknown) {
@@ -578,6 +631,8 @@ export const RemittancePage = () => {
         setConfirmRows([])
         setOverrideOpen(false)
         setOverrideApproval(null)
+        setPartialSummary(null)
+        setPartialSummaryLoading(false)
     }
 
     return (
@@ -657,9 +712,16 @@ export const RemittancePage = () => {
                             cashRecord={cashRecord}
                             cashAmount={cashAmount}
                             otherAmounts={otherAmounts}
+                            partialSummary={partialSummary}
+                            partialSummaryLoading={partialSummaryLoading}
+                            cashOverrideNeeded={cashOverrideNeeded}
                             submitError={submitError}
                             loading={loading}
-                            onCashChange={setCashAmount}
+                            onCashChange={(val) => {
+                                setCashAmount(val)
+                                // Clear override approval if cash amount changes after approval
+                                setOverrideApproval(null)
+                            }}
                             onOtherAmountChange={(method, val) => {
                                 setOtherAmounts((prev) => ({ ...prev, [method]: val }))
                                 // Clear override approval if amounts are changed after approval

@@ -67,3 +67,23 @@ export interface OverrideApproval {
     approverId: number
     remarks: string
 }
+
+export interface PartialTransaction {
+    receipt_no: string
+    reference_code: string
+    cash_amount: number
+    transacted_at: string
+}
+
+export interface PartialSummary {
+    supplier_code: string
+    total_cash: number
+    count: number
+    transactions: PartialTransaction[]
+}
+
+export interface PartialSummaryResponse {
+    result: 'success' | 'error'
+    message: string
+    data?: PartialSummary
+}

@@ -49,4 +49,13 @@ const fullRemitRequest = async (req: Request, res: Response) => {
     });
 };
 
-export default { partialRemitRequest, fullRemitRequest };
+const getPartialSummaryRequest = async (req: Request, res: Response) => {
+    const supplierCode = req.params.supplier_code;
+    if (!supplierCode) {
+        return res.status(400).json({ result: 'error', message: 'supplier_code is required.' });
+    }
+    const data = await remittanceService.getPartialSummary(supplierCode);
+    return res.json({ result: 'success', message: 'Partial summary fetched.', data });
+};
+
+export default { partialRemitRequest, fullRemitRequest, getPartialSummaryRequest };

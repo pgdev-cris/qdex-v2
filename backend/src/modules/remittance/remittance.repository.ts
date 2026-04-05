@@ -1,4 +1,5 @@
 import { PoolConnection } from 'mysql2/promise';
+import PoolManager from '../../shared/db/pool.manager';
 
 //  Types
 
@@ -93,4 +94,55 @@ const createOverrideLog = async (
     );
 };
 
-export default { createTransaction, createTransactionDetails, createOverrideLog };
+export interface PartialTransactionRow {
+    receipt_no: string;
+    reference_code: string;
+    cash_amount: number;
+    transacted_at: Date;
+}
+
+export interface PartialCashSummary {
+    total_cash: number;
+    count: number;
+    transactions: PartialTransactionRow[];
+}
+
+const SERIES_CODE = 'TRX';
+
+/**
+ * Returns each non-voided CASH partial remittance for a supplier today,
+ * plus a pre-computed total and count.
+ */
+const getPartialCashSummary = async (
+    supplierCode: number,
+    eventId: number,
+): Promise<PartialCashSummary> => {
+    const rowSql = `
+        SELECT
+            CONCAT(COALESCE(sr.prefix, ''), LPAD(t.transaction_no, COALESCE(sr.pad_length, 6), '0')) AS receipt_no,
+            t.reference_code,
+            td.amount      AS cash_amount,
+            t.transacted_at
+        FROM tbl_transactions      t
+        INNER JOIN tbl_suppliers   s  ON s.id  = t.supplier_id
+        INNER JOIN tbl_transaction_details td ON td.transaction_id = t.id
+        LEFT  JOIN tbl_series      sr ON sr.code = '${SERIES_CODE}'
+        WHERE s.code            = ?
+          AND t.event_id        = ?
+          AND t.type            = 1       -- PARTIAL
+          AND t.status         != 2       -- not VOIDED
+          AND DATE(t.transacted_at) = CURDATE()
+          AND td.tender_type   = 1        -- CASH
+        ORDER BY t.id ASC
+    `;
+
+    const rows = await PoolManager.query<PartialTransactionRow[]>(rowSql, [supplierCode, eventId]);
+    const transactions = rows ?? [];
+
+    const total_cash = transactions.reduce((s, r) => s + Number(r.cash_amount), 0);
+    const count = transactions.length;
+
+    return { total_cash, count, transactions };
+};
+
+export default { createTransaction, createTransactionDetails, createOverrideLog, getPartialCashSummary };

@@ -1,9 +1,9 @@
-import { RotateCcw, AlertCircle, Loader2 } from 'lucide-react'
+import { RotateCcw, AlertCircle, Loader2, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import type { SalesRecord, RemitType } from '../types'
+import type { SalesRecord, RemitType, PartialSummary } from '../types'
 import { fmt, methodLabel } from '../helpers'
 
 interface Props {
@@ -13,8 +13,11 @@ interface Props {
     salesData: SalesRecord[]
     cashRecord: SalesRecord | undefined
     cashAmount: string
-    // keyed by payment_method — only non-CASH; pre-seeded with POS amounts
     otherAmounts: Record<string, string>
+    partialSummary: PartialSummary | null
+    partialSummaryLoading: boolean
+    // true when the entered cash amount deviates from the computed balance
+    cashOverrideNeeded: boolean
     submitError: string | null
     loading: boolean
     onCashChange: (value: string) => void
@@ -31,6 +34,9 @@ export const RemittanceForm = ({
     cashRecord,
     cashAmount,
     otherAmounts,
+    partialSummary,
+    partialSummaryLoading,
+    cashOverrideNeeded,
     submitError,
     loading,
     onCashChange,
@@ -38,6 +44,11 @@ export const RemittanceForm = ({
     onSubmit,
     onBack,
 }: Props) => {
+    const posCashTotal = Number(cashRecord?.total ?? 0)
+    const totalPartial = partialSummary?.total_cash ?? 0
+    const balance = Math.max(0, posCashTotal - totalPartial)
+    const hasPartial = (partialSummary?.count ?? 0) > 0
+
     return (
         <Card>
             <CardHeader>
@@ -100,11 +111,13 @@ export const RemittanceForm = ({
                                                 step="0.01"
                                                 placeholder={rec.total}
                                                 className="pl-7 text-right tabular-nums h-8 text-sm"
-                                                value={otherAmounts[rec.payment_method] ?? rec.total}
+                                                value={
+                                                    otherAmounts[rec.payment_method] ?? rec.total
+                                                }
                                                 onChange={(e) =>
                                                     onOtherAmountChange(
                                                         rec.payment_method,
-                                                        e.target.value,
+                                                        e.target.value
                                                     )
                                                 }
                                             />
@@ -114,8 +127,90 @@ export const RemittanceForm = ({
                             ))}
                         </div>
                         <div className="border-t bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
-                            Non-cash amounts are pre-filled from POS. Editing them requires override approval.
+                            Non-cash amounts are pre-filled from POS. Editing them requires override
+                            approval.
                         </div>
+                    </div>
+                )}
+
+                {/* Full: cash balance breakdown — shows partial deductions per transaction */}
+                {remitType === 'full' && (
+                    <div className="rounded-lg border">
+                        <div className="px-4 py-2.5">
+                            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                                Cash Balance
+                            </p>
+                        </div>
+                        <Separator />
+
+                        {partialSummaryLoading ? (
+                            <div className="flex items-center gap-2 px-4 py-4 text-sm text-muted-foreground">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                Loading partial remittances…
+                            </div>
+                        ) : (
+                            <div className="flex flex-col text-sm">
+                                {/* POS cash total */}
+                                <div className="flex items-center justify-between px-4 py-3 border-b">
+                                    <span className="text-muted-foreground">Cash Sales (POS)</span>
+                                    <span className="tabular-nums font-semibold">
+                                        {fmt(posCashTotal)}
+                                    </span>
+                                </div>
+
+                                {/* Individual partial transactions */}
+                                {hasPartial && (
+                                    <>
+                                        <div className="px-4 pt-2.5 pb-1">
+                                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                                Less: Partial Remitted ({partialSummary!.count}×)
+                                            </p>
+                                        </div>
+                                        {partialSummary!.transactions.map((tx) => (
+                                            <div
+                                                key={tx.receipt_no}
+                                                className="flex items-center justify-between px-4 py-2 border-b last:border-b-0"
+                                            >
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="font-medium text-xs">
+                                                        {tx.receipt_no}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground font-mono">
+                                                        {tx.reference_code}
+                                                    </span>
+                                                </div>
+                                                <span className="tabular-nums text-destructive font-medium">
+                                                    − {fmt(tx.cash_amount)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {/* Partial subtotal */}
+                                        <div className="flex items-center justify-between px-4 py-2 border-b bg-destructive/5">
+                                            <span className="text-xs text-destructive font-medium">
+                                                Total Partial Remitted
+                                            </span>
+                                            <span className="tabular-nums text-destructive font-semibold">
+                                                − {fmt(totalPartial)}
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Balance row */}
+                                <div className="flex items-center justify-between px-4 py-3 bg-muted/40 rounded-b-lg">
+                                    <span className="font-semibold">
+                                        {hasPartial ? 'Balance to Remit' : 'Cash to Remit'}
+                                    </span>
+                                    <span
+                                        className={`tabular-nums font-semibold ${
+                                            balance <= 0 ? 'text-muted-foreground' : 'text-primary'
+                                        }`}
+                                    >
+                                        {fmt(balance)}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -160,6 +255,17 @@ export const RemittanceForm = ({
                         </p>
                     )}
                 </div>
+
+                {cashOverrideNeeded && (
+                    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                        <span>
+                            {remitType === 'full'
+                                ? 'Cash amount differs from the computed balance. Override approval is required to proceed.'
+                                : 'Cash amount exceeds current sales total. Override approval is required to proceed.'}
+                        </span>
+                    </div>
+                )}
 
                 <Button className="w-full" onClick={onSubmit} disabled={loading}>
                     {loading ? (

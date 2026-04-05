@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import remittanceService from './remittance.service';
-import { PartialRemitPayload, FullRemitPayload } from './remittance.type';
+import { PartialRemitPayload, FullRemitPayload, VoidPayload } from './remittance.type';
 
 const validateBody = (body: PartialRemitPayload | FullRemitPayload, res: Response) => {
     if (!body?.supplier_code) {
@@ -58,4 +58,30 @@ const getPartialSummaryRequest = async (req: Request, res: Response) => {
     return res.json({ result: 'success', message: 'Partial summary fetched.', data });
 };
 
-export default { partialRemitRequest, fullRemitRequest, getPartialSummaryRequest };
+const voidRemitRequest = async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const body = req.body as VoidPayload;
+    const userId: number = (req as any).user?.id;
+
+    if (!id) {
+        return res.status(400).json({ result: 'error', message: 'Transaction ID is required.' });
+    }
+
+    if (!body?.override?.approver_user_id || !body?.override?.remarks) {
+        return res.status(400).json({ result: 'error', message: 'Override approval is required.' });
+    }
+
+    await remittanceService.voidRemittance(id, body, userId);
+
+    return res.json({
+        result: 'success',
+        message: 'Transaction voided successfully.',
+    });
+};
+
+export default {
+    partialRemitRequest,
+    fullRemitRequest,
+    getPartialSummaryRequest,
+    voidRemitRequest,
+};

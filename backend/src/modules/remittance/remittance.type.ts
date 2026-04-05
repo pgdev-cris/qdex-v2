@@ -22,6 +22,10 @@ export interface FullRemitPayload {
     override?: OverrideInfo;
 }
 
+export interface VoidPayload {
+    override: OverrideInfo;
+}
+
 export interface Receipt {
     trans_no: string;
     ref_code: string;

@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Activity, Search, RefreshCw, ChevronLeft, ChevronRight, Eye, Printer } from 'lucide-react'
+import {
+    Activity,
+    Search,
+    RefreshCw,
+    ChevronLeft,
+    ChevronRight,
+    Eye,
+    Printer,
+    Trash2,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +18,7 @@ import { fmt } from '@/pages/transaction/remittance/helpers'
 import { ThermalReceipt } from '@/pages/transaction/remittance/components/ThermalReceipt'
 import type { Receipt } from '@/pages/transaction/remittance/types'
 import { toTitleCase } from '@/utils/string.utils.ts'
+import { OverrideModal } from '@/components/OverrideModal'
 
 //  Types
 
@@ -76,7 +86,7 @@ const STATUS_OPTIONS = [
     { value: '2', label: 'Voided' },
 ]
 
-const COLUMNS: { label: string; center?: boolean }[] = [
+const COLUMNS: { label: string; center?: boolean; right?: boolean }[] = [
     { label: 'Receipt No' },
     { label: 'Supplier' },
     { label: 'Type', center: true },
@@ -84,7 +94,7 @@ const COLUMNS: { label: string; center?: boolean }[] = [
     { label: 'Remitted By' },
     { label: 'Status', center: true },
     { label: 'Date' },
-    { label: '' },
+    { label: '', right: true },
 ]
 
 //  Badges
@@ -265,6 +275,9 @@ export const MonitoringPage = () => {
     const [reprintData, setReprintData] = useState<Receipt | null>(null)
     const [reprintLoadingId, setReprintLoadingId] = useState<number | null>(null)
 
+    const [voidingId, setVoidingId] = useState<number | null>(null)
+    const [overrideOpen, setOverrideOpen] = useState(false)
+
     // Debounce: wait 400 ms after the last keystroke before triggering a fetch
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(search), 400)
@@ -335,6 +348,35 @@ export const MonitoringPage = () => {
             alert('Failed to generate reprint data.')
         } finally {
             setReprintLoadingId(null)
+        }
+    }
+
+    const openVoidOverride = (id: number) => {
+        setVoidingId(id)
+        setOverrideOpen(true)
+    }
+
+    const handleVoid = async (approverId: number, remarks: string) => {
+        if (!voidingId) return
+        setLoading(true)
+        try {
+            await apiFetch(`/api/v1/remittance/void/${voidingId}`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    override: {
+                        approver_user_id: approverId,
+                        remarks,
+                    },
+                }),
+            })
+            setOverrideOpen(false)
+            setVoidingId(null)
+            await fetchTransactions(page)
+        } catch (err: unknown) {
+            console.error('Failed to void transaction:', err)
+            alert(err instanceof Error ? err.message : 'Failed to void transaction.')
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -419,7 +461,7 @@ export const MonitoringPage = () => {
                             <col style={{ width: '140px' }} /> {/* Remitted By */}
                             <col style={{ width: '100px' }} /> {/* Status */}
                             <col style={{ width: '160px' }} /> {/* Date */}
-                            <col style={{ width: '76px' }} /> {/* Actions */}
+                            <col style={{ width: '110px' }} /> {/* Actions */}
                         </colgroup>
                         <thead>
                             <tr className="border-b">
@@ -428,7 +470,11 @@ export const MonitoringPage = () => {
                                         key={col.label}
                                         className={[
                                             'px-4 py-3 text-xs font-medium tracking-wide text-muted-foreground',
-                                            col.center ? 'text-center' : 'text-left',
+                                            col.center
+                                                ? 'text-center'
+                                                : col.right
+                                                  ? 'text-right'
+                                                  : 'text-left',
                                         ].join(' ')}
                                     >
                                         {col.label}
@@ -494,7 +540,7 @@ export const MonitoringPage = () => {
                                         <td className="px-4 py-3 text-xs text-muted-foreground">
                                             {new Date(row.transacted_at).toLocaleString('en-PH')}
                                         </td>
-                                        <td className="px-4 py-3 flex items-center gap-1">
+                                        <td className="px-4 py-3 flex items-center justify-end gap-1">
                                             <Button
                                                 variant="ghost"
                                                 size="icon-sm"
@@ -520,6 +566,18 @@ export const MonitoringPage = () => {
                                                     ].join(' ')}
                                                 />
                                             </Button>
+                                            {row.status !== 2 && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    title="Void"
+                                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                    disabled={loading}
+                                                    onClick={() => openVoidOverride(row.id)}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
@@ -563,6 +621,12 @@ export const MonitoringPage = () => {
                 onClose={() => setDetail(null)}
                 onReprint={handleReprint}
                 reprinting={reprintLoadingId === detail?.id}
+            />
+
+            <OverrideModal
+                open={overrideOpen}
+                onClose={() => setOverrideOpen(false)}
+                onApproved={handleVoid}
             />
 
             {/* Print rendering */}

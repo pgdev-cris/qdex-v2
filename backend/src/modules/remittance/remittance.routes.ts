@@ -13,4 +13,7 @@ router.post('/partial', jwtValidator, controller.partialRemitRequest);
 // POST /remittance — full remittance (all payment methods)
 router.post('/', jwtValidator, controller.fullRemitRequest);
 
+// POST /remittance/void/:id — void a transaction (requires override)
+router.post('/void/:id', jwtValidator, controller.voidRemitRequest);
+
 export default router;

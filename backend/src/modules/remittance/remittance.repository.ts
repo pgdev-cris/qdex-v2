@@ -145,9 +145,18 @@ const getPartialCashSummary = async (
     return { total_cash, count, transactions };
 };
 
+const updateTransactionStatus = async (
+    conn: PoolConnection,
+    id: number,
+    status: number,
+): Promise<void> => {
+    await conn.execute('UPDATE tbl_transactions SET status = ? WHERE id = ?', [status, id]);
+};
+
 export default {
     createTransaction,
     createTransactionDetails,
     createOverrideLog,
     getPartialCashSummary,
+    updateTransactionStatus,
 };

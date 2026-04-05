@@ -7,7 +7,7 @@ import remittanceRepository from './remittance.repository';
 import { validateLines } from './remittance.helper';
 import { BadRequestError } from '../../shared/errors';
 import { TRANSACTION_TYPE, TRANSACTION_STATUS, TENDER_TYPE } from '../../shared/constants';
-import { PartialRemitPayload, FullRemitPayload, RemitResult } from './remittance.type';
+import { PartialRemitPayload, FullRemitPayload, RemitResult, VoidPayload } from './remittance.type';
 
 // Series code to use to get the next series number.
 const SERIES_RECEIPT = 'TRX';
@@ -171,4 +171,17 @@ const getPartialSummary = async (supplierCodeStr: string) => {
     };
 };
 
-export default { partialRemit, fullRemit, getPartialSummary };
+const voidRemittance = async (id: number, payload: VoidPayload, userId: number) => {
+    await PoolManager.transaction(async (conn) => {
+        await remittanceRepository.updateTransactionStatus(conn, id, TRANSACTION_STATUS.VOIDED);
+
+        await remittanceRepository.createOverrideLog(conn, {
+            transaction_id: id,
+            requester_user_id: userId,
+            approver_user_id: payload.override.approver_user_id,
+            remarks: payload.override.remarks,
+        });
+    });
+};
+
+export default { partialRemit, fullRemit, getPartialSummary, voidRemittance };

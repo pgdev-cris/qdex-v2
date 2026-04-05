@@ -3,16 +3,23 @@ export interface RemitLine {
     amount: string | number;
 }
 
+export interface OverrideInfo {
+    approver_user_id: number;
+    remarks: string;
+}
+
 export interface PartialRemitPayload {
     supplier_code: string;
     remitter_name: string;
     lines: RemitLine[];
+    override?: OverrideInfo;
 }
 
 export interface FullRemitPayload {
     supplier_code: string;
     remitter_name: string;
     lines: RemitLine[];
+    override?: OverrideInfo;
 }
 
 export interface Receipt {

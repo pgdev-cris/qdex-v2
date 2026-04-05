@@ -31,6 +31,21 @@ const login = async (username: string, password: string) => {
     };
 };
 
+const verifyOverride = async (username: string, password: string): Promise<number> => {
+    const user = await repository.getUserByUsername(username);
+    if (!user) {
+        throw new Error('Invalid credentials.');
+    }
+    if (user.password !== password) {
+        throw new Error('Invalid credentials.');
+    }
+    if (!user.can_override) {
+        throw new Error('This user is not authorized to approve overrides.');
+    }
+    return user.id;
+};
+
 export default {
     login,
+    verifyOverride,
 };

@@ -19,6 +19,7 @@ import type {
     Receipt,
     SalesResponse,
     RemittanceApiResponse,
+    OverrideApproval,
 } from './types'
 import { SALES_FETCH_PATH } from './constants'
 import { fmtReceiptDate, fmt, methodLabel } from './helpers'
@@ -31,6 +32,7 @@ import { RemittanceForm } from './components/RemittanceForm'
 import { ReceiptPreview } from './components/ReceiptPreview'
 import { ConfirmModal } from '@/components/ui/modal'
 import type { ConfirmRow } from '@/components/ui/modal'
+import { OverrideModal } from '@/components/OverrideModal'
 
 // Context panel
 
@@ -153,7 +155,6 @@ const ContextPanel = ({
                                 ? salesData.filter((r) => r.payment_method === 'CASH')
                                 : salesData
 
-                        // On remit step, substitute the typed cash amount for the CASH row
                         const resolveAmount = (r: SalesRecord) => {
                             if (step === 'remit' && r.payment_method === 'CASH') {
                                 return encodedCash
@@ -223,8 +224,16 @@ const ContextPanel = ({
 }
 
 // Helpers
-// Helpers
-const buildReceiptFromApi = (apiData: NonNullable<RemittanceApiResponse['data']>, remitType: RemitType, supplierCode: string, supplierName: string, remitterName: string, printedBy: string, eventName: string, eventCode: string): Receipt => {
+const buildReceiptFromApi = (
+    apiData: NonNullable<RemittanceApiResponse['data']>,
+    remitType: RemitType,
+    supplierCode: string,
+    supplierName: string,
+    remitterName: string,
+    printedBy: string,
+    eventName: string,
+    eventCode: string,
+): Receipt => {
     return {
         trans_no: apiData.receipt_no,
         ref_code: apiData.reference_code,
@@ -242,7 +251,6 @@ const buildReceiptFromApi = (apiData: NonNullable<RemittanceApiResponse['data']>
 }
 
 // Page
-// Page
 export const RemittancePage = () => {
     const { token, user, currentEvent } = useAuth()
 
@@ -255,6 +263,8 @@ export const RemittancePage = () => {
     const [remitType, setRemitType] = useState<RemitType | null>(null)
     const [salesData, setSalesData] = useState<SalesRecord[]>([])
     const [cashAmount, setCashAmount] = useState('')
+    // edited non-CASH amounts keyed by payment_method; seeded with POS values on type select
+    const [otherAmounts, setOtherAmounts] = useState<Record<string, string>>({})
     const [receipt, setReceipt] = useState<Receipt | null>(null)
 
     // Async state
@@ -263,8 +273,11 @@ export const RemittancePage = () => {
     const [selectError, setSelectError] = useState<string | null>(null)
     const [submitError, setSubmitError] = useState<string | null>(null)
 
-    /** Which type button is currently in a pending API call */
     const [pendingType, setPendingType] = useState<RemitType | null>(null)
+
+    // Override state
+    const [overrideOpen, setOverrideOpen] = useState(false)
+    const [overrideApproval, setOverrideApproval] = useState<OverrideApproval | null>(null)
 
     // Confirm modal
     const [confirmOpen, setConfirmOpen] = useState(false)
@@ -287,233 +300,297 @@ export const RemittancePage = () => {
     }, [step])
 
     // Step 1 — search supplier
-    // Step 1 — search supplier
     const handleSearch = async () => {
-            const code = supplierInput.trim().toUpperCase()
-            if (!code) return
-            setError(null)
-            setLoading(true)
-            try {
-                const json = await apiFetch<SalesResponse>(`${SALES_FETCH_PATH}/${code}`, {
-                    method: 'GET',
-                    token: token ?? undefined,
-                })
-                setSalesData(json.data.sales)
-                setSupplierCode(code)
-                setSupplierName(json.data.supplier.name ?? '')
-                setStep('select-type')
-            } catch (err: unknown) {
-                console.error('Error fetching sales data:', err)
-                const msg =
-                    err && typeof err === 'object' && 'message' in err
-                        ? String((err as { message: unknown }).message)
-                        : null
-                setError(msg ?? 'Could not reach the sales service. Check your connection.')
-            } finally {
-                setLoading(false)
-            }
+        const code = supplierInput.trim().toUpperCase()
+        if (!code) return
+        setError(null)
+        setLoading(true)
+        try {
+            const json = await apiFetch<SalesResponse>(`${SALES_FETCH_PATH}/${code}`, {
+                method: 'GET',
+                token: token ?? undefined,
+            })
+            setSalesData(json.data.sales)
+            setSupplierCode(code)
+            setSupplierName(json.data.supplier.name ?? '')
+            setStep('select-type')
+        } catch (err: unknown) {
+            const msg =
+                err && typeof err === 'object' && 'message' in err
+                    ? String((err as { message: unknown }).message)
+                    : null
+            setError(msg ?? 'Could not reach the sales service. Check your connection.')
+        } finally {
+            setLoading(false)
         }
+    }
 
     // Step 2 — select type
-    // Both partial and full go to the remit form so the operator can
-    // manually encode the actual cash amount collected.
-    // Full pre-fills cash with the POS total as a starting point.
-    // Step 2 — select type
-    // Both partial and full go to the remit form so the operator can
-    // manually encode the actual cash amount collected.
-    // Full pre-fills cash with the POS total as a starting point.
     const handleSelectType = (type: RemitType) => {
-            setRemitType(type)
-            setSelectError(null)
-            setSubmitError(null)
+        setRemitType(type)
+        setSelectError(null)
+        setSubmitError(null)
+        setOverrideApproval(null)
 
-            if (type === 'partial') {
-                setCashAmount('')
-            } else {
-                // Pre-fill with POS cash total; operator adjusts if needed
-                setCashAmount(cashRecord?.total ?? '')
-            }
-
-            setStep('remit')
+        if (type === 'partial') {
+            setCashAmount('')
+            setOtherAmounts({})
+        } else {
+            // Pre-fill cash with POS cash total; seed non-CASH with their POS amounts
+            setCashAmount(cashRecord?.total ?? '')
+            const others: Record<string, string> = {}
+            salesData
+                .filter((r) => r.payment_method !== 'CASH')
+                .forEach((r) => {
+                    others[r.payment_method] = r.total
+                })
+            setOtherAmounts(others)
         }
 
-    // Full remittance — execute after confirmation
+        setStep('remit')
+    }
+
+    // Determine whether any non-CASH amount was changed from the POS value
+    const detectOverrideNeeded = (): boolean => {
+        if (remitType !== 'full') return false
+        return salesData
+            .filter((r) => r.payment_method !== 'CASH')
+            .some((r) => {
+                const edited = otherAmounts[r.payment_method]
+                if (edited === undefined) return false
+                return Number(edited) !== Number(r.total)
+            })
+    }
+
+    // Build confirm rows for the modal
+    const buildConfirmRows = (approval: OverrideApproval | null): ConfirmRow[] => {
+        const cashVal = Number(cashAmount)
+        const supplierLabel = supplierName ? `${supplierCode} - ${supplierName}` : supplierCode
+
+        if (remitType === 'full') {
+            return [
+                { label: 'Supplier', value: supplierLabel },
+                { label: 'Remitter', value: remitterName.trim() || '—' },
+                { label: 'Type', value: 'Full Remittance' },
+                ...salesData.map((r) => {
+                    if (r.payment_method === 'CASH') {
+                        return { label: methodLabel(r.payment_method), value: fmt(cashVal) }
+                    }
+                    const editedVal = Number(otherAmounts[r.payment_method] ?? r.total)
+                    const wasChanged = editedVal !== Number(r.total)
+                    return {
+                        label: methodLabel(r.payment_method),
+                        value: fmt(editedVal),
+                        overridden: !!approval && wasChanged,
+                    }
+                }),
+            ]
+        }
+
+        return [
+            { label: 'Supplier', value: supplierLabel },
+            { label: 'Remitter', value: remitterName.trim() || '—' },
+            { label: 'Type', value: 'Partial Remittance' },
+            { label: 'Cash to Remit', value: fmt(cashVal) },
+        ]
+    }
+
+    // Step 3 — validate then either open override or confirm modal
+    const handleSubmit = () => {
+        setSubmitError(null)
+
+        const cashVal = Number(cashAmount)
+        if (!cashAmount || isNaN(cashVal) || cashVal <= 0) {
+            setSubmitError('Please enter a valid cash amount.')
+            return
+        }
+
+        const needsOverride = detectOverrideNeeded()
+
+        if (needsOverride && !overrideApproval) {
+            // Show override modal first; confirm will open after approval
+            setOverrideOpen(true)
+            return
+        }
+
+        // Build confirm rows using current override approval state
+        setConfirmRows(buildConfirmRows(overrideApproval))
+        setConfirmOpen(true)
+    }
+
+    // Called when OverrideModal resolves successfully
+    const handleOverrideApproved = (approverId: number, remarks: string) => {
+        const approval: OverrideApproval = { approverId, remarks }
+        setOverrideApproval(approval)
+        setOverrideOpen(false)
+        // Immediately open confirm modal with override-tagged rows
+        setConfirmRows(buildConfirmRows(approval))
+        setConfirmOpen(true)
+    }
+
     // Full remittance — execute after confirmation
     const executeFullRemittance = async () => {
-            // Use the operator-entered cashAmount, not the raw POS total
-            const lines: ReceiptLine[] = salesData.map((r) =>
-                r.payment_method === 'CASH'
-                    ? { method: r.payment_method, amount: cashAmount }
-                    : { method: r.payment_method, amount: r.total }
-            )
-
-            setConfirmOpen(false)
-            setPendingType('full')
-            setLoading(true)
-
-            try {
-                const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        supplier_code: supplierCode,
-                        supplier_name: supplierName,
-                        remitter_name: remitterName.trim(),
-                        remit_type: 'full',
-                        lines,
-                    }),
-                    token: token ?? undefined,
-                })
-
-                if (json.result !== 'success' || !json.data) {
-                    setSelectError(json.message ?? 'Failed to process full remittance.')
-                    return
-                }
-
-                setReceipt(
-                    buildReceiptFromApi(
-                        json.data,
-                        'full',
-                        supplierCode,
-                        supplierName,
-                        remitterName.trim(),
-                        printedBy,
-                        eventName,
-                        eventCode
-                    )
-                )
-                setStep('receipt')
-            } catch (err: unknown) {
-                const msg =
-                    err && typeof err === 'object' && 'message' in err
-                        ? String((err as { message: unknown }).message)
-                        : null
-                setSelectError(msg ?? 'Could not process remittance. Check your connection.')
-            } finally {
-                setPendingType(null)
-                setLoading(false)
+        const lines: ReceiptLine[] = salesData.map((r) => {
+            if (r.payment_method === 'CASH') {
+                return { method: r.payment_method, amount: cashAmount }
             }
-        }
+            return {
+                method: r.payment_method,
+                amount: otherAmounts[r.payment_method] ?? r.total,
+            }
+        })
 
-    // Step 3 — validate cash amount then open confirm modal (partial + full)
-    // Step 3 — validate cash amount then open confirm modal (partial + full)
-    const handleSubmit = () => {
-            setSubmitError(null)
+        setConfirmOpen(false)
+        setPendingType('full')
+        setLoading(true)
 
-            const cashVal = Number(cashAmount)
-            if (!cashAmount || isNaN(cashVal) || cashVal <= 0) {
-                setSubmitError('Please enter a valid cash amount.')
+        try {
+            const body: Record<string, unknown> = {
+                supplier_code: supplierCode,
+                supplier_name: supplierName,
+                remitter_name: remitterName.trim(),
+                remit_type: 'full',
+                lines,
+            }
+            if (overrideApproval) {
+                body.override = {
+                    approver_user_id: overrideApproval.approverId,
+                    remarks: overrideApproval.remarks,
+                }
+            }
+
+            const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance', {
+                method: 'POST',
+                body: JSON.stringify(body),
+                token: token ?? undefined,
+            })
+
+            if (json.result !== 'success' || !json.data) {
+                setSelectError(json.message ?? 'Failed to process full remittance.')
                 return
             }
 
-            const supplierLabel = supplierName ? `${supplierCode} - ${supplierName}` : supplierCode
-
-            let rows: ConfirmRow[]
-
-            if (remitType === 'full') {
-                // Full: show every payment method — cash uses the operator-entered amount
-                rows = [
-                    { label: 'Supplier', value: supplierLabel },
-                    { label: 'Remitter', value: remitterName.trim() || '—' },
-                    { label: 'Type', value: 'Full Remittance' },
-                    ...salesData.map((r) => ({
-                        label: methodLabel(r.payment_method),
-                        value: fmt(r.payment_method === 'CASH' ? cashVal : Number(r.total)),
-                    })),
-                ]
-            } else {
-                rows = [
-                    { label: 'Supplier', value: supplierLabel },
-                    { label: 'Remitter', value: remitterName.trim() || '—' },
-                    { label: 'Type', value: 'Partial Remittance' },
-                    { label: 'Cash to Remit', value: fmt(cashVal) },
-                ]
-            }
-
-            setConfirmRows(rows)
-            setConfirmOpen(true)
+            setReceipt(
+                buildReceiptFromApi(
+                    json.data,
+                    'full',
+                    supplierCode,
+                    supplierName,
+                    remitterName.trim(),
+                    printedBy,
+                    eventName,
+                    eventCode,
+                ),
+            )
+            setStep('receipt')
+        } catch (err: unknown) {
+            const msg =
+                err && typeof err === 'object' && 'message' in err
+                    ? String((err as { message: unknown }).message)
+                    : null
+            setSelectError(msg ?? 'Could not process remittance. Check your connection.')
+        } finally {
+            setPendingType(null)
+            setLoading(false)
         }
+    }
 
-    // Partial remittance — execute after confirmation
     // Partial remittance — execute after confirmation
     const executePartialRemittance = async () => {
-            const lines: ReceiptLine[] = [{ method: 'CASH', amount: cashAmount }]
+        const lines: ReceiptLine[] = [{ method: 'CASH', amount: cashAmount }]
 
-            setConfirmOpen(false)
-            setLoading(true)
+        setConfirmOpen(false)
+        setLoading(true)
 
-            try {
-                const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance/partial', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        supplier_code: supplierCode,
-                        supplier_name: supplierName,
-                        remitter_name: remitterName.trim(),
-                        remit_type: 'partial',
-                        lines,
-                    }),
-                    token: token ?? undefined,
-                })
-
-                if (json.result !== 'success' || !json.data) {
-                    setSubmitError(json.message ?? 'Failed to process partial remittance.')
-                    return
-                }
-
-                setReceipt(
-                    buildReceiptFromApi(
-                        json.data,
-                        'partial',
-                        supplierCode,
-                        supplierName,
-                        remitterName.trim(),
-                        printedBy,
-                        eventName,
-                        eventCode
-                    )
-                )
-                setStep('receipt')
-            } catch (err: unknown) {
-                const msg =
-                    err && typeof err === 'object' && 'message' in err
-                        ? String((err as { message: unknown }).message)
-                        : null
-                setSubmitError(msg ?? 'Could not process remittance. Check your connection.')
-            } finally {
-                setLoading(false)
+        try {
+            const body: Record<string, unknown> = {
+                supplier_code: supplierCode,
+                supplier_name: supplierName,
+                remitter_name: remitterName.trim(),
+                remit_type: 'partial',
+                lines,
             }
-        }
+            if (overrideApproval) {
+                body.override = {
+                    approver_user_id: overrideApproval.approverId,
+                    remarks: overrideApproval.remarks,
+                }
+            }
 
-    // Confirm modal dispatcher
+            const json = await apiFetch<RemittanceApiResponse>('/api/v1/remittance/partial', {
+                method: 'POST',
+                body: JSON.stringify(body),
+                token: token ?? undefined,
+            })
+
+            if (json.result !== 'success' || !json.data) {
+                setSubmitError(json.message ?? 'Failed to process partial remittance.')
+                return
+            }
+
+            setReceipt(
+                buildReceiptFromApi(
+                    json.data,
+                    'partial',
+                    supplierCode,
+                    supplierName,
+                    remitterName.trim(),
+                    printedBy,
+                    eventName,
+                    eventCode,
+                ),
+            )
+            setStep('receipt')
+        } catch (err: unknown) {
+            const msg =
+                err && typeof err === 'object' && 'message' in err
+                    ? String((err as { message: unknown }).message)
+                    : null
+            setSubmitError(msg ?? 'Could not process remittance. Check your connection.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     // Confirm modal dispatcher
     const handleConfirm = () => {
-            if (remitType === 'full') executeFullRemittance()
-            else if (remitType === 'partial') executePartialRemittance()
-        }
+        if (remitType === 'full') executeFullRemittance()
+        else if (remitType === 'partial') executePartialRemittance()
+    }
 
     // Reset
-    // Reset
     const handleReset = () => {
-            setStep('search')
-            setSupplierInput('')
-            setSupplierCode('')
-            setSupplierName('')
-            setRemitterName('')
-            setRemitType(null)
-            setSalesData([])
-            setCashAmount('')
-            setReceipt(null)
-            setError(null)
-            setSelectError(null)
-            setSubmitError(null)
-            setPendingType(null)
-            setConfirmOpen(false)
-            setConfirmRows([])
-        }
+        setStep('search')
+        setSupplierInput('')
+        setSupplierCode('')
+        setSupplierName('')
+        setRemitterName('')
+        setRemitType(null)
+        setSalesData([])
+        setCashAmount('')
+        setOtherAmounts({})
+        setReceipt(null)
+        setError(null)
+        setSelectError(null)
+        setSubmitError(null)
+        setPendingType(null)
+        setConfirmOpen(false)
+        setConfirmRows([])
+        setOverrideOpen(false)
+        setOverrideApproval(null)
+    }
 
     return (
         <div className="flex min-h-full flex-col p-6">
             {/* Thermal receipt — hidden on screen, prints on 4.25×8.5 in */}
             {receipt && <ThermalReceipt receipt={receipt} />}
+
+            {/* Override approval modal */}
+            <OverrideModal
+                open={overrideOpen}
+                onClose={() => setOverrideOpen(false)}
+                onApproved={handleOverrideApproved}
+            />
 
             {/* Remittance confirm modal */}
             <ConfirmModal
@@ -523,6 +600,8 @@ export const RemittancePage = () => {
                 rows={confirmRows}
                 confirmLabel="Process Remittance"
                 loading={loading}
+                isOverridden={!!overrideApproval}
+                overrideRemarks={overrideApproval?.remarks}
                 onConfirm={handleConfirm}
                 onCancel={() => !loading && setConfirmOpen(false)}
             />
@@ -577,9 +656,15 @@ export const RemittancePage = () => {
                             salesData={salesData}
                             cashRecord={cashRecord}
                             cashAmount={cashAmount}
+                            otherAmounts={otherAmounts}
                             submitError={submitError}
                             loading={loading}
                             onCashChange={setCashAmount}
+                            onOtherAmountChange={(method, val) => {
+                                setOtherAmounts((prev) => ({ ...prev, [method]: val }))
+                                // Clear override approval if amounts are changed after approval
+                                setOverrideApproval(null)
+                            }}
                             onSubmit={handleSubmit}
                             onBack={() => setStep('select-type')}
                         />

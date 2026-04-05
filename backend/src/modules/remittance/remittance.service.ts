@@ -62,6 +62,15 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
         }));
 
         await remittanceRepository.createTransactionDetails(conn, details);
+
+        if (payload.override) {
+            await remittanceRepository.createOverrideLog(conn, {
+                transaction_id: transactionId,
+                requester_user_id: userId,
+                approver_user_id: payload.override.approver_user_id,
+                remarks: payload.override.remarks,
+            });
+        }
     });
 
     return {
@@ -121,6 +130,15 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
         }));
 
         await remittanceRepository.createTransactionDetails(conn, details);
+
+        if (payload.override) {
+            await remittanceRepository.createOverrideLog(conn, {
+                transaction_id: transactionId,
+                requester_user_id: userId,
+                approver_user_id: payload.override.approver_user_id,
+                remarks: payload.override.remarks,
+            });
+        }
     });
 
     return {

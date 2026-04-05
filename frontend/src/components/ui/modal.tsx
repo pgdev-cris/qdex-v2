@@ -74,6 +74,7 @@ export const Modal = ({
 export interface ConfirmRow {
     label: string
     value: string
+    overridden?: boolean
 }
 
 interface ConfirmModalProps {
@@ -83,6 +84,8 @@ interface ConfirmModalProps {
     rows?: ConfirmRow[]
     confirmLabel?: string
     loading?: boolean
+    isOverridden?: boolean
+    overrideRemarks?: string
     onConfirm: () => void
     onCancel: () => void
 }
@@ -94,6 +97,8 @@ export const ConfirmModal = ({
     rows,
     confirmLabel = 'Confirm',
     loading = false,
+    isOverridden = false,
+    overrideRemarks,
     onConfirm,
     onCancel,
 }: ConfirmModalProps) => {
@@ -106,12 +111,19 @@ export const ConfirmModal = ({
         >
             <div className="absolute inset-0 bg-black/50" />
             <div
-                className="relative z-10 w-96 rounded-xl border bg-card shadow-xl"
+                className="relative z-10 w-[420px] rounded-xl border bg-card shadow-xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="border-b px-6 py-4">
-                    <p className="text-base font-semibold text-card-foreground">{title}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-base font-semibold text-card-foreground">{title}</p>
+                        {isOverridden && (
+                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                Override
+                            </span>
+                        )}
+                    </div>
                     {description && (
                         <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
                     )}
@@ -120,15 +132,30 @@ export const ConfirmModal = ({
                 {/* Summary rows */}
                 {rows && rows.length > 0 && (
                     <div className="divide-y px-6 py-1">
-                        {rows.map(({ label, value }) => (
+                        {rows.map(({ label, value, overridden }) => (
                             <div
                                 key={label}
                                 className="flex items-start justify-between gap-4 py-2.5 text-sm"
                             >
                                 <span className="shrink-0 text-muted-foreground">{label}</span>
-                                <span className="text-right font-medium">{value}</span>
+                                <div className="flex items-center gap-1.5 text-right">
+                                    {overridden && (
+                                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">
+                                            overridden
+                                        </span>
+                                    )}
+                                    <span className="font-medium">{value}</span>
+                                </div>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {/* Override remarks */}
+                {isOverridden && overrideRemarks && (
+                    <div className="mx-6 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
+                        <p className="text-xs font-medium text-amber-700">Override Remarks</p>
+                        <p className="mt-0.5 text-sm text-amber-900">{overrideRemarks}</p>
                     </div>
                 )}
 

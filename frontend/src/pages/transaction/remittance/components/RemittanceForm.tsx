@@ -13,9 +13,12 @@ interface Props {
     salesData: SalesRecord[]
     cashRecord: SalesRecord | undefined
     cashAmount: string
+    // keyed by payment_method — only non-CASH; pre-seeded with POS amounts
+    otherAmounts: Record<string, string>
     submitError: string | null
     loading: boolean
     onCashChange: (value: string) => void
+    onOtherAmountChange: (method: string, value: string) => void
     onSubmit: () => void
     onBack: () => void
 }
@@ -27,9 +30,11 @@ export const RemittanceForm = ({
     salesData,
     cashRecord,
     cashAmount,
+    otherAmounts,
     submitError,
     loading,
     onCashChange,
+    onOtherAmountChange,
     onSubmit,
     onBack,
 }: Props) => {
@@ -62,7 +67,7 @@ export const RemittanceForm = ({
             </CardHeader>
 
             <CardContent className="flex flex-col gap-5">
-                {/* Full: show all payment rows */}
+                {/* Full: show all payment rows — non-CASH are now editable */}
                 {remitType === 'full' && (
                     <div className="rounded-lg border">
                         <div className="px-4 py-2.5">
@@ -75,9 +80,9 @@ export const RemittanceForm = ({
                             {salesData.map((rec) => (
                                 <div
                                     key={rec.payment_method}
-                                    className="flex items-center justify-between px-4 py-3"
+                                    className="flex items-center justify-between px-4 py-3 gap-4"
                                 >
-                                    <span className="text-sm font-medium">
+                                    <span className="text-sm font-medium shrink-0">
                                         {methodLabel(rec.payment_method)}
                                     </span>
                                     {rec.payment_method === 'CASH' ? (
@@ -85,10 +90,31 @@ export const RemittanceForm = ({
                                             (editable below)
                                         </span>
                                     ) : (
-                                        <span className="text-sm">{fmt(rec.total)}</span>
+                                        <div className="relative w-36">
+                                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
+                                                ₱
+                                            </span>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                placeholder={rec.total}
+                                                className="pl-7 text-right tabular-nums h-8 text-sm"
+                                                value={otherAmounts[rec.payment_method] ?? rec.total}
+                                                onChange={(e) =>
+                                                    onOtherAmountChange(
+                                                        rec.payment_method,
+                                                        e.target.value,
+                                                    )
+                                                }
+                                            />
+                                        </div>
                                     )}
                                 </div>
                             ))}
+                        </div>
+                        <div className="border-t bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+                            Non-cash amounts are pre-filled from POS. Editing them requires override approval.
                         </div>
                     </div>
                 )}

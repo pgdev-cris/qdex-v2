@@ -62,3 +62,8 @@ export interface RemittanceApiResponse {
 
 export type Step = 'search' | 'select-type' | 'remit' | 'receipt'
 export type RemitType = 'partial' | 'full'
+
+export interface OverrideApproval {
+    approverId: number
+    remarks: string
+}

@@ -74,4 +74,23 @@ const createTransactionDetails = async (
     );
 };
 
-export default { createTransaction, createTransactionDetails };
+export interface InsertOverrideLogData {
+    transaction_id: number;
+    requester_user_id: number;
+    approver_user_id: number;
+    remarks: string;
+}
+
+const createOverrideLog = async (
+    conn: PoolConnection,
+    data: InsertOverrideLogData,
+): Promise<void> => {
+    await conn.execute(
+        `INSERT INTO tbl_override_logs
+            (transaction_id, requester_user_id, approver_user_id, remarks, created_at)
+         VALUES (?, ?, ?, ?, NOW())`,
+        [data.transaction_id, data.requester_user_id, data.approver_user_id, data.remarks],
+    );
+};
+
+export default { createTransaction, createTransactionDetails, createOverrideLog };

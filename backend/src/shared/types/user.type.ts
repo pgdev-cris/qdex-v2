@@ -13,4 +13,5 @@ export interface User extends RowDataPacket {
     created_at: Date;
     employee_no: string | null;
     menu_preset_id: number | null;
+    can_override: number;
 }

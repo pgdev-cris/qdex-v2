@@ -21,6 +21,7 @@ interface User {
     created_at: string
     employee_no: string | null
     menu_preset_id: number | null
+    can_override: number
 }
 
 interface ApiListResponse {
@@ -50,6 +51,7 @@ type FormData = {
     role: string
     employee_no: string
     menu_preset_id: number | null
+    can_override: number
     password?: string
 }
 
@@ -62,6 +64,7 @@ const BLANK: FormData = {
     role: 'Staff',
     employee_no: '',
     menu_preset_id: null,
+    can_override: 0,
     password: '',
 }
 
@@ -93,6 +96,7 @@ const COLUMNS = [
     'Department',
     'Role',
     'Menu Preset',
+    'Can Override',
     'Status',
     'Created',
     'Actions',
@@ -180,6 +184,7 @@ export const UsersPage = () => {
                 role: user.role,
                 employee_no: user.employee_no ?? '',
                 menu_preset_id: user.menu_preset_id,
+                can_override: user.can_override ? 1 : 0,
             },
         })
     }
@@ -203,6 +208,7 @@ export const UsersPage = () => {
             middle_name,
             employee_no,
             menu_preset_id,
+            can_override,
         } = modal.data
         if (!first_name.trim() || !last_name.trim() || !username.trim() || !employee_no.trim())
             return
@@ -219,6 +225,7 @@ export const UsersPage = () => {
                 role,
                 employee_no: employee_no.trim(),
                 menu_preset_id: menu_preset_id ?? null,
+                can_override: can_override ?? 0,
             }
 
             if (modal.mode === 'add') {
@@ -397,6 +404,18 @@ export const UsersPage = () => {
                                             {presetName(user.menu_preset_id)}
                                         </td>
                                         <td className="px-4 py-3">
+                                            {!!user.can_override ? (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                                    Yes
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                                    No
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
                                             <StatusBadge status={user.status} />
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
@@ -559,6 +578,33 @@ export const UsersPage = () => {
                                 onChange={(v) => setField('menu_preset_id', v)}
                             />
                         </FormField>
+
+                        {/* Can Override toggle */}
+                        <div className="flex items-center justify-between rounded-md border px-4 py-3">
+                            <div>
+                                <p className="text-sm font-medium">Can Override</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Allow this user to approve override requests.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={modal.data.can_override === 1}
+                                onClick={() =>
+                                    setField('can_override', modal.data.can_override === 1 ? 0 : 1)
+                                }
+                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                                    modal.data.can_override === 1 ? 'bg-amber-500' : 'bg-muted-foreground/30'
+                                }`}
+                            >
+                                <span
+                                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                                        modal.data.can_override === 1 ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                />
+                            </button>
+                        </div>
 
                         {error && <p className="text-sm text-destructive">{error}</p>}
                     </div>

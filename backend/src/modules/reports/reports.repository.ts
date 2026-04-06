@@ -1,6 +1,6 @@
 import PoolManager from '../../shared/db/pool.manager';
 import { RemittanceRecord, RemittanceSummary } from '../../shared/types';
-import { RemittanceReportQuery, TransactionReportQuery } from './reports.schema';
+import { RemittanceReportQuery, TransactionReportQuery, RemittanceStatusQuery } from './reports.schema';
 
 const POOL = 'auth-pool';
 
@@ -252,10 +252,85 @@ const getSupplierPerTender = async (
     return (await PoolManager.query<SupplierTenderRawRow[]>(sql, params, POOL)) ?? [];
 };
 
+export interface RemittanceStatusRow {
+    supplier_id: number;
+    supplier_code: number;
+    supplier_name: string;
+    total_sales: number;    // SUM of full-remittance totals (declared POS sales)
+    total_remitted: number; // SUM of verified transaction totals
+    balance: number;        // total_sales - total_remitted
+    transaction_count: number;
+}
+
+/**
+ * Returns one row per active supplier with remittance totals for the given date range.
+ *
+ * total_sales    = SUM(total_amount) for FULL (type=2) non-voided transactions
+ * total_remitted = SUM(total_amount) for VERIFIED (status=1) transactions (all types)
+ * balance        = total_sales - total_remitted
+ *
+ * Suppliers with no transactions in the range still appear (all zeroes).
+ */
+const getRemittanceStatus = async (
+    query: RemittanceStatusQuery,
+): Promise<RemittanceStatusRow[]> => {
+    const params: unknown[] = [];
+    const dateFilters: string[] = [];
+
+    if (query.from) {
+        dateFilters.push('DATE(t.transacted_at) >= ?');
+        params.push(query.from);
+    }
+    if (query.to) {
+        dateFilters.push('DATE(t.transacted_at) <= ?');
+        params.push(query.to);
+    }
+
+    const joinExtra = dateFilters.length ? `AND ${dateFilters.join(' AND ')}` : '';
+
+    // Supplier-side search applied after the LEFT JOIN
+    const havingClauses: string[] = [];
+    if (query.search) {
+        havingClauses.push(`(v.name LIKE ? OR CAST(v.code AS CHAR) LIKE ?)`);
+        const like = `%${query.search}%`;
+        params.push(like, like);
+    }
+    const having = havingClauses.length ? `HAVING ${havingClauses.join(' AND ')}` : '';
+
+    const sql = `
+        SELECT
+            v.id   AS supplier_id,
+            v.code AS supplier_code,
+            v.name AS supplier_name,
+            COALESCE(SUM(
+                CASE WHEN t.type = 2 AND t.status != 2 THEN t.total_amount ELSE 0 END
+            ), 0) AS total_sales,
+            COALESCE(SUM(
+                CASE WHEN t.status = 1 THEN t.total_amount ELSE 0 END
+            ), 0) AS total_remitted,
+            COALESCE(SUM(
+                CASE WHEN t.type = 2 AND t.status != 2 THEN t.total_amount ELSE 0 END
+            ), 0) - COALESCE(SUM(
+                CASE WHEN t.status = 1 THEN t.total_amount ELSE 0 END
+            ), 0) AS balance,
+            COUNT(DISTINCT CASE WHEN t.status != 2 THEN t.id END) AS transaction_count
+        FROM tbl_suppliers v
+        LEFT JOIN tbl_transactions t
+            ON t.supplier_id = v.id ${joinExtra}
+        WHERE v.status = 1
+        GROUP BY v.id, v.code, v.name
+        ${having}
+        ORDER BY v.code ASC
+    `;
+
+    return (await PoolManager.query<RemittanceStatusRow[]>(sql, params)) ?? [];
+};
+
 export default {
     getRemittances,
     getRemittanceSummary,
     getRemittanceById,
     getTransactions,
     getSupplierPerTender,
+    getRemittanceStatus,
 };

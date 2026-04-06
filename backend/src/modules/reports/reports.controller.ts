@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import service from './reports.service';
 import { HTTP_STATUS } from '../../shared/constants';
-import { RemittanceReportQuery, TransactionReportQuery } from './reports.schema';
+import { RemittanceReportQuery, TransactionReportQuery, RemittanceStatusQuery } from './reports.schema';
 
 /**
  * GET /api/v1/reports/remittances
@@ -81,10 +81,25 @@ const getSupplierPerTenderRequest = async (req: Request, res: Response) => {
     });
 };
 
+/**
+ * GET /api/v1/reports/remittance-status
+ * Query params: from, to, search
+ * Returns all active suppliers with their total_sales, total_remitted, balance, and status.
+ */
+const getRemittanceStatusRequest = async (req: Request, res: Response) => {
+    const query = req.query as RemittanceStatusQuery;
+    const report = await service.getRemittanceStatusReport(query);
+    return res.status(HTTP_STATUS.OK).json({
+        result: 'success',
+        data: report,
+    });
+};
+
 export default {
     getRemittanceReportRequest,
     getRemittanceSummaryRequest,
     getRemittanceDetailRequest,
     getTransactionReportRequest,
     getSupplierPerTenderRequest,
+    getRemittanceStatusRequest,
 };

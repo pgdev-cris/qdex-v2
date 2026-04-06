@@ -25,3 +25,12 @@ export const TransactionReportQuerySchema = z.object({
 });
 
 export type TransactionReportQuery = z.infer<typeof TransactionReportQuerySchema>;
+
+// Remittance status query — used by GET /api/v1/reports/remittance-status
+export const RemittanceStatusQuerySchema = z.object({
+    from: z.string().optional(), // YYYY-MM-DD
+    to: z.string().optional(),   // YYYY-MM-DD
+    search: z.string().optional(),
+});
+
+export type RemittanceStatusQuery = z.infer<typeof RemittanceStatusQuerySchema>;

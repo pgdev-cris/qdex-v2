@@ -1,5 +1,6 @@
 import repository from './reports.repository';
-import { RemittanceReportQuery, TransactionReportQuery } from './reports.schema';
+import { RemittanceReportQuery, TransactionReportQuery, RemittanceStatusQuery } from './reports.schema';
+import { RemittanceStatusRow } from './reports.repository';
 
 const getRemittanceReport = async (query: RemittanceReportQuery) => {
     const [transactions, summary] = await Promise.all([
@@ -78,10 +79,60 @@ const getSupplierPerTenderReport = async (
     };
 };
 
+export type RemittanceStatus = 'settled' | 'partial' | 'pending' | 'no_activity';
+
+export interface RemittanceStatusResult extends RemittanceStatusRow {
+    status: RemittanceStatus;
+}
+
+export interface RemittanceStatusSummary {
+    total_suppliers: number;
+    settled: number;
+    partial: number;
+    pending: number;
+    no_activity: number;
+}
+
+export interface RemittanceStatusReport {
+    rows: RemittanceStatusResult[];
+    summary: RemittanceStatusSummary;
+}
+
+const deriveStatus = (row: RemittanceStatusRow): RemittanceStatus => {
+    const { total_sales, total_remitted, transaction_count } = row;
+    if (transaction_count === 0) return 'no_activity';
+    if (total_remitted > 0 && Number(total_sales) === 0) return 'partial'; // only partials, no full remit yet
+    if (Number(total_sales) > 0 && total_remitted === 0) return 'pending';
+    if (Number(total_sales) > 0 && Number(total_sales) - Number(total_remitted) <= 0) return 'settled';
+    return 'partial';
+};
+
+const getRemittanceStatusReport = async (
+    query: RemittanceStatusQuery,
+): Promise<RemittanceStatusReport> => {
+    const rows = await repository.getRemittanceStatus(query);
+
+    const results: RemittanceStatusResult[] = rows.map((r) => ({
+        ...r,
+        status: deriveStatus(r),
+    }));
+
+    const summary: RemittanceStatusSummary = {
+        total_suppliers: results.length,
+        settled: results.filter((r) => r.status === 'settled').length,
+        partial: results.filter((r) => r.status === 'partial').length,
+        pending: results.filter((r) => r.status === 'pending').length,
+        no_activity: results.filter((r) => r.status === 'no_activity').length,
+    };
+
+    return { rows: results, summary };
+};
+
 export default {
     getRemittanceReport,
     getRemittanceSummary,
     getRemittanceById,
     getTransactionReport,
     getSupplierPerTenderReport,
+    getRemittanceStatusReport,
 };

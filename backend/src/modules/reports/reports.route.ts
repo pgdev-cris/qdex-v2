@@ -2,7 +2,11 @@ import { Router } from 'express';
 import controller from './reports.controller';
 import { jwtValidator } from '../../shared/middlewares/jwtValidator';
 import { requestValidator } from '../../shared/middlewares/requestValidator.middleware';
-import { RemittanceReportQuerySchema, TransactionReportQuerySchema } from './reports.schema';
+import {
+    RemittanceReportQuerySchema,
+    TransactionReportQuerySchema,
+    RemittanceStatusQuerySchema,
+} from './reports.schema';
 
 const router = Router();
 
@@ -39,6 +43,14 @@ router.get(
     jwtValidator,
     requestValidator({ query: TransactionReportQuerySchema }),
     controller.getSupplierPerTenderRequest,
+);
+
+// GET /api/v1/reports/remittance-status
+router.get(
+    '/remittance-status',
+    jwtValidator,
+    requestValidator({ query: RemittanceStatusQuerySchema }),
+    controller.getRemittanceStatusRequest,
 );
 
 export default router;

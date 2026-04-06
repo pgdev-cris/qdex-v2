@@ -9,6 +9,7 @@ import { MonitoringPage } from '@/pages/transaction/MonitoringPage'
 import { UsersPage } from '@/pages/maintenance/UsersPage'
 import { SuppliersPage } from '@/pages/maintenance/SuppliersPage'
 import { EventsPage } from '@/pages/maintenance/EventsPage'
+import { RemittanceStatusPage } from '@/pages/reports/RemittanceStatusPage'
 
 const App = () => {
     return (
@@ -68,6 +69,16 @@ const App = () => {
                         element={
                             <Layout>
                                 <EventsPage />
+                            </Layout>
+                        }
+                    />
+
+                    {/* Reports */}
+                    <Route
+                        path="/reports/remittance-status"
+                        element={
+                            <Layout>
+                                <RemittanceStatusPage />
                             </Layout>
                         }
                     />

@@ -30,17 +30,25 @@ const tenderChartConfig = {
         label: 'GCash',
         color: 'var(--chart-2)',
     },
-    MAYA: {
-        label: 'Maya',
+    PWALLET: {
+        label: 'Puregold Wallet',
         color: 'var(--chart-3)',
     },
-    CREDIT_CARD: {
-        label: 'Credit Card',
+    TANGENT_DEBIT: {
+        label: '(Tangent) Credit Card',
         color: 'var(--chart-4)',
     },
-    DEBIT_CARD: {
-        label: 'Debit Card',
+    TANGENT_CREDIT: {
+        label: '(Tangent) Debit Card',
         color: 'var(--chart-5)',
+    },
+    HOMECREDIT: {
+        label: 'Home Credit',
+        color: 'oklch(0.7 0.15 30)',
+    },
+    GCASH_EPOS: {
+        label: 'GCash E-POS',
+        color: 'oklch(0.65 0.18 250)',
     },
 } satisfies ChartConfig
 

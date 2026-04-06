@@ -50,8 +50,11 @@ export const methodLabel = (code: string): string => {
     const map: Record<string, string> = {
         CASH: 'Cash',
         GCASH: 'GCash',
-        PWALLET: 'PWALLET',
-        CREDIT_CARD: 'CREDIT CARD',
+        PWALLET: 'Puregold Wallet',
+        TANGENT_DEBIT: '(Tangent) Credit Card',
+        TANGENT_CREDIT: '(Tangent) Debit Card',
+        HOMECREDIT: 'Home Credit',
+        GCASH_EPOS: 'GCash E-POS',
     }
     return map[code] ?? code
 }

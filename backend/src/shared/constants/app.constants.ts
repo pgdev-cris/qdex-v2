@@ -33,9 +33,10 @@ export const TENDER_TYPE: Record<string, number> = {
     CASH: 1,
     GCASH: 2,
     PWALLET: 3,
-    CREDIT_CARD: 4,
-    DEBIT_CARD: 5,
+    TANGENT_DEBIT: 4,
+    TANGENT_CREDIT: 5,
     HOMECREDIT: 6,
+    GCASH_EPOS: 7,
 };
 
 export const TRANSACTION_TYPE = {

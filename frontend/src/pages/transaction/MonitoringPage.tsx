@@ -68,10 +68,11 @@ const STATUS_LABEL: Record<number, string> = { 0: 'Pending', 1: 'Verified', 2: '
 const TENDER_LABEL: Record<number, string> = {
     1: 'Cash',
     2: 'GCash',
-    3: 'PayWallet',
-    4: 'Credit Card',
-    5: 'Debit Card',
+    3: 'Puregold Wallet',
+    4: '(Tangent) Credit Card',
+    5: '(Tangent) Debit Card',
     6: 'Home Credit',
+    7: 'GCash E-POS',
 }
 
 const TYPE_OPTIONS = [

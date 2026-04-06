@@ -19,6 +19,7 @@ import { ThermalReceipt } from '@/pages/transaction/remittance/components/Therma
 import type { Receipt } from '@/pages/transaction/remittance/types'
 import { toTitleCase } from '@/utils/string.utils.ts'
 import { OverrideModal } from '@/components/OverrideModal'
+import { DatePickerWithRange } from '@/components/ui/date-picker-range.tsx'
 
 //  Types
 
@@ -268,6 +269,8 @@ export const MonitoringPage = () => {
     const [debouncedSearch, setDebouncedSearch] = useState('')
     const [typeFilter, setTypeFilter] = useState('')
     const [statusFilter, setStatusFilter] = useState('')
+    const [dateFrom, setDateFrom] = useState<Date>(new Date())
+    const [dateTo, setDateTo] = useState<Date>(new Date())
 
     const [detail, setDetail] = useState<TransactionWithDetails | null>(null)
     const [detailLoading, setDetailLoading] = useState(false)
@@ -294,6 +297,9 @@ export const MonitoringPage = () => {
                 if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
                 if (typeFilter) params.set('type', typeFilter)
                 if (statusFilter) params.set('status', statusFilter)
+                if (dateFrom)
+                    params.set('date_from', new Date(dateFrom).toISOString().split('T')[0])
+                if (dateTo) params.set('date_to', new Date(dateTo).toISOString().split('T')[0])
 
                 const res = await apiFetch<ListResponse>(
                     `/api/v1/monitoring?${params.toString()}`,
@@ -310,7 +316,7 @@ export const MonitoringPage = () => {
                 setLoading(false)
             }
         },
-        [debouncedSearch, typeFilter, statusFilter]
+        [debouncedSearch, typeFilter, statusFilter, dateFrom, dateTo]
     )
 
     useEffect(() => {
@@ -416,7 +422,8 @@ export const MonitoringPage = () => {
 
                         {/* Filters */}
                         <div className="flex flex-wrap items-center gap-2">
-                            <div className="relative w-56">
+                            {/* Search */}
+                            <div className="relative w-52">
                                 <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     placeholder="Supplier, ref code..."
@@ -425,6 +432,8 @@ export const MonitoringPage = () => {
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
                             </div>
+
+                            {/* Type */}
                             <select
                                 className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                 value={typeFilter}
@@ -436,6 +445,8 @@ export const MonitoringPage = () => {
                                     </option>
                                 ))}
                             </select>
+
+                            {/* Status */}
                             <select
                                 className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                 value={statusFilter}
@@ -447,6 +458,15 @@ export const MonitoringPage = () => {
                                     </option>
                                 ))}
                             </select>
+
+                            <DatePickerWithRange
+                                from={dateFrom}
+                                to={dateTo}
+                                onSelect={(dateRange) => {
+                                    if (dateRange?.from) setDateFrom(dateRange.from)
+                                    if (dateRange?.to) setDateTo(dateRange.to)
+                                }}
+                            />
                         </div>
                     </div>
                 </CardHeader>
@@ -498,7 +518,7 @@ export const MonitoringPage = () => {
                                         colSpan={COLUMNS.length}
                                         className="py-16 text-center text-sm text-muted-foreground"
                                     >
-                                        {search || typeFilter || statusFilter
+                                        {search || typeFilter || statusFilter || dateFrom || dateTo
                                             ? 'No transactions match your filters.'
                                             : 'No transactions recorded yet.'}
                                     </td>

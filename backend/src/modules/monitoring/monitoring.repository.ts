@@ -11,7 +11,7 @@ const SERIES_CODE = 'TRX';
 const listTransactions = async (
     filters: ListTransactionsQuery,
 ): Promise<{ rows: TransactionRow[]; total: number }> => {
-    const { search, type, status, page = 1, limit = 20 } = filters;
+    const { search, type, status, date_from, date_to, page = 1, limit = 20 } = filters;
     const offset = (page - 1) * limit;
 
     const conditions: string[] = [];
@@ -33,6 +33,16 @@ const listTransactions = async (
     if (status !== undefined) {
         conditions.push(`t.status = ?`);
         params.push(status);
+    }
+
+    if (date_from) {
+        conditions.push(`DATE(t.transacted_at) >= ?`);
+        params.push(date_from);
+    }
+
+    if (date_to) {
+        conditions.push(`DATE(t.transacted_at) <= ?`);
+        params.push(date_to);
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';

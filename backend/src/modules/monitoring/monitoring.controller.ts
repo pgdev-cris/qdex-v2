@@ -7,6 +7,8 @@ const listTransactionsRequest = async (req: Request, res: Response) => {
         search: req.query.search as string | undefined,
         type: req.query.type !== undefined ? Number(req.query.type) : undefined,
         status: req.query.status !== undefined ? Number(req.query.status) : undefined,
+        date_from: req.query.date_from as string | undefined,
+        date_to: req.query.date_to as string | undefined,
         page: req.query.page !== undefined ? Number(req.query.page) : 1,
         limit: req.query.limit !== undefined ? Number(req.query.limit) : 20,
     };

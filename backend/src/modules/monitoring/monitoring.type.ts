@@ -28,6 +28,8 @@ export interface ListTransactionsQuery {
     search?: string;
     type?: number;
     status?: number;
+    date_from?: string; // YYYY-MM-DD
+    date_to?: string;   // YYYY-MM-DD
     page?: number;
     limit?: number;
 }

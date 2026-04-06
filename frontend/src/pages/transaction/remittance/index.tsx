@@ -22,6 +22,8 @@ import type {
     OverrideApproval,
     PartialSummary,
     PartialSummaryResponse,
+    TenderType,
+    TenderTypesResponse,
 } from './types'
 import { SALES_FETCH_PATH } from './constants'
 import { fmtReceiptDate, fmt, methodLabel } from './helpers'
@@ -273,6 +275,9 @@ export const RemittancePage = () => {
     const [partialSummary, setPartialSummary] = useState<PartialSummary | null>(null)
     const [partialSummaryLoading, setPartialSummaryLoading] = useState(false)
 
+    // Tender types from DB (loaded once on mount; drives is_editable + sort order)
+    const [tenderTypes, setTenderTypes] = useState<TenderType[]>([])
+
     // Async state
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -296,6 +301,15 @@ export const RemittancePage = () => {
         `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim().toUpperCase() || 'UNKNOWN'
     const eventName = currentEvent?.name ?? ''
     const eventCode = currentEvent?.code ?? ''
+
+    // Load tender types once on mount
+    useEffect(() => {
+        apiFetch<TenderTypesResponse>('/api/v1/tender-types', { token: token ?? undefined })
+            .then((res) => {
+                if (res.result === 'success') setTenderTypes(res.data)
+            })
+            .catch(() => {/* non-fatal — fall back to salesData order */})
+    }, [token])
 
     // Auto-focus supplier input so handheld scanner fires without a click
     useEffect(() => {
@@ -393,18 +407,32 @@ export const RemittancePage = () => {
             ? !partialSummaryLoading && cashAmount !== '' && Number(cashAmount) !== computedBalance
             : cashAmount !== '' && Number(cashAmount) > computedBalance
 
-    // Determine whether any non-CASH amount was changed from the POS value, or cash differs from balance
+    // Helpers derived from tenderTypes
+    const tenderMap = new Map(tenderTypes.map((t) => [t.code, t]))
+    const isEditableTender = (method: string): boolean => {
+        if (tenderTypes.length === 0) return method !== 'CASH'
+        return (tenderMap.get(method)?.is_editable ?? 0) === 1
+    }
+    const sortedSales = [...salesData].sort((a, b) => {
+        const sortA = tenderMap.get(a.payment_method)?.sort ?? 9999
+        const sortB = tenderMap.get(b.payment_method)?.sort ?? 9999
+        return sortA - sortB
+    })
+    const tenderLabel = (method: string) =>
+        tenderMap.get(method)?.label ?? methodLabel(method)
+
+    // Determine whether any editable amount was changed from POS value, or cash differs from balance
     const detectOverrideNeeded = (): boolean => {
         if (remitType === 'partial') return cashOverrideNeeded
 
-        const nonCashChanged = salesData
-            .filter((r) => r.payment_method !== 'CASH')
+        const editableChanged = salesData
+            .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method))
             .some((r) => {
                 const edited = otherAmounts[r.payment_method]
                 if (edited === undefined) return false
                 return Number(edited) !== Number(r.total)
             })
-        return nonCashChanged || cashOverrideNeeded
+        return editableChanged || cashOverrideNeeded
     }
 
     // Build confirm rows for the modal
@@ -417,18 +445,21 @@ export const RemittancePage = () => {
                 { label: 'Supplier', value: supplierLabel },
                 { label: 'Remitter', value: remitterName.trim() || '—' },
                 { label: 'Type', value: 'Full Remittance' },
-                ...salesData.map((r) => {
+                ...sortedSales.map((r) => {
                     if (r.payment_method === 'CASH') {
                         return {
-                            label: methodLabel(r.payment_method),
+                            label: tenderLabel(r.payment_method),
                             value: fmt(cashVal),
                             overridden: !!approval && cashOverrideNeeded,
                         }
                     }
-                    const editedVal = Number(otherAmounts[r.payment_method] ?? r.total)
-                    const wasChanged = editedVal !== Number(r.total)
+                    const editedVal = isEditableTender(r.payment_method)
+                        ? Number(otherAmounts[r.payment_method] ?? r.total)
+                        : Number(r.total)
+                    const wasChanged =
+                        isEditableTender(r.payment_method) && editedVal !== Number(r.total)
                     return {
-                        label: methodLabel(r.payment_method),
+                        label: tenderLabel(r.payment_method),
                         value: fmt(editedVal),
                         overridden: !!approval && wasChanged,
                     }
@@ -483,14 +514,15 @@ export const RemittancePage = () => {
 
     // Full remittance — execute after confirmation
     const executeFullRemittance = async () => {
-        const lines: ReceiptLine[] = salesData.map((r) => {
+        const lines: ReceiptLine[] = sortedSales.map((r) => {
             if (r.payment_method === 'CASH') {
                 return { method: r.payment_method, amount: cashAmount }
             }
-            return {
-                method: r.payment_method,
-                amount: otherAmounts[r.payment_method] ?? r.total,
-            }
+            // Only use the edited amount for editable tender types
+            const amount = isEditableTender(r.payment_method)
+                ? (otherAmounts[r.payment_method] ?? r.total)
+                : r.total
+            return { method: r.payment_method, amount }
         })
 
         setConfirmOpen(false)
@@ -709,6 +741,7 @@ export const RemittancePage = () => {
                             supplierCode={supplierCode}
                             supplierName={supplierName}
                             salesData={salesData}
+                            tenderTypes={tenderTypes}
                             cashRecord={cashRecord}
                             cashAmount={cashAmount}
                             otherAmounts={otherAmounts}

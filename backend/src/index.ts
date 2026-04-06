@@ -11,6 +11,7 @@ import reportsRoutes from './modules/reports/reports.route';
 import salesRoutes from './modules/sales/sales.route';
 import monitoringRoutes from './modules/monitoring/monitoring.routes';
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
+import tenderTypesRoutes from './modules/tender-types/tender-types.routes';
 import { notFoundHandler, errorHandler } from './shared/middlewares';
 import { API_PREFIX } from './shared/constants';
 
@@ -36,6 +37,7 @@ app.use(`${API_PREFIX}/reports`, reportsRoutes);
 app.use(`${API_PREFIX}/sales`, salesRoutes);
 app.use(`${API_PREFIX}/monitoring`, monitoringRoutes);
 app.use(`${API_PREFIX}/dashboard`, dashboardRoutes);
+app.use(`${API_PREFIX}/tender-types`, tenderTypesRoutes);
 
 /**
  * Error Handling

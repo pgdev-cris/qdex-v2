@@ -87,3 +87,16 @@ export interface PartialSummaryResponse {
     message: string
     data?: PartialSummary
 }
+
+export interface TenderType {
+    id: number
+    code: string
+    label: string
+    is_editable: number  // 0 | 1
+    sort: number
+}
+
+export interface TenderTypesResponse {
+    result: 'success' | 'error'
+    data: TenderType[]
+}

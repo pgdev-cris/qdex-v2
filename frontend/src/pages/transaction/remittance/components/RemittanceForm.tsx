@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import type { SalesRecord, RemitType, PartialSummary } from '../types'
+import type { SalesRecord, RemitType, PartialSummary, TenderType } from '../types'
 import { fmt, methodLabel } from '../helpers'
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
     supplierCode: string
     supplierName: string
     salesData: SalesRecord[]
+    tenderTypes: TenderType[]
     cashRecord: SalesRecord | undefined
     cashAmount: string
     otherAmounts: Record<string, string>
@@ -31,6 +32,7 @@ export const RemittanceForm = ({
     supplierCode,
     supplierName,
     salesData,
+    tenderTypes,
     cashRecord,
     cashAmount,
     otherAmounts,
@@ -48,6 +50,23 @@ export const RemittanceForm = ({
     const totalPartial = partialSummary?.total_cash ?? 0
     const balance = Math.max(0, posCashTotal - totalPartial)
     const hasPartial = (partialSummary?.count ?? 0) > 0
+
+    // Build a lookup map for tender type metadata keyed by code
+    const tenderMap = new Map<string, TenderType>(tenderTypes.map((t) => [t.code, t]))
+
+    // Sort salesData rows by the tender type's sort column; unknown codes go last
+    const sortedSalesData = [...salesData].sort((a, b) => {
+        const sortA = tenderMap.get(a.payment_method)?.sort ?? 9999
+        const sortB = tenderMap.get(b.payment_method)?.sort ?? 9999
+        return sortA - sortB
+    })
+
+    // A row is editable when its tender type has is_editable = 1
+    // If tenderTypes haven't loaded yet, fall back to the old behaviour (non-CASH editable)
+    const isEditable = (method: string): boolean => {
+        if (tenderTypes.length === 0) return method !== 'CASH'
+        return (tenderMap.get(method)?.is_editable ?? 0) === 1
+    }
 
     return (
         <Card>
@@ -88,19 +107,20 @@ export const RemittanceForm = ({
                         </div>
                         <Separator />
                         <div className="divide-y">
-                            {salesData.map((rec) => (
+                            {sortedSalesData.map((rec) => (
                                 <div
                                     key={rec.payment_method}
                                     className="flex items-center justify-between px-4 py-3 gap-4"
                                 >
                                     <span className="text-sm font-medium shrink-0">
-                                        {methodLabel(rec.payment_method)}
+                                        {tenderMap.get(rec.payment_method)?.label ??
+                                            methodLabel(rec.payment_method)}
                                     </span>
                                     {rec.payment_method === 'CASH' ? (
                                         <span className="text-muted-foreground text-xs italic">
                                             (editable below)
                                         </span>
-                                    ) : (
+                                    ) : isEditable(rec.payment_method) ? (
                                         <div className="relative w-36">
                                             <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
                                                 ₱
@@ -122,13 +142,17 @@ export const RemittanceForm = ({
                                                 }
                                             />
                                         </div>
+                                    ) : (
+                                        <span className="tabular-nums text-sm font-mono">
+                                            {fmt(rec.total)}
+                                        </span>
                                     )}
                                 </div>
                             ))}
                         </div>
                         <div className="border-t bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
-                            Non-cash amounts are pre-filled from POS. Editing them requires override
-                            approval.
+                            Editable tender types are pre-filled from POS. Editing them requires
+                            override approval.
                         </div>
                     </div>
                 )}

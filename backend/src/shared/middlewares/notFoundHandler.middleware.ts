@@ -5,4 +5,4 @@ export const notFoundHandler = (req: Request, res: Response) => {
         status: 404,
         message: `Route ${req.method} ${req.originalUrl} not found`,
     });
-}
+};

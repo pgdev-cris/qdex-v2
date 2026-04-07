@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -8,4 +8,4 @@ export const mainDb = {
     password: process.env.QDEX_DB_PASSWORD,
     database: process.env.QDEX_DB_NAME,
     port: Number(process.env.QDEX_DB_PORT) || 3306,
-}
+};

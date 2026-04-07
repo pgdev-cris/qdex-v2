@@ -8,12 +8,11 @@ import {
     ChevronsUpDown,
 } from 'lucide-react'
 import { format } from 'date-fns'
-import type { DateRange } from 'react-day-picker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { DatePickerWithRange } from '@/components/ui/date-picker-range'
+import { DatePicker } from '@/components/ui/date-picker'
 import { apiFetch } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -162,9 +161,8 @@ export const RemittanceStatusPage = () => {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    // Filters — stored as Date objects to match DatePickerWithRange API
-    const [dateFrom, setDateFrom] = useState<Date>(new Date())
-    const [dateTo, setDateTo] = useState<Date>(new Date())
+    // Filters — single date (sent as both `from` and `to` to the backend)
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date())
     const [search, setSearch] = useState('')
     const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -183,10 +181,11 @@ export const RemittanceStatusPage = () => {
         setError(null)
         try {
             const params = new URLSearchParams()
-            const isoFrom = toISO(dateFrom)
-            const isoTo = toISO(dateTo)
-            if (isoFrom) params.set('from', isoFrom)
-            if (isoTo) params.set('to', isoTo)
+            const isoDate = toISO(selectedDate)
+            if (isoDate) {
+                params.set('from', isoDate)
+                params.set('to', isoDate)
+            }
             if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
 
             const res = await apiFetch<ApiResponse>(
@@ -200,7 +199,7 @@ export const RemittanceStatusPage = () => {
         } finally {
             setLoading(false)
         }
-    }, [dateFrom, dateTo, debouncedSearch, token])
+    }, [selectedDate, debouncedSearch, token])
 
     useEffect(() => {
         void fetchData()
@@ -280,12 +279,9 @@ export const RemittanceStatusPage = () => {
                             <CardTitle>Supplier Overview</CardTitle>
                             <CardDescription>
                                 {rows.length} {rows.length === 1 ? 'supplier' : 'suppliers'} found
-                                {(dateFrom || dateTo) && (
+                                {selectedDate && (
                                     <span className="ml-1">
-                                        for{' '}
-                                        {toISO(dateFrom) === toISO(dateTo)
-                                            ? format(dateFrom, 'MMM d, yyyy')
-                                            : `${dateFrom ? format(dateFrom, 'MMM d') : '—'} – ${dateTo ? format(dateTo, 'MMM d, yyyy') : '—'}`}
+                                        for {format(selectedDate, 'MMM d, yyyy')}
                                     </span>
                                 )}
                             </CardDescription>
@@ -302,12 +298,10 @@ export const RemittanceStatusPage = () => {
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
                             </div>
-                            <DatePickerWithRange
-                                from={dateFrom}
-                                to={dateTo}
-                                onSelect={(range: DateRange) => {
-                                    if (range.from) setDateFrom(range.from)
-                                    if (range.to) setDateTo(range.to)
+                            <DatePicker
+                                value={selectedDate}
+                                onSelect={(date) => {
+                                    if (date) setSelectedDate(date)
                                 }}
                             />
                         </div>
@@ -322,12 +316,12 @@ export const RemittanceStatusPage = () => {
                     ) : (
                         <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
                             <colgroup>
-                                <col style={{ width: '90px' }} /> {/* Code */}
-                                <col /> {/* Name — fills remaining */}
-                                <col style={{ width: '150px' }} /> {/* Total Sales */}
-                                <col style={{ width: '150px' }} /> {/* Total Remitted */}
-                                <col style={{ width: '140px' }} /> {/* Balance */}
-                                <col style={{ width: '120px' }} /> {/* Status */}
+                                <col style={{ width: '90px' }} />
+                                <col />
+                                <col style={{ width: '150px' }} />
+                                <col style={{ width: '150px' }} />
+                                <col style={{ width: '140px' }} />
+                                <col style={{ width: '120px' }} />
                             </colgroup>
                             <thead>
                                 <tr className="border-b">

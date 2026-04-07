@@ -1,5 +1,9 @@
 import repository from './reports.repository';
-import { RemittanceReportQuery, TransactionReportQuery, RemittanceStatusQuery } from './reports.schema';
+import {
+    RemittanceReportQuery,
+    TransactionReportQuery,
+    RemittanceStatusQuery,
+} from './reports.schema';
 import { RemittanceStatusRow } from './reports.repository';
 import posClient from '../../shared/clients/pos.client';
 import { SalesPerVendorByDate } from '../../shared/types/pos.type';
@@ -88,9 +92,9 @@ export interface RemittanceStatusResult {
     supplier_id: number;
     supplier_code: number;
     supplier_name: string;
-    total_sales: number;    // sourced from POS total_revenue
+    total_sales: number; // sourced from POS total_revenue
     total_remitted: number; // sourced from DB verified transactions
-    balance: number;        // total_sales - total_remitted
+    balance: number; // total_sales - total_remitted
     transaction_count: number;
     status: RemittanceStatus;
 }
@@ -110,13 +114,15 @@ export interface RemittanceStatusReport {
 
 /**
  * Derive remittance status from POS sales vs DB remitted amounts.
- * - no_activity : vendor has no POS sales for the day
- * - pending     : vendor has POS sales but has not remitted anything
- * - settled     : vendor remitted >= POS sales (balance <= 0)
- * - partial     : vendor has remitted something but balance is still > 0
+ * - no_activity : no POS sales AND no remittance recorded
+ * - pending     : has POS sales but nothing remitted yet
+ * - settled     : remitted >= POS sales (balance <= 0)
+ * - partial     : has remitted something but balance is still > 0,
+ *                 OR remitted but POS sales unavailable (possible POS error)
  */
 const deriveStatus = (totalSales: number, totalRemitted: number): RemittanceStatus => {
-    if (totalSales === 0) return 'no_activity';
+    if (totalSales === 0 && totalRemitted === 0) return 'no_activity';
+    if (totalSales === 0 && totalRemitted > 0) return 'partial';
     if (totalRemitted === 0) return 'pending';
     if (totalSales - totalRemitted <= 0) return 'settled';
     return 'partial';
@@ -130,13 +136,15 @@ const getRemittanceStatusReport = async (
 
     // Fetch POS sales and DB remittance totals in parallel
     const [posResponse, dbRows] = await Promise.all([
-        posClient.getSalesPerVendorByDate(posDate).catch(() => ({ data: [] as SalesPerVendorByDate[] })),
+        posClient
+            .getSalesPerVendorByDate(posDate)
+            .catch(() => ({ data: [] as SalesPerVendorByDate[] })),
         repository.getRemittanceStatus(query),
     ]);
 
     // Build a vendor_code → POS data map for O(1) lookups
     const posMap = new Map<number, SalesPerVendorByDate>();
-    for (const vendor of (posResponse.data ?? [])) {
+    for (const vendor of posResponse.data ?? []) {
         posMap.set(vendor.vendor_code, vendor);
     }
 

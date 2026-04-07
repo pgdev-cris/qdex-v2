@@ -256,18 +256,16 @@ export interface RemittanceStatusRow {
     supplier_id: number;
     supplier_code: number;
     supplier_name: string;
-    total_sales: number;    // SUM of full-remittance totals (declared POS sales)
-    total_remitted: number; // SUM of verified transaction totals
-    balance: number;        // total_sales - total_remitted
+    total_remitted: number; // SUM of verified (status=1) transaction totals from DB
     transaction_count: number;
 }
 
 /**
- * Returns one row per active supplier with remittance totals for the given date range.
+ * Returns one row per active supplier with DB-side remittance totals for the given date range.
+ * total_sales / balance are NOT computed here — they are merged from POS data in the service layer.
  *
- * total_sales    = SUM(total_amount) for FULL (type=2) non-voided transactions
- * total_remitted = SUM(total_amount) for VERIFIED (status=1) transactions (all types)
- * balance        = total_sales - total_remitted
+ * total_remitted = SUM(total_amount) for VERIFIED (status=1) transactions
+ * transaction_count = distinct non-voided transaction IDs
  *
  * Suppliers with no transactions in the range still appear (all zeroes).
  */
@@ -303,16 +301,8 @@ const getRemittanceStatus = async (
             v.code AS supplier_code,
             v.name AS supplier_name,
             COALESCE(SUM(
-                CASE WHEN t.type = 2 AND t.status != 2 THEN t.total_amount ELSE 0 END
-            ), 0) AS total_sales,
-            COALESCE(SUM(
                 CASE WHEN t.status = 1 THEN t.total_amount ELSE 0 END
             ), 0) AS total_remitted,
-            COALESCE(SUM(
-                CASE WHEN t.type = 2 AND t.status != 2 THEN t.total_amount ELSE 0 END
-            ), 0) - COALESCE(SUM(
-                CASE WHEN t.status = 1 THEN t.total_amount ELSE 0 END
-            ), 0) AS balance,
             COUNT(DISTINCT CASE WHEN t.status != 2 THEN t.id END) AS transaction_count
         FROM tbl_suppliers v
         LEFT JOIN tbl_transactions t

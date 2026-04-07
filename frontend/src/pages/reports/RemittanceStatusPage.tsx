@@ -8,6 +8,7 @@ import {
     ChevronsUpDown,
 } from 'lucide-react'
 import { format } from 'date-fns'
+import type { DateRange } from 'react-day-picker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +16,8 @@ import { Separator } from '@/components/ui/separator'
 import { DatePickerWithRange } from '@/components/ui/date-picker-range'
 import { apiFetch } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
+
+const toISO = (d: Date | undefined) => (d ? format(d, 'yyyy-MM-dd') : '')
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -151,8 +154,6 @@ const fmt = (val: number) =>
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-const todayISO = () => format(new Date(), 'yyyy-MM-dd')
-
 export const RemittanceStatusPage = () => {
     const { token } = useAuth()
 
@@ -161,9 +162,9 @@ export const RemittanceStatusPage = () => {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    // Filters
-    const [dateFrom, setDateFrom] = useState(todayISO())
-    const [dateTo, setDateTo] = useState(todayISO())
+    // Filters — stored as Date objects to match DatePickerWithRange API
+    const [dateFrom, setDateFrom] = useState<Date>(new Date())
+    const [dateTo, setDateTo] = useState<Date>(new Date())
     const [search, setSearch] = useState('')
     const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -182,8 +183,10 @@ export const RemittanceStatusPage = () => {
         setError(null)
         try {
             const params = new URLSearchParams()
-            if (dateFrom) params.set('from', dateFrom)
-            if (dateTo) params.set('to', dateTo)
+            const isoFrom = toISO(dateFrom)
+            const isoTo = toISO(dateTo)
+            if (isoFrom) params.set('from', isoFrom)
+            if (isoTo) params.set('to', isoTo)
             if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
 
             const res = await apiFetch<ApiResponse>(
@@ -280,12 +283,9 @@ export const RemittanceStatusPage = () => {
                                 {(dateFrom || dateTo) && (
                                     <span className="ml-1">
                                         for{' '}
-                                        {dateFrom === dateTo
-                                            ? format(
-                                                  new Date(dateFrom + 'T00:00:00'),
-                                                  'MMM d, yyyy'
-                                              )
-                                            : `${dateFrom ? format(new Date(dateFrom + 'T00:00:00'), 'MMM d') : '—'} – ${dateTo ? format(new Date(dateTo + 'T00:00:00'), 'MMM d, yyyy') : '—'}`}
+                                        {toISO(dateFrom) === toISO(dateTo)
+                                            ? format(dateFrom, 'MMM d, yyyy')
+                                            : `${dateFrom ? format(dateFrom, 'MMM d') : '—'} – ${dateTo ? format(dateTo, 'MMM d, yyyy') : '—'}`}
                                     </span>
                                 )}
                             </CardDescription>
@@ -305,9 +305,9 @@ export const RemittanceStatusPage = () => {
                             <DatePickerWithRange
                                 from={dateFrom}
                                 to={dateTo}
-                                onChange={(f, t) => {
-                                    setDateFrom(f)
-                                    setDateTo(t)
+                                onSelect={(range: DateRange) => {
+                                    if (range.from) setDateFrom(range.from)
+                                    if (range.to) setDateTo(range.to)
                                 }}
                             />
                         </div>

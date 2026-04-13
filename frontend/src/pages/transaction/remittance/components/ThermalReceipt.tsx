@@ -112,14 +112,14 @@ const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
             {/* Cash Breakdown */}
             {cashLine && (
                 <div style={{ ...gapSm, lineHeight: '1.8' }}>
-                    <Row label="  Cash Total" value={fmtAmt(cashTotal)} />
+                    <Row label="  Cash Total:" value={fmtAmt(cashTotal)} />
                 </div>
             )}
 
-            {/* Cards Breakdown */}
+            {/* Online Payments Breakdown */}
             {cardLines.length > 0 && (
                 <div style={{ ...gapSm, lineHeight: '1.8' }}>
-                    <div style={{ fontWeight: 'bold' }}>Cards Breakdown</div>
+                    <div style={{ fontWeight: 'bold' }}>Online Payments Breakdown</div>
                     {cardLines.map((l) => (
                         <div
                             key={l.method}
@@ -133,7 +133,7 @@ const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                             <span>{fmtAmt(l.amount)}</span>
                         </div>
                     ))}
-                    <Row label="  Cards Total:" value={fmtAmt(cardsTotal)} />
+                    <Row label="  Online Payments Total:" value={fmtAmt(cardsTotal)} />
                 </div>
             )}
 

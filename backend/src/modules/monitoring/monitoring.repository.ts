@@ -9,11 +9,16 @@ import {
 const listTransactions = async (
     filters: ListTransactionsQuery,
 ): Promise<{ rows: TransactionRow[]; total: number }> => {
-    const { search, type, status, date_from, date_to, page = 1, limit = 20 } = filters;
+    const { event_id, search, type, status, date_from, date_to, page = 1, limit = 20 } = filters;
     const offset = (page - 1) * limit;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
+
+    if (event_id !== undefined) {
+        conditions.push(`t.event_id = ?`);
+        params.push(event_id);
+    }
 
     if (search) {
         conditions.push(

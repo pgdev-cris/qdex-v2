@@ -3,7 +3,7 @@ import { CalendarDays, Search, Plus, Pencil, Trash2, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Modal, DeleteModal, FormField, FormRow } from '@/components/ui/modal'
+import { Modal, DeleteModal, ConfirmModal, FormField, FormRow } from '@/components/ui/modal'
 import { apiFetch } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import type { AppEvent } from '@/types/auth.types'
@@ -65,6 +65,7 @@ export const EventsPage = () => {
         id?: number
     } | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<AppEvent | null>(null)
+    const [confirmActiveTarget, setConfirmActiveTarget] = useState<AppEvent | null>(null)
 
     //  Fetch
 
@@ -324,7 +325,7 @@ export const EventsPage = () => {
                                                     <Button
                                                         variant="ghost"
                                                         size="icon-sm"
-                                                        onClick={() => handleSetActive(event)}
+                                                        onClick={() => setConfirmActiveTarget(event)}
                                                         title="Set as active event"
                                                         disabled={saving}
                                                     >
@@ -425,6 +426,22 @@ export const EventsPage = () => {
                 label={deleteTarget?.name ?? ''}
                 onConfirm={handleDelete}
                 onCancel={() => setDeleteTarget(null)}
+            />
+
+            {/* Set active confirmation */}
+            <ConfirmModal
+                open={confirmActiveTarget !== null}
+                title="Change Active Event?"
+                description="This will disable the current active event and set the selected one as active."
+                confirmLabel="Yes, set as active"
+                loading={saving}
+                onConfirm={() => {
+                    if (confirmActiveTarget) {
+                        handleSetActive(confirmActiveTarget)
+                        setConfirmActiveTarget(null)
+                    }
+                }}
+                onCancel={() => setConfirmActiveTarget(null)}
             />
         </div>
     )

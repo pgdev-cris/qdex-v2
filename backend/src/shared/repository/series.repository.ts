@@ -50,4 +50,18 @@ const incrementWithConnection = async (
     return { ...row, last_sequence: next };
 };
 
-export default { findByCode, incrementWithConnection };
+// Create a fresh series counter row for a newly created event
+const createSeriesForEvent = async (
+    eventId: number,
+    padLength: number = 6,
+    prefix: string | null = null,
+): Promise<void> => {
+    const code = `TRX-${eventId}`;
+    await PoolManager.execute(
+        `INSERT INTO tbl_series (code, prefix, last_sequence, pad_length)
+         VALUES (?, ?, 0, ?)`,
+        [code, prefix, padLength],
+    );
+};
+
+export default { findByCode, incrementWithConnection, createSeriesForEvent };

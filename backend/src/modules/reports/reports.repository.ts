@@ -180,7 +180,7 @@ const getTransactions = async (query: TransactionReportQuery): Promise<Transacti
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers v ON v.id = t.supplier_id
         INNER JOIN tbl_events   e ON e.id = t.event_id
-        LEFT  JOIN tbl_series   s ON s.code = 'TRX'
+        LEFT  JOIN tbl_series   s ON s.code = CONCAT('TRX-', t.event_id)
         ${where}
         ORDER BY t.id DESC
         LIMIT ${limit} OFFSET ${offset}

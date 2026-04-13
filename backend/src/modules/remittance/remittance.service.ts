@@ -9,9 +9,6 @@ import { BadRequestError } from '../../shared/errors';
 import { TRANSACTION_TYPE, TRANSACTION_STATUS, TENDER_TYPE } from '../../shared/constants';
 import { PartialRemitPayload, FullRemitPayload, RemitResult, VoidPayload } from './remittance.type';
 
-// Series code to use to get the next series number.
-const SERIES_RECEIPT = 'TRX';
-
 const partialRemit = async (payload: PartialRemitPayload, userId: number): Promise<RemitResult> => {
     const supplierCode = Number(payload.supplier_code);
     const supplier = await supplierProvider.validateSupplier(supplierCode);
@@ -19,6 +16,9 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
     validateLines(payload.lines);
 
     const event = await eventProvider.getCurrentEvent();
+
+    // Series code is scoped per event
+    const seriesCode = `TRX-${event.id}`;
 
     const totalAmount = payload.lines.reduce((sum, l) => sum + Number(l.amount), 0);
     const now = new Date();
@@ -31,9 +31,9 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
 
     await PoolManager.transaction(async (conn) => {
         // Increment series inside the transaction so it rolls back on failure
-        const seriesRow = await SeriesRepository.incrementWithConnection(SERIES_RECEIPT, conn);
+        const seriesRow = await SeriesRepository.incrementWithConnection(seriesCode, conn);
         if (!seriesRow) {
-            throw new BadRequestError(`Series "${SERIES_RECEIPT}" not configured.`);
+            throw new BadRequestError(`Series "${seriesCode}" not configured. Make sure the event has a counter.`);
         }
 
         // Format for display/receipt only — store the raw int in the DB
@@ -93,6 +93,9 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
 
     const event = await eventProvider.getCurrentEvent();
 
+    // Series code is scoped per event
+    const seriesCode = `TRX-${event.id}`;
+
     const totalAmount = payload.lines.reduce((sum, l) => sum + Number(l.amount), 0);
     const now = new Date();
     const referenceCode = generateRefCode();
@@ -100,9 +103,9 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
     let receiptNo!: string;
 
     await PoolManager.transaction(async (conn) => {
-        const seriesRow = await SeriesRepository.incrementWithConnection(SERIES_RECEIPT, conn);
+        const seriesRow = await SeriesRepository.incrementWithConnection(seriesCode, conn);
         if (!seriesRow) {
-            throw new BadRequestError(`Series "${SERIES_RECEIPT}" not configured.`);
+            throw new BadRequestError(`Series "${seriesCode}" not configured. Make sure the event has a counter.`);
         }
 
         const paddedSeq = String(seriesRow.last_sequence).padStart(seriesRow.pad_length, '0');

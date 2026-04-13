@@ -127,7 +127,7 @@ export const EventsPage = () => {
         try {
             const payload = {
                 name: modal.data.name.trim(),
-                code: modal.data.code.trim().toUpperCase(),
+                code: modal.data.code.trim(),
                 period_start: modal.data.period_start || undefined,
                 period_end: modal.data.period_end || undefined,
             }
@@ -387,8 +387,7 @@ export const EventsPage = () => {
                                 <Input
                                     placeholder="TNAP-2025"
                                     value={modal.data.code}
-                                    onChange={(e) => setField('code', e.target.value.toUpperCase())}
-                                    className="uppercase"
+                                    onChange={(e) => setField('code', e.target.value)}
                                 />
                             </FormField>
                         </FormRow>

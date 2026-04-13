@@ -154,7 +154,7 @@ const fmt = (val: number) =>
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export const RemittanceStatusPage = () => {
-    const { token } = useAuth()
+    const { token, currentEvent } = useAuth()
 
     const [rows, setRows] = useState<RemittanceStatusRow[]>([])
     const [summary, setSummary] = useState<RemittanceStatusSummary | null>(null)
@@ -181,6 +181,7 @@ export const RemittanceStatusPage = () => {
         setError(null)
         try {
             const params = new URLSearchParams()
+            if (currentEvent?.id) params.set('event_id', String(currentEvent.id))
             const isoDate = toISO(selectedDate)
             if (isoDate) {
                 params.set('from', isoDate)
@@ -199,7 +200,7 @@ export const RemittanceStatusPage = () => {
         } finally {
             setLoading(false)
         }
-    }, [selectedDate, debouncedSearch, token])
+    }, [currentEvent?.id, selectedDate, debouncedSearch, token])
 
     useEffect(() => {
         void fetchData()
@@ -244,6 +245,11 @@ export const RemittanceStatusPage = () => {
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         Supplier remittance compliance and balance overview.
+                        {currentEvent && (
+                            <span className="text-primary ml-2 font-medium">
+                                {currentEvent.name} ({currentEvent.code})
+                            </span>
+                        )}
                     </p>
                 </div>
                 <Button variant="outline" onClick={fetchData} disabled={loading}>

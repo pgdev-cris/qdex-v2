@@ -28,6 +28,7 @@ export type TransactionReportQuery = z.infer<typeof TransactionReportQuerySchema
 
 // Remittance status query — used by GET /api/v1/reports/remittance-status
 export const RemittanceStatusQuerySchema = z.object({
+    event_id: z.string().regex(/^\d+$/).optional(), // numeric event ID
     from: z.string().optional(), // YYYY-MM-DD
     to: z.string().optional(),   // YYYY-MM-DD
     search: z.string().optional(),

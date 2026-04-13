@@ -23,3 +23,29 @@ export const HTTP_STATUS = {
     BAD_GATEWAY: 502,
     SERVICE_UNAVAILABLE: 503,
 } as const;
+
+export const SUPPLIER_STATUS = {
+    ACTIVE: 1,
+    INACTIVE: 0,
+};
+
+export const TENDER_TYPE: Record<string, number> = {
+    CASH: 1,
+    GCASH: 2,
+    PWALLET: 3,
+    TANGENT_DEBIT: 4,
+    TANGENT_CREDIT: 5,
+    HOMECREDIT: 6,
+    GCASH_EPOS: 7,
+};
+
+export const TRANSACTION_TYPE = {
+    PARTIAL: 1,
+    FULL: 2,
+} as const;
+
+export const TRANSACTION_STATUS = {
+    PENDING: 0,
+    VERIFIED: 1,
+    VOIDED: 2,
+} as const;

@@ -85,20 +85,23 @@ export const ReceiptPreview = ({ receipt, onPrint, onReset }: Props) => {
 
                         {cashLine && (
                             <div className="mb-2">
-                                <ScreenRow label="  Cash Total" value={fmtAmt(cashLine.amount)} />
+                                <ScreenRow label="  Cash Total:" value={fmtAmt(cashLine.amount)} />
                             </div>
                         )}
 
                         {cardLines.length > 0 && (
                             <div className="mb-2">
-                                <p>Cards Breakdown</p>
+                                <p>Online Payments Breakdown</p>
                                 {cardLines.map((l) => (
                                     <div key={l.method} className="flex justify-between ml-4">
                                         <span>{methodLabel(l.method)}</span>
                                         <span>{fmtAmt(l.amount)}</span>
                                     </div>
                                 ))}
-                                <ScreenRow label="  Cards Total" value={fmtAmt(cardsTotal)} />
+                                <ScreenRow
+                                    label="  Online Payments Total"
+                                    value={fmtAmt(cardsTotal)}
+                                />
                             </div>
                         )}
 
@@ -121,7 +124,7 @@ export const ReceiptPreview = ({ receipt, onPrint, onReset }: Props) => {
                                     {toTitleCase(receipt.remitter_name)}
                                 </p>
                                 <p className="-mt-2">{'_'.repeat(37)}</p>
-                                <p className="text-muted-foreground">Acknowledge By</p>
+                                <p className="text-muted-foreground">Acknowledged By</p>
                             </div>
                             <div></div>
                         </div>

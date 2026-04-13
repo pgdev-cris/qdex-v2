@@ -308,7 +308,9 @@ export const RemittancePage = () => {
             .then((res) => {
                 if (res.result === 'success') setTenderTypes(res.data)
             })
-            .catch(() => {/* non-fatal — fall back to salesData order */})
+            .catch(() => {
+                /* non-fatal — fall back to salesData order */
+            })
     }, [token])
 
     // Auto-focus supplier input so handheld scanner fires without a click
@@ -319,9 +321,49 @@ export const RemittancePage = () => {
         }
     }, [step])
 
-    // Step 1 — search supplier
-    const handleSearch = async () => {
-        const code = supplierInput.trim().toUpperCase()
+    // Global barcode listener
+    useEffect(() => {
+        if (step !== 'search') return
+
+        let buffer = ''
+        let lastKeyTime = 0
+        const SCAN_CHAR_GAP_MS = 50 // max ms between chars for a scan sequence
+
+        const handleGlobalKey = (e: KeyboardEvent) => {
+            const now = Date.now()
+            const gap = now - lastKeyTime
+            lastKeyTime = now
+
+            // If there's a large gap, treat it as the start of a new sequence.
+            // Don't reset on Enter so we can still flush a slow-ending scan.
+            if (gap > SCAN_CHAR_GAP_MS && e.key !== 'Enter') {
+                buffer = ''
+            }
+
+            if (e.key === 'Enter') {
+                const code = buffer.trim().toUpperCase()
+                buffer = ''
+                if (code.length > 0) {
+                    setSupplierInput(code)
+                    // Trigger search directly with the buffered code so we don't
+                    // rely on supplierInput state which may not have updated yet.
+                    void handleSearchWithCode(code)
+                }
+                return
+            }
+
+            // Accumulate printable single characters only
+            if (e.key.length === 1) {
+                buffer += e.key
+            }
+        }
+
+        window.addEventListener('keydown', handleGlobalKey)
+        return () => window.removeEventListener('keydown', handleGlobalKey)
+    }, [step])
+
+    // Step 1 — search supplier (accepts an explicit code for the barcode listener path)
+    const handleSearchWithCode = async (code: string) => {
         if (!code) return
         setError(null)
         setLoading(true)
@@ -343,6 +385,10 @@ export const RemittancePage = () => {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleSearch = () => {
+        handleSearchWithCode(supplierInput.trim().toUpperCase())
     }
 
     // Step 2 — select type
@@ -418,8 +464,7 @@ export const RemittancePage = () => {
         const sortB = tenderMap.get(b.payment_method)?.sort ?? 9999
         return sortA - sortB
     })
-    const tenderLabel = (method: string) =>
-        tenderMap.get(method)?.label ?? methodLabel(method)
+    const tenderLabel = (method: string) => tenderMap.get(method)?.label ?? methodLabel(method)
 
     // Determine whether any editable amount was changed from POS value, or cash differs from balance
     const detectOverrideNeeded = (): boolean => {

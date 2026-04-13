@@ -107,8 +107,6 @@ export interface PartialCashSummary {
     transactions: PartialTransactionRow[];
 }
 
-const SERIES_CODE = 'TRX';
-
 /**
  * Returns each non-voided CASH partial remittance for a supplier today,
  * plus a pre-computed total and count.
@@ -126,7 +124,7 @@ const getPartialCashSummary = async (
         FROM tbl_transactions      t
         INNER JOIN tbl_suppliers   s  ON s.id  = t.supplier_id
         INNER JOIN tbl_transaction_details td ON td.transaction_id = t.id
-        LEFT  JOIN tbl_series      sr ON sr.code = '${SERIES_CODE}'
+        LEFT  JOIN tbl_series      sr ON sr.code = CONCAT('TRX-', t.event_id)
         WHERE s.id            = ?
           AND t.event_id        = ?
           AND t.type            = 1       -- PARTIAL

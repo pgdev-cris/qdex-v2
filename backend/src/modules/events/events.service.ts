@@ -1,4 +1,5 @@
 import repository from './events.repository';
+import SeriesRepository from '../../shared/repository/series.repository';
 import { CreateEventRequest, UpdateEventRequest, UpdateEventStatus } from './events.schema';
 
 const getEvents = async () => {
@@ -24,7 +25,14 @@ const createEvent = async (data: CreateEventRequest) => {
         await repository.deactivateAllEvents();
     }
 
-    return await repository.createEvent(data);
+    const result = await repository.createEvent(data);
+
+    // Provision a fresh transaction counter for this event
+    if (result?.insertId) {
+        await SeriesRepository.createSeriesForEvent(result.insertId);
+    }
+
+    return result;
 };
 
 const updateEvent = async (id: number, data: UpdateEventRequest) => {

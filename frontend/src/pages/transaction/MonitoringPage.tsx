@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { useAuth } from '@/contexts/AuthContext'
 import { apiFetch } from '@/lib/api'
 import { fmt } from '@/pages/transaction/remittance/helpers'
 import { ThermalReceipt } from '@/pages/transaction/remittance/components/ThermalReceipt'
@@ -260,6 +261,7 @@ const TransactionDetailModal = ({
 const PAGE_LIMIT = 20
 
 export const MonitoringPage = () => {
+    const { currentEvent } = useAuth()
     const [rows, setRows] = useState<TransactionRow[]>([])
     const [loading, setLoading] = useState(false)
     const [total, setTotal] = useState(0)
@@ -295,6 +297,7 @@ export const MonitoringPage = () => {
                 const params = new URLSearchParams()
                 params.set('page', String(p))
                 params.set('limit', String(PAGE_LIMIT))
+                if (currentEvent?.id) params.set('event_id', String(currentEvent.id))
                 if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
                 if (typeFilter) params.set('type', typeFilter)
                 if (statusFilter) params.set('status', statusFilter)
@@ -317,7 +320,7 @@ export const MonitoringPage = () => {
                 setLoading(false)
             }
         },
-        [debouncedSearch, typeFilter, statusFilter, dateFrom, dateTo]
+        [currentEvent?.id, debouncedSearch, typeFilter, statusFilter, dateFrom, dateTo]
     )
 
     useEffect(() => {
@@ -398,6 +401,11 @@ export const MonitoringPage = () => {
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         Remittance transaction log and audit trail.
+                        {currentEvent && (
+                            <span className="text-primary ml-2 font-medium">
+                                {currentEvent.name} ({currentEvent.code})
+                            </span>
+                        )}
                     </p>
                 </div>
                 <Button

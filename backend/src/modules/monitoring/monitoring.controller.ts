@@ -4,6 +4,7 @@ import { ListTransactionsQuery } from './monitoring.type';
 
 const listTransactionsRequest = async (req: Request, res: Response) => {
     const query: ListTransactionsQuery = {
+        event_id: req.query.event_id !== undefined ? Number(req.query.event_id) : undefined,
         search: req.query.search as string | undefined,
         type: req.query.type !== undefined ? Number(req.query.type) : undefined,
         status: req.query.status !== undefined ? Number(req.query.status) : undefined,

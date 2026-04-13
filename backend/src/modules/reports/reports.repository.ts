@@ -180,7 +180,7 @@ const getTransactions = async (query: TransactionReportQuery): Promise<Transacti
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers v ON v.id = t.supplier_id
         INNER JOIN tbl_events   e ON e.id = t.event_id
-        LEFT  JOIN tbl_series   s ON s.code = 'TRX'
+        LEFT  JOIN tbl_series   s ON s.code = CONCAT('TRX-', t.event_id)
         ${where}
         ORDER BY t.id DESC
         LIMIT ${limit} OFFSET ${offset}
@@ -273,18 +273,22 @@ const getRemittanceStatus = async (
     query: RemittanceStatusQuery,
 ): Promise<RemittanceStatusRow[]> => {
     const params: unknown[] = [];
-    const dateFilters: string[] = [];
+    const joinFilters: string[] = [];
 
+    if (query.event_id) {
+        joinFilters.push('t.event_id = ?');
+        params.push(Number(query.event_id));
+    }
     if (query.from) {
-        dateFilters.push('DATE(t.transacted_at) >= ?');
+        joinFilters.push('DATE(t.transacted_at) >= ?');
         params.push(query.from);
     }
     if (query.to) {
-        dateFilters.push('DATE(t.transacted_at) <= ?');
+        joinFilters.push('DATE(t.transacted_at) <= ?');
         params.push(query.to);
     }
 
-    const joinExtra = dateFilters.length ? `AND ${dateFilters.join(' AND ')}` : '';
+    const joinExtra = joinFilters.length ? `AND ${joinFilters.join(' AND ')}` : '';
 
     // Supplier-side search applied after the LEFT JOIN
     const havingClauses: string[] = [];

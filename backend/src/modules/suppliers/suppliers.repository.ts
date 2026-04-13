@@ -37,8 +37,8 @@ const createSupplier = async (
     data: CreateSupplierRequest,
 ): Promise<{ insertId: number } | null> => {
     const query = `
-        INSERT INTO tbl_suppliers (code, name, status)
-        VALUES (?, ?, 1)
+        INSERT INTO tbl_suppliers (code, name, status, created_at)
+        VALUES (?, ?, 1, NOW())
     `;
     const result = await PoolManager.execute(query, [data.code, data.name], POOL);
     return result ? { insertId: result.insertId } : null;

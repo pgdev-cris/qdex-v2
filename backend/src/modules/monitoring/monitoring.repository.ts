@@ -6,16 +6,19 @@ import {
     ListTransactionsQuery,
 } from './monitoring.type';
 
-const SERIES_CODE = 'TRX';
-
 const listTransactions = async (
     filters: ListTransactionsQuery,
 ): Promise<{ rows: TransactionRow[]; total: number }> => {
-    const { search, type, status, date_from, date_to, page = 1, limit = 20 } = filters;
+    const { event_id, search, type, status, date_from, date_to, page = 1, limit = 20 } = filters;
     const offset = (page - 1) * limit;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
+
+    if (event_id !== undefined) {
+        conditions.push(`t.event_id = ?`);
+        params.push(event_id);
+    }
 
     if (search) {
         conditions.push(
@@ -51,7 +54,7 @@ const listTransactions = async (
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers  v ON v.id = t.supplier_id
         INNER JOIN tbl_events   e ON e.id = t.event_id
-        LEFT  JOIN tbl_series   s ON s.code = '${SERIES_CODE}'
+        LEFT  JOIN tbl_series   s ON s.code = CONCAT('TRX-', t.event_id)
         ${where}
     `;
 
@@ -103,7 +106,7 @@ const getTransactionById = async (id: number): Promise<TransactionWithDetails | 
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers  v ON v.id = t.supplier_id
         INNER JOIN tbl_events   e ON e.id = t.event_id
-        LEFT  JOIN tbl_series   s ON s.code = '${SERIES_CODE}'
+        LEFT  JOIN tbl_series   s ON s.code = CONCAT('TRX-', t.event_id)
         WHERE t.id = ?
         LIMIT 1
     `;

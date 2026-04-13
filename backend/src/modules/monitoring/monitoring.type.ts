@@ -25,6 +25,7 @@ export interface TransactionWithDetails extends TransactionRow {
 }
 
 export interface ListTransactionsQuery {
+    event_id?: number;
     search?: string;
     type?: number;
     status?: number;

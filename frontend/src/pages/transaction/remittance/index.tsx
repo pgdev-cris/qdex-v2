@@ -343,7 +343,15 @@ export const RemittancePage = () => {
             if (e.key === 'Enter') {
                 const code = buffer.trim().toUpperCase()
                 buffer = ''
-                if (code.length > 0) {
+                // If Enter came from the supplier input field itself, let that
+                // field's own onKeyDown handler call handleSearch — firing here
+                // as well would send a second (stale/partial) request.
+                if (e.target === inputRef.current) return
+                // Require at least 2 characters before triggering an auto-search.
+                // A 1-char buffer is almost always a stale artifact from manual
+                // typing (the rolling reset leaves only the last key pressed before
+                // Enter). Real scanner codes are always multi-character.
+                if (code.length >= 2) {
                     setSupplierInput(code)
                     // Trigger search directly with the buffered code so we don't
                     // rely on supplierInput state which may not have updated yet.
@@ -529,7 +537,14 @@ export const RemittancePage = () => {
         setSubmitError(null)
 
         const cashVal = Number(cashAmount)
-        if (!cashAmount || isNaN(cashVal) || cashVal <= 0) {
+        // For partial remittance cash must be > 0.
+        // For full remittance, 0 is allowed when prior partial remittances already
+        // cover the entire cash balance (balance = 0).
+        const cashInvalid =
+            !cashAmount ||
+            isNaN(cashVal) ||
+            (remitType === 'partial' ? cashVal <= 0 : cashVal < 0)
+        if (cashInvalid) {
             setSubmitError('Please enter a valid cash amount.')
             return
         }

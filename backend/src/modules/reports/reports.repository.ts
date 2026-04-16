@@ -189,12 +189,15 @@ const getTransactions = async (query: TransactionReportQuery): Promise<Transacti
     return (await PoolManager.query<TransactionReportRow[]>(sql, params, POOL)) ?? [];
 };
 
-// Raw row returned by the SQL — one row per supplier × event × tender_type
+// Raw row returned by the SQL — one row per transaction × tender_type
 export interface SupplierTenderRawRow {
     supplier_code: number;
     supplier_name: string;
-    event_code: string;
-    event_name: string;
+    transaction_id: number;
+    reference_code: string;
+    verified_by: string;
+    verified_at: string;
+    transaction_no: string;
     tender_type_id: number;
     tender_name: string;
     total: number;
@@ -229,24 +232,30 @@ const getSupplierPerTender = async (
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    // One row per supplier × event × tender_type — pivoting is done in the service layer
+    // One row per transaction × tender_type — pivoting is done in the service layer
     const sql = `
         SELECT
-            v.code       AS supplier_code,
-            v.name       AS supplier_name,
-            e.code       AS event_code,
-            e.name       AS event_name,
-            tt.id        AS tender_type_id,
-            tt.label     AS tender_name,
-            COALESCE(SUM(td.amount), 0) AS total
+            v.code                                        AS supplier_code,
+            v.name                                        AS supplier_name,
+            t.id                                                                              AS transaction_id,
+            t.reference_code,
+            CONCAT(u.last_name, ', ', u.first_name)                                           AS verified_by,
+            t.verified_at,
+            CONCAT(COALESCE(s.prefix, ''), LPAD(t.transaction_no, COALESCE(s.pad_length, 6), '0')) AS transaction_no,
+            tt.id                                                                             AS tender_type_id,
+            tt.label                                                                          AS tender_name,
+            COALESCE(SUM(td.amount), 0)                                                       AS total
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers           v  ON v.id  = t.supplier_id
         INNER JOIN tbl_events              e  ON e.id  = t.event_id
         INNER JOIN tbl_transaction_details td ON td.transaction_id = t.id
         INNER JOIN tbl_tender_types        tt ON tt.id = td.tender_type
+        LEFT  JOIN tbl_users               u  ON u.id  = t.verified_by
+        LEFT  JOIN tbl_series              s  ON s.code = CONCAT('TRX-', t.event_id)
         ${where}
-        GROUP BY v.id, v.code, v.name, e.id, e.code, e.name, tt.id, tt.label
-        ORDER BY e.code ASC, v.code ASC, tt.id ASC
+        GROUP BY t.id, v.code, v.name, t.reference_code, t.verified_at, t.transaction_no,
+                 s.prefix, s.pad_length, u.last_name, u.first_name, tt.id, tt.label
+        ORDER BY v.code ASC, t.id ASC, tt.id ASC
     `;
 
     return (await PoolManager.query<SupplierTenderRawRow[]>(sql, params, POOL)) ?? [];

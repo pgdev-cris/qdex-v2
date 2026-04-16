@@ -32,8 +32,10 @@ const getTransactionReport = async (query: TransactionReportQuery) => {
 export interface PivotedSupplierRow {
     supplier_code: number;
     supplier_name: string;
-    event_code: string;
-    event_name: string;
+    ref_code: string;
+    verified_by: string;
+    verified_date: string;
+    transaction_no: string;
     tenders: Record<string, number>; // tender_name → total
     grand_total: number;
 }
@@ -52,18 +54,20 @@ const getSupplierPerTenderReport = async (
     const tenderOrder: string[] = [];
     const seenTenders = new Set<string>();
 
-    // Key: "event_code||supplier_code"
-    const map = new Map<string, PivotedSupplierRow>();
+    // Key: transaction_id — one pivoted row per transaction
+    const map = new Map<number, PivotedSupplierRow>();
 
     for (const row of rawRows) {
-        const key = `${row.event_code}||${row.supplier_code}`;
+        const key = row.transaction_id;
 
         if (!map.has(key)) {
             map.set(key, {
                 supplier_code: row.supplier_code,
                 supplier_name: row.supplier_name,
-                event_code: row.event_code,
-                event_name: row.event_name,
+                ref_code: row.reference_code,
+                verified_by: row.verified_by ?? '',
+                verified_date: row.verified_at ?? '',
+                transaction_no: row.transaction_no,
                 tenders: {},
                 grand_total: 0,
             });

@@ -9,8 +9,10 @@ import { apiClient } from '@/lib/axios'
 interface PivotedRow {
     supplier_code: number
     supplier_name: string
-    event_code: string
-    event_name: string
+    ref_code: string
+    verified_by: string
+    verified_date: string
+    transaction_no: string
     tenders: Record<string, number> // tender_name → total
     grand_total: number
 }
@@ -39,41 +41,47 @@ const exportToExcel = (report: ApiReport, filters: Filters) => {
 
     const sheetData = rows.map((r) => {
         const base: Record<string, string | number> = {
-            'Event Code': r.event_code,
-            'Event Name': r.event_name,
-            'Supplier Code': r.supplier_code,
-            'Supplier Name': r.supplier_name,
+            'Vendor Code': r.supplier_code,
+            'Vendor Name': r.supplier_name,
+            'Ref Code': r.ref_code,
+            'Verified By': r.verified_by,
+            'Verified Date': r.verified_date,
         }
         // Dynamic tender columns — one per tender type from tbl_tender_types
         for (const name of tender_names) {
             base[name] = Number(r.tenders[name] ?? 0)
         }
-        base['Grand Total'] = Number(r.grand_total)
+        base['Total Takeout'] = Number(r.grand_total)
+        base['Transaction No'] = r.transaction_no
         return base
     })
 
     // Totals row at the bottom
     const totalsRow: Record<string, string | number> = {
-        'Event Code': '',
-        'Event Name': '',
-        'Supplier Code': '',
-        'Supplier Name': 'TOTAL',
+        'Vendor Code': '',
+        'Vendor Name': 'TOTAL',
+        'Ref Code': '',
+        'Verified By': '',
+        'Verified Date': '',
     }
     for (const name of tender_names) {
         totalsRow[name] = rows.reduce((sum, r) => sum + Number(r.tenders[name] ?? 0), 0)
     }
-    totalsRow['Grand Total'] = rows.reduce((sum, r) => sum + Number(r.grand_total), 0)
+    totalsRow['Total Takeout'] = rows.reduce((sum, r) => sum + Number(r.grand_total), 0)
+    totalsRow['Transaction No'] = ''
     sheetData.push(totalsRow)
 
     const ws = XLSX.utils.json_to_sheet(sheetData)
 
-    // Fixed cols + one per tender + Grand Total
+    // VENDOR_CODE, VENDOR_NAME, REF_CODE, VERIFIED_BY, VERIFIED_DATE + tender cols + TOTAL_TAKEOUT + TRANSACTION_NO
     ws['!cols'] = [
-        { wch: 12 },
-        { wch: 25 },
         { wch: 14 },
-        { wch: 30 },
+        { wch: 35 },
+        { wch: 12 },
+        { wch: 28 },
+        { wch: 22 },
         ...tender_names.map(() => ({ wch: 16 })),
+        { wch: 16 },
         { wch: 16 },
     ]
 

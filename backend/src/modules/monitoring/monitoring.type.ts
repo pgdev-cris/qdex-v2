@@ -11,6 +11,7 @@ export interface TransactionRow {
     status: number;
     total_amount: number;
     remitted_by: string;
+    verified_by: string | null;
     transacted_at: string;
 }
 

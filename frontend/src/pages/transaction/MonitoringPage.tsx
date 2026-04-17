@@ -35,6 +35,7 @@ interface TransactionRow {
     status: number
     total_amount: number
     remitted_by: string
+    verified_by: string | null
     transacted_at: string
 }
 
@@ -95,6 +96,7 @@ const COLUMNS: { label: string; center?: boolean; right?: boolean }[] = [
     { label: 'Type', center: true },
     { label: 'Total Amount' },
     { label: 'Remitted By' },
+    { label: 'Verified By' },
     { label: 'Status', center: true },
     { label: 'Date' },
     { label: '', right: true },
@@ -204,6 +206,14 @@ const TransactionDetailModal = ({
                     <div>
                         <p className="text-xs text-muted-foreground">Remitted By</p>
                         <p className="font-medium">{toTitleCase(transaction.remitted_by)}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-muted-foreground">Verified By</p>
+                        <p className="font-medium">
+                            {transaction.verified_by
+                                ? toTitleCase(transaction.verified_by)
+                                : '—'}
+                        </p>
                     </div>
                     <div>
                         <p className="text-xs text-muted-foreground">Date</p>
@@ -391,9 +401,9 @@ export const MonitoringPage = () => {
     }
 
     return (
-        <div className="p-6">
+        <div className="p-3 md:p-6">
             {/* Header */}
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-4 md:mb-6 flex items-center justify-between gap-3">
                 <div>
                     <h1 className="flex items-center gap-2 text-2xl font-semibold">
                         <Activity className="h-5 w-5 text-muted-foreground" />
@@ -481,15 +491,20 @@ export const MonitoringPage = () => {
                 </CardHeader>
 
                 <CardContent className="p-0">
-                    <table className="w-full text-sm" style={{ tableLayout: 'fixed' }}>
+                    <div className="overflow-x-auto">
+                    <table
+                        className="w-full min-w-[1100px] text-sm"
+                        style={{ tableLayout: 'fixed' }}
+                    >
                         <colgroup>
-                            <col style={{ width: '154px' }} /> {/* Receipt No */}
-                            <col style={{ width: '200px' }} /> {/* Supplier */}
-                            <col style={{ width: '90px' }} /> {/* Type */}
-                            <col style={{ width: '120px' }} /> {/* Total Amount */}
-                            <col style={{ width: '140px' }} /> {/* Remitted By */}
-                            <col style={{ width: '100px' }} /> {/* Status */}
-                            <col style={{ width: '160px' }} /> {/* Date */}
+                            <col style={{ width: '140px' }} /> {/* Receipt No */}
+                            <col style={{ width: '190px' }} /> {/* Supplier */}
+                            <col style={{ width: '80px' }} /> {/* Type */}
+                            <col style={{ width: '110px' }} /> {/* Total Amount */}
+                            <col style={{ width: '130px' }} /> {/* Remitted By */}
+                            <col style={{ width: '130px' }} /> {/* Verified By */}
+                            <col style={{ width: '90px' }} /> {/* Status */}
+                            <col style={{ width: '150px' }} /> {/* Date */}
                             <col style={{ width: '110px' }} /> {/* Actions */}
                         </colgroup>
                         <thead>
@@ -498,7 +513,7 @@ export const MonitoringPage = () => {
                                     <th
                                         key={col.label}
                                         className={[
-                                            'px-4 py-3 text-xs font-medium tracking-wide text-muted-foreground',
+                                            'px-2 md:px-4 py-3 text-xs font-medium tracking-wide text-muted-foreground',
                                             col.center
                                                 ? 'text-center'
                                                 : col.right
@@ -538,7 +553,7 @@ export const MonitoringPage = () => {
                                         key={row.id}
                                         className="border-b last:border-0 hover:bg-muted/40"
                                     >
-                                        <td className="px-4 py-3">
+                                        <td className="px-2 md:px-4 py-3">
                                             <p className="font-mono text-xs font-semibold">
                                                 {row.receipt_no}
                                             </p>
@@ -546,7 +561,7 @@ export const MonitoringPage = () => {
                                                 {row.reference_code}
                                             </p>
                                         </td>
-                                        <td className="overflow-hidden px-4 py-3">
+                                        <td className="overflow-hidden px-2 md:px-4 py-3">
                                             <p
                                                 className="truncate font-medium"
                                                 title={`${row.supplier_code} - ${row.supplier_name}`}
@@ -554,22 +569,25 @@ export const MonitoringPage = () => {
                                                 {row.supplier_code} - {row.supplier_name}
                                             </p>
                                         </td>
-                                        <td className="px-4 py-3 text-center">
+                                        <td className="px-2 md:px-4 py-3 text-center">
                                             <TypeBadge type={row.type} />
                                         </td>
-                                        <td className="px-4 py-3 font-mono">
+                                        <td className="px-2 md:px-4 py-3 font-mono">
                                             {fmt(row.total_amount)}
                                         </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
+                                        <td className="px-2 md:px-4 py-3 text-muted-foreground">
                                             {toTitleCase(row.remitted_by)}
                                         </td>
-                                        <td className="px-4 py-3 text-center">
+                                        <td className="px-2 md:px-4 py-3 text-muted-foreground">
+                                            {row.verified_by ? toTitleCase(row.verified_by) : '—'}
+                                        </td>
+                                        <td className="px-2 md:px-4 py-3 text-center">
                                             <StatusBadge status={row.status} />
                                         </td>
-                                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                                        <td className="px-2 md:px-4 py-3 text-xs text-muted-foreground">
                                             {new Date(row.transacted_at).toLocaleString('en-PH')}
                                         </td>
-                                        <td className="px-4 py-3 flex items-center justify-end gap-1">
+                                        <td className="px-2 md:px-4 py-3 flex items-center justify-end gap-1">
                                             <Button
                                                 variant="ghost"
                                                 size="icon-sm"
@@ -613,6 +631,7 @@ export const MonitoringPage = () => {
                             )}
                         </tbody>
                     </table>
+                    </div>
                 </CardContent>
 
                 {/* Pagination */}

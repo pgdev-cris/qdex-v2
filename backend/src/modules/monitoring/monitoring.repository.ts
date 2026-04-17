@@ -54,6 +54,7 @@ const listTransactions = async (
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers  v ON v.id = t.supplier_id
         INNER JOIN tbl_events   e ON e.id = t.event_id
+        LEFT  JOIN tbl_users    u ON u.id = t.verified_by
         LEFT  JOIN tbl_series   s ON s.code = CONCAT('TRX-', t.event_id)
         ${where}
     `;
@@ -76,6 +77,10 @@ const listTransactions = async (
             t.status,
             t.total_amount,
             t.remitted_by,
+            CASE
+                WHEN u.id IS NULL THEN NULL
+                ELSE CONCAT(u.last_name, ', ', u.first_name)
+            END AS verified_by,
             t.transacted_at
         ${baseQuery}
         ORDER BY t.id DESC
@@ -102,10 +107,15 @@ const getTransactionById = async (id: number): Promise<TransactionWithDetails | 
             t.status,
             t.total_amount,
             t.remitted_by,
+            CASE
+                WHEN u.id IS NULL THEN NULL
+                ELSE CONCAT(u.last_name, ', ', u.first_name)
+            END AS verified_by,
             t.transacted_at
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers  v ON v.id = t.supplier_id
         INNER JOIN tbl_events   e ON e.id = t.event_id
+        LEFT  JOIN tbl_users    u ON u.id = t.verified_by
         LEFT  JOIN tbl_series   s ON s.code = CONCAT('TRX-', t.event_id)
         WHERE t.id = ?
         LIMIT 1

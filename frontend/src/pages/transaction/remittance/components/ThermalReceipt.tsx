@@ -86,6 +86,11 @@ const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                 <div style={{ fontWeight: 'bold', fontSize: '12pt' }}>{COMPANY_NAME}</div>
                 <div>{receipt.event_name}</div>
                 <div>{RECEIPT_TITLE}</div>
+                <div style={{ fontWeight: 'bold' }}>
+                    {receipt.remit_type === 'partial'
+                        ? 'PARTIAL REMITTANCE'
+                        : 'FULL REMITTANCE'}
+                </div>
                 <div style={{ fontWeight: 'bold' }}>{copyLabel}</div>
             </div>
 

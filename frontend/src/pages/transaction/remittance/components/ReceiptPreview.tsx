@@ -63,6 +63,11 @@ export const ReceiptPreview = ({ receipt, onPrint, onReset }: Props) => {
                         <p className="font-bold">{COMPANY_NAME}</p>
                         <p>{receipt.event_name}</p>
                         <p>{RECEIPT_TITLE}</p>
+                        <p className="font-bold">
+                            {receipt.remit_type === 'partial'
+                                ? 'PARTIAL REMITTANCE'
+                                : 'FULL REMITTANCE'}
+                        </p>
                         <p>Supplier Copy</p>
                     </div>
 

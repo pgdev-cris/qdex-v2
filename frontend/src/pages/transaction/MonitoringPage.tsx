@@ -587,16 +587,26 @@ export const MonitoringPage = () => {
                         style={{ tableLayout: 'fixed' }}
                     >
                         <colgroup>
-                            <col style={{ width: '140px' }} /> {/* Receipt No */}
-                            <col style={{ width: '190px' }} /> {/* Supplier */}
-                            <col style={{ width: '80px' }} /> {/* Type */}
-                            <col style={{ width: '110px' }} /> {/* Total Amount */}
-                            <col style={{ width: '130px' }} /> {/* Remitted By */}
-                            <col style={{ width: '130px' }} /> {/* Verified By */}
-                            <col style={{ width: '90px' }} /> {/* Status */}
-                            <col style={{ width: '100px' }} /> {/* Override */}
-                            <col style={{ width: '150px' }} /> {/* Date */}
-                            <col style={{ width: '110px' }} /> {/* Actions */}
+                            {/* Receipt No */}
+                            <col style={{ width: '140px' }} />
+                            {/* Supplier */}
+                            <col style={{ width: '190px' }} />
+                            {/* Type */}
+                            <col style={{ width: '80px' }} />
+                            {/* Total Amount */}
+                            <col style={{ width: '110px' }} />
+                            {/* Remitted By */}
+                            <col style={{ width: '130px' }} />
+                            {/* Verified By */}
+                            <col style={{ width: '130px' }} />
+                            {/* Status */}
+                            <col style={{ width: '90px' }} />
+                            {/* Override */}
+                            <col style={{ width: '100px' }} />
+                            {/* Date */}
+                            <col style={{ width: '150px' }} />
+                            {/* Actions */}
+                            <col style={{ width: '110px' }} />
                         </colgroup>
                         <thead>
                             <tr className="border-b">

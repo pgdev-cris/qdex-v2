@@ -62,11 +62,7 @@ const reprintTransaction = async (id: number, printedBy: string): Promise<Receip
         supplier_name: transaction.supplier_name,
         remitter_name: transaction.remitted_by,
         remit_type: transaction.remit_type === TRANSACTION_TYPE.FULL ? 'full' : 'partial',
-        // tender_code comes from tbl_tender_types via the LEFT JOIN in
-        // monitoringRepository.getTransactionById, so any tender configured
-        // in the DB (SKYRO, SHOPEE_PAY, anything added later) prints with
-        // its real code instead of falling back to 'UNKNOWN'. The fallback
-        // only triggers if the tender row was deleted from the lookup.
+        is_voided: transaction.status === TRANSACTION_STATUS.VOIDED,
         lines: transaction.details.map((d) => ({
             method: d.tender_code ?? `TENDER_${d.tender_type}`,
             amount: String(d.amount),

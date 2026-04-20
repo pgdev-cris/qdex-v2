@@ -39,6 +39,7 @@ export interface Receipt {
     printed_by: string;
     event_name: string;
     event_code: string;
+    is_voided: boolean;
 }
 
 export interface RemitResult {

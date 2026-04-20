@@ -251,6 +251,7 @@ const buildReceiptFromApi = (
         printed_by: printedBy,
         event_name: eventName,
         event_code: eventCode,
+        is_voided: false,
     }
 }
 
@@ -541,9 +542,7 @@ export const RemittancePage = () => {
         // For full remittance, 0 is allowed when prior partial remittances already
         // cover the entire cash balance (balance = 0).
         const cashInvalid =
-            !cashAmount ||
-            isNaN(cashVal) ||
-            (remitType === 'partial' ? cashVal <= 0 : cashVal < 0)
+            !cashAmount || isNaN(cashVal) || (remitType === 'partial' ? cashVal <= 0 : cashVal < 0)
         if (cashInvalid) {
             setSubmitError('Please enter a valid cash amount.')
             return

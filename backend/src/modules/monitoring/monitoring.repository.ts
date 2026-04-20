@@ -135,10 +135,16 @@ const getTransactionById = async (id: number): Promise<TransactionWithDetails | 
     if (!transaction) return null;
 
     const detailsSql = `
-        SELECT tender_type, amount, transaction_count
-        FROM tbl_transaction_details
-        WHERE transaction_id = ?
-        ORDER BY tender_type ASC
+        SELECT
+            td.tender_type,
+            tt.code  AS tender_code,
+            tt.label AS tender_label,
+            td.amount,
+            td.transaction_count
+        FROM tbl_transaction_details td
+        LEFT JOIN tbl_tender_types tt ON tt.id = td.tender_type
+        WHERE td.transaction_id = ?
+        ORDER BY td.tender_type ASC
     `;
 
     const details = await PoolManager.query<TransactionDetailRow[]>(detailsSql, [id]);

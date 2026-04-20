@@ -18,6 +18,11 @@ export interface TransactionRow {
 
 export interface TransactionDetailRow {
     tender_type: number;
+    /** Code from tbl_tender_types (e.g. 'CASH', 'SHOPEE_PAY'). Null only if
+     *  the row points at a tender that no longer exists in the lookup. */
+    tender_code: string | null;
+    /** Human label from tbl_tender_types (e.g. 'Shopee Pay'). */
+    tender_label: string | null;
     amount: number;
     transaction_count: number;
 }

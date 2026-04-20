@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import type { Receipt } from '../types'
-import { fmtAmt, methodLabel } from '../helpers'
+import { fmtAmt } from '../helpers'
 import { COMPANY_NAME, RECEIPT_TITLE } from '../constants'
 import { toTitleCase } from '@/utils/string.utils.ts'
+import { tenderLabelByCode } from '@/constants/tender.constants'
 
 //  Screen-only receipt row
 
@@ -99,7 +100,7 @@ export const ReceiptPreview = ({ receipt, onPrint, onReset }: Props) => {
                                 <p>Online Payments Breakdown</p>
                                 {cardLines.map((l) => (
                                     <div key={l.method} className="flex justify-between ml-4">
-                                        <span>{methodLabel(l.method)}</span>
+                                        <span>{tenderLabelByCode(l.method)}</span>
                                         <span>{fmtAmt(l.amount)}</span>
                                     </div>
                                 ))}

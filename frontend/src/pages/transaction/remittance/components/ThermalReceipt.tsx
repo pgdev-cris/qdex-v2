@@ -1,8 +1,9 @@
 import type { Receipt } from '../types'
-import { fmtAmt, fmtReceiptDate, methodLabel } from '../helpers'
+import { fmtAmt, fmtReceiptDate } from '../helpers'
 import { COMPANY_NAME, RECEIPT_TITLE } from '../constants'
 import React from 'react'
 import { toTitleCase } from '@/utils/string.utils.ts'
+import { tenderLabelByCode } from '@/constants/tender.constants'
 
 //  Helpers
 const Row = ({ label, value }: { label: string; value: string }) => {
@@ -134,7 +135,7 @@ const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                                 marginLeft: '8px',
                             }}
                         >
-                            <span> {methodLabel(l.method)}</span>
+                            <span> {tenderLabelByCode(l.method)}</span>
                             <span>{fmtAmt(l.amount)}</span>
                         </div>
                     ))}

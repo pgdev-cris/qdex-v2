@@ -21,6 +21,7 @@ import type { Receipt } from '@/pages/transaction/remittance/types'
 import { toTitleCase } from '@/utils/string.utils.ts'
 import { OverrideModal } from '@/components/OverrideModal'
 import { DatePickerWithRange } from '@/components/ui/date-picker-range.tsx'
+import { tenderLabelById } from '@/constants/tender.constants'
 
 //  Types
 
@@ -82,15 +83,6 @@ interface DetailResponse {
 
 const TYPE_LABEL: Record<number, string> = { 1: 'Partial', 2: 'Full' }
 const STATUS_LABEL: Record<number, string> = { 0: 'Pending', 1: 'Verified', 2: 'Voided' }
-const TENDER_LABEL: Record<number, string> = {
-    1: 'Cash',
-    2: 'GCash',
-    3: 'Puregold Wallet',
-    4: '(Tangent) Credit Card',
-    5: '(Tangent) Debit Card',
-    6: 'Home Credit',
-    7: 'GCash E-POS',
-}
 
 const TYPE_OPTIONS = [
     { value: '', label: 'All Types' },
@@ -240,9 +232,7 @@ const TransactionDetailModal = ({
                     <div>
                         <p className="text-xs text-muted-foreground">Verified By</p>
                         <p className="font-medium">
-                            {transaction.verified_by
-                                ? toTitleCase(transaction.verified_by)
-                                : '—'}
+                            {transaction.verified_by ? toTitleCase(transaction.verified_by) : '—'}
                         </p>
                     </div>
                     <div>
@@ -274,7 +264,7 @@ const TransactionDetailModal = ({
                                 {transaction.details.map((d, i) => (
                                     <tr key={i} className="border-b last:border-0">
                                         <td className="px-3 py-2">
-                                            {TENDER_LABEL[d.tender_type] ?? `Type ${d.tender_type}`}
+                                            {tenderLabelById(d.tender_type)}
                                         </td>
                                         <td className="px-3 py-2 text-right font-mono">
                                             {fmt(d.amount)}
@@ -582,159 +572,169 @@ export const MonitoringPage = () => {
 
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
-                    <table
-                        className="w-full min-w-[1200px] text-sm"
-                        style={{ tableLayout: 'fixed' }}
-                    >
-                        <colgroup>
-                            {/* Receipt No */}
-                            <col style={{ width: '140px' }} />
-                            {/* Supplier */}
-                            <col style={{ width: '190px' }} />
-                            {/* Type */}
-                            <col style={{ width: '80px' }} />
-                            {/* Total Amount */}
-                            <col style={{ width: '110px' }} />
-                            {/* Remitted By */}
-                            <col style={{ width: '130px' }} />
-                            {/* Verified By */}
-                            <col style={{ width: '130px' }} />
-                            {/* Status */}
-                            <col style={{ width: '90px' }} />
-                            {/* Override */}
-                            <col style={{ width: '100px' }} />
-                            {/* Date */}
-                            <col style={{ width: '150px' }} />
-                            {/* Actions */}
-                            <col style={{ width: '110px' }} />
-                        </colgroup>
-                        <thead>
-                            <tr className="border-b">
-                                {COLUMNS.map((col) => (
-                                    <th
-                                        key={col.label}
-                                        className={[
-                                            'px-2 md:px-4 py-3 text-xs font-medium tracking-wide text-muted-foreground',
-                                            col.center
-                                                ? 'text-center'
-                                                : col.right
-                                                  ? 'text-right'
-                                                  : 'text-left',
-                                        ].join(' ')}
-                                    >
-                                        {col.label}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td
-                                        colSpan={COLUMNS.length}
-                                        className="py-16 text-center text-sm text-muted-foreground"
-                                    >
-                                        Loading...
-                                    </td>
+                        <table
+                            className="w-full min-w-[1200px] text-sm"
+                            style={{ tableLayout: 'fixed' }}
+                        >
+                            <colgroup>
+                                {/* Receipt No */}
+                                <col style={{ width: '140px' }} />
+                                {/* Supplier */}
+                                <col style={{ width: '190px' }} />
+                                {/* Type */}
+                                <col style={{ width: '80px' }} />
+                                {/* Total Amount */}
+                                <col style={{ width: '110px' }} />
+                                {/* Remitted By */}
+                                <col style={{ width: '130px' }} />
+                                {/* Verified By */}
+                                <col style={{ width: '130px' }} />
+                                {/* Status */}
+                                <col style={{ width: '90px' }} />
+                                {/* Override */}
+                                <col style={{ width: '100px' }} />
+                                {/* Date */}
+                                <col style={{ width: '150px' }} />
+                                {/* Actions */}
+                                <col style={{ width: '110px' }} />
+                            </colgroup>
+                            <thead>
+                                <tr className="border-b">
+                                    {COLUMNS.map((col) => (
+                                        <th
+                                            key={col.label}
+                                            className={[
+                                                'px-2 md:px-4 py-3 text-xs font-medium tracking-wide text-muted-foreground',
+                                                col.center
+                                                    ? 'text-center'
+                                                    : col.right
+                                                      ? 'text-right'
+                                                      : 'text-left',
+                                            ].join(' ')}
+                                        >
+                                            {col.label}
+                                        </th>
+                                    ))}
                                 </tr>
-                            ) : rows.length === 0 ? (
-                                <tr>
-                                    <td
-                                        colSpan={COLUMNS.length}
-                                        className="py-16 text-center text-sm text-muted-foreground"
-                                    >
-                                        {search || typeFilter || statusFilter || dateFrom || dateTo
-                                            ? 'No transactions match your filters.'
-                                            : 'No transactions recorded yet.'}
-                                    </td>
-                                </tr>
-                            ) : (
-                                rows.map((row) => (
-                                    <tr
-                                        key={row.id}
-                                        className="border-b last:border-0 hover:bg-muted/40"
-                                    >
-                                        <td className="px-2 md:px-4 py-3">
-                                            <p className="font-mono text-xs font-semibold">
-                                                {row.receipt_no}
-                                            </p>
-                                            <p className="font-mono text-xs text-muted-foreground">
-                                                {row.reference_code}
-                                            </p>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td
+                                            colSpan={COLUMNS.length}
+                                            className="py-16 text-center text-sm text-muted-foreground"
+                                        >
+                                            Loading...
                                         </td>
-                                        <td className="overflow-hidden px-2 md:px-4 py-3">
-                                            <p
-                                                className="truncate font-medium"
-                                                title={`${row.supplier_code} - ${row.supplier_name}`}
-                                            >
-                                                {row.supplier_code} - {row.supplier_name}
-                                            </p>
+                                    </tr>
+                                ) : rows.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={COLUMNS.length}
+                                            className="py-16 text-center text-sm text-muted-foreground"
+                                        >
+                                            {search ||
+                                            typeFilter ||
+                                            statusFilter ||
+                                            dateFrom ||
+                                            dateTo
+                                                ? 'No transactions match your filters.'
+                                                : 'No transactions recorded yet.'}
                                         </td>
-                                        <td className="px-2 md:px-4 py-3 text-center">
-                                            <TypeBadge type={row.type} />
-                                        </td>
-                                        <td className="px-2 md:px-4 py-3 font-mono">
-                                            {fmt(row.total_amount)}
-                                        </td>
-                                        <td className="px-2 md:px-4 py-3 text-muted-foreground">
-                                            {toTitleCase(row.remitted_by)}
-                                        </td>
-                                        <td className="px-2 md:px-4 py-3 text-muted-foreground">
-                                            {row.verified_by ? toTitleCase(row.verified_by) : '—'}
-                                        </td>
-                                        <td className="px-2 md:px-4 py-3 text-center">
-                                            <StatusBadge status={row.status} />
-                                        </td>
-                                        <td className="px-2 md:px-4 py-3 text-center">
-                                            <OverrideBadge overridden={row.is_overridden === 1} />
-                                        </td>
-                                        <td className="px-2 md:px-4 py-3 text-xs text-muted-foreground">
-                                            {new Date(row.transacted_at).toLocaleString('en-PH')}
-                                        </td>
-                                        <td className="px-2 md:px-4 py-3 flex items-center justify-end gap-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon-sm"
-                                                title="View details"
-                                                disabled={detailLoading}
-                                                onClick={() => openDetail(row.id)}
-                                            >
-                                                <Eye className="h-3.5 w-3.5" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon-sm"
-                                                title="Reprint"
-                                                disabled={reprintLoadingId !== null}
-                                                onClick={() => handleReprint(row.id)}
-                                            >
-                                                <Printer
-                                                    className={[
-                                                        'h-3.5 w-3.5',
-                                                        reprintLoadingId === row.id
-                                                            ? 'animate-pulse'
-                                                            : '',
-                                                    ].join(' ')}
+                                    </tr>
+                                ) : (
+                                    rows.map((row) => (
+                                        <tr
+                                            key={row.id}
+                                            className="border-b last:border-0 hover:bg-muted/40"
+                                        >
+                                            <td className="px-2 md:px-4 py-3">
+                                                <p className="font-mono text-xs font-semibold">
+                                                    {row.receipt_no}
+                                                </p>
+                                                <p className="font-mono text-xs text-muted-foreground">
+                                                    {row.reference_code}
+                                                </p>
+                                            </td>
+                                            <td className="overflow-hidden px-2 md:px-4 py-3">
+                                                <p
+                                                    className="truncate font-medium"
+                                                    title={`${row.supplier_code} - ${row.supplier_name}`}
+                                                >
+                                                    {row.supplier_code} - {row.supplier_name}
+                                                </p>
+                                            </td>
+                                            <td className="px-2 md:px-4 py-3 text-center">
+                                                <TypeBadge type={row.type} />
+                                            </td>
+                                            <td className="px-2 md:px-4 py-3 font-mono">
+                                                {fmt(row.total_amount)}
+                                            </td>
+                                            <td className="px-2 md:px-4 py-3 text-muted-foreground">
+                                                {toTitleCase(row.remitted_by)}
+                                            </td>
+                                            <td className="px-2 md:px-4 py-3 text-muted-foreground">
+                                                {row.verified_by
+                                                    ? toTitleCase(row.verified_by)
+                                                    : '—'}
+                                            </td>
+                                            <td className="px-2 md:px-4 py-3 text-center">
+                                                <StatusBadge status={row.status} />
+                                            </td>
+                                            <td className="px-2 md:px-4 py-3 text-center">
+                                                <OverrideBadge
+                                                    overridden={row.is_overridden === 1}
                                                 />
-                                            </Button>
-                                            {row.status !== 2 && (
+                                            </td>
+                                            <td className="px-2 md:px-4 py-3 text-xs text-muted-foreground">
+                                                {new Date(row.transacted_at).toLocaleString(
+                                                    'en-PH'
+                                                )}
+                                            </td>
+                                            <td className="px-2 md:px-4 py-3 flex items-center justify-end gap-1">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon-sm"
-                                                    title="Void"
-                                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                    disabled={loading}
-                                                    onClick={() => openVoidOverride(row.id)}
+                                                    title="View details"
+                                                    disabled={detailLoading}
+                                                    onClick={() => openDetail(row.id)}
                                                 >
-                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                    <Eye className="h-3.5 w-3.5" />
                                                 </Button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    title="Reprint"
+                                                    disabled={reprintLoadingId !== null}
+                                                    onClick={() => handleReprint(row.id)}
+                                                >
+                                                    <Printer
+                                                        className={[
+                                                            'h-3.5 w-3.5',
+                                                            reprintLoadingId === row.id
+                                                                ? 'animate-pulse'
+                                                                : '',
+                                                        ].join(' ')}
+                                                    />
+                                                </Button>
+                                                {row.status !== 2 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon-sm"
+                                                        title="Void"
+                                                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                        disabled={loading}
+                                                        onClick={() => openVoidOverride(row.id)}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </CardContent>
 

@@ -1,6 +1,6 @@
 import monitoringRepository from './monitoring.repository';
 import { NotFoundError } from '../../shared/errors';
-import { TRANSACTION_TYPE, TRANSACTION_STATUS, TENDER_TYPE } from '../../shared/constants';
+import { TRANSACTION_TYPE, TRANSACTION_STATUS } from '../../shared/constants';
 import {
     ListTransactionsQuery,
     PaginatedResult,
@@ -8,10 +8,6 @@ import {
     TransactionWithDetails,
 } from './monitoring.type';
 import { Receipt } from '../remittance/remittance.type';
-
-const TENDER_LABEL: Record<number, string> = Object.fromEntries(
-    Object.entries(TENDER_TYPE).map(([label, id]) => [id, label]),
-);
 
 const TYPE_LABEL: Record<number, string> = {
     [TRANSACTION_TYPE.PARTIAL]: 'Partial',
@@ -66,8 +62,13 @@ const reprintTransaction = async (id: number, printedBy: string): Promise<Receip
         supplier_name: transaction.supplier_name,
         remitter_name: transaction.remitted_by,
         remit_type: transaction.remit_type === TRANSACTION_TYPE.FULL ? 'full' : 'partial',
+        // tender_code comes from tbl_tender_types via the LEFT JOIN in
+        // monitoringRepository.getTransactionById, so any tender configured
+        // in the DB (SKYRO, SHOPEE_PAY, anything added later) prints with
+        // its real code instead of falling back to 'UNKNOWN'. The fallback
+        // only triggers if the tender row was deleted from the lookup.
         lines: transaction.details.map((d) => ({
-            method: TENDER_LABEL[d.tender_type] || 'UNKNOWN',
+            method: d.tender_code ?? `TENDER_${d.tender_type}`,
             amount: String(d.amount),
         })),
         verified_at: new Date(transaction.transacted_at).toLocaleString('en-US', {
@@ -94,5 +95,5 @@ const reprintTransaction = async (id: number, printedBy: string): Promise<Receip
     };
 };
 
-export { TYPE_LABEL, STATUS_LABEL, TENDER_LABEL };
+export { TYPE_LABEL, STATUS_LABEL };
 export default { listTransactions, getTransaction, reprintTransaction };

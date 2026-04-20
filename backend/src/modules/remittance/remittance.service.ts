@@ -6,7 +6,12 @@ import { generateRefCode } from '../../shared/utils/refcode.util';
 import remittanceRepository from './remittance.repository';
 import { validateLines } from './remittance.helper';
 import { BadRequestError } from '../../shared/errors';
-import { TRANSACTION_TYPE, TRANSACTION_STATUS, TENDER_TYPE } from '../../shared/constants';
+import {
+    TRANSACTION_TYPE,
+    TRANSACTION_STATUS,
+    TENDER_TYPE,
+    OVERRIDE_ACTION,
+} from '../../shared/constants';
 import { PartialRemitPayload, FullRemitPayload, RemitResult, VoidPayload } from './remittance.type';
 
 const partialRemit = async (payload: PartialRemitPayload, userId: number): Promise<RemitResult> => {
@@ -66,6 +71,7 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
         if (payload.override) {
             await remittanceRepository.createOverrideLog(conn, {
                 transaction_id: transactionId,
+                action_id: OVERRIDE_ACTION.REMITTANCE,
                 requester_user_id: userId,
                 approver_user_id: payload.override.approver_user_id,
                 remarks: payload.override.remarks,
@@ -137,6 +143,7 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
         if (payload.override) {
             await remittanceRepository.createOverrideLog(conn, {
                 transaction_id: transactionId,
+                action_id: OVERRIDE_ACTION.REMITTANCE,
                 requester_user_id: userId,
                 approver_user_id: payload.override.approver_user_id,
                 remarks: payload.override.remarks,
@@ -180,6 +187,7 @@ const voidRemittance = async (id: number, payload: VoidPayload, userId: number) 
 
         await remittanceRepository.createOverrideLog(conn, {
             transaction_id: id,
+            action_id: OVERRIDE_ACTION.VOID,
             requester_user_id: userId,
             approver_user_id: payload.override.approver_user_id,
             remarks: payload.override.remarks,

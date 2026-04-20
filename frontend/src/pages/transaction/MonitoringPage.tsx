@@ -37,6 +37,7 @@ interface TransactionRow {
     remitted_by: string
     verified_by: string | null
     transacted_at: string
+    is_overridden: number // 0 | 1
 }
 
 interface TransactionDetail {
@@ -45,8 +46,22 @@ interface TransactionDetail {
     transaction_count: number
 }
 
+interface OverrideLog {
+    id: number
+    action_id: number
+    action_code: string | null
+    action_label: string | null
+    requester_user_id: number
+    requester_name: string | null
+    approver_user_id: number
+    approver_name: string | null
+    remarks: string
+    created_at: string
+}
+
 interface TransactionWithDetails extends TransactionRow {
     details: TransactionDetail[]
+    overrides: OverrideLog[]
 }
 
 interface ListResponse {
@@ -98,6 +113,7 @@ const COLUMNS: { label: string; center?: boolean; right?: boolean }[] = [
     { label: 'Remitted By' },
     { label: 'Verified By' },
     { label: 'Status', center: true },
+    { label: 'Override', center: true },
     { label: 'Date' },
     { label: '', right: true },
 ]
@@ -132,6 +148,20 @@ const StatusBadge = ({ status }: { status: number }) => {
             ].join(' ')}
         >
             {STATUS_LABEL[status] ?? status}
+        </span>
+    )
+}
+
+const OverrideBadge = ({ overridden }: { overridden: boolean }) => {
+    if (!overridden) {
+        return <span className="text-xs text-muted-foreground">—</span>
+    }
+    return (
+        <span
+            className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700"
+            title="Tender amounts were modified from POS values and approved by a supervisor."
+        >
+            Yes
         </span>
     )
 }
@@ -261,6 +291,66 @@ const TransactionDetailModal = ({
                         </table>
                     </div>
                 </div>
+
+                {/* Override logs — shown only when the transaction was overridden */}
+                {transaction.overrides && transaction.overrides.length > 0 && (
+                    <div>
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                            Override & Remarks
+                        </p>
+                        <div className="flex flex-col gap-2">
+                            {transaction.overrides.map((o) => {
+                                // action_label comes from tbl_override_action_status
+                                // (REMITTANCE=1 → "Remittance Override",
+                                //  VOID=2 → "Void Override").
+                                const label = o.action_label ?? 'Override'
+                                return (
+                                    <div
+                                        key={o.id}
+                                        className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm"
+                                    >
+                                        <div className="mb-1 flex items-center justify-between gap-2">
+                                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                                {label}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {new Date(o.created_at).toLocaleString('en-PH')}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Approved By
+                                                </p>
+                                                <p className="font-medium">
+                                                    {o.approver_name
+                                                        ? toTitleCase(o.approver_name)
+                                                        : `User #${o.approver_user_id}`}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Requested By
+                                                </p>
+                                                <p className="font-medium">
+                                                    {o.requester_name
+                                                        ? toTitleCase(o.requester_name)
+                                                        : `User #${o.requester_user_id}`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-2">
+                                            <p className="text-xs text-muted-foreground">Remarks</p>
+                                            <p className="whitespace-pre-wrap break-words">
+                                                {o.remarks || '—'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
         </Modal>
     )
@@ -493,7 +583,7 @@ export const MonitoringPage = () => {
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
                     <table
-                        className="w-full min-w-[1100px] text-sm"
+                        className="w-full min-w-[1200px] text-sm"
                         style={{ tableLayout: 'fixed' }}
                     >
                         <colgroup>
@@ -504,6 +594,7 @@ export const MonitoringPage = () => {
                             <col style={{ width: '130px' }} /> {/* Remitted By */}
                             <col style={{ width: '130px' }} /> {/* Verified By */}
                             <col style={{ width: '90px' }} /> {/* Status */}
+                            <col style={{ width: '100px' }} /> {/* Override */}
                             <col style={{ width: '150px' }} /> {/* Date */}
                             <col style={{ width: '110px' }} /> {/* Actions */}
                         </colgroup>
@@ -583,6 +674,9 @@ export const MonitoringPage = () => {
                                         </td>
                                         <td className="px-2 md:px-4 py-3 text-center">
                                             <StatusBadge status={row.status} />
+                                        </td>
+                                        <td className="px-2 md:px-4 py-3 text-center">
+                                            <OverrideBadge overridden={row.is_overridden === 1} />
                                         </td>
                                         <td className="px-2 md:px-4 py-3 text-xs text-muted-foreground">
                                             {new Date(row.transacted_at).toLocaleString('en-PH')}

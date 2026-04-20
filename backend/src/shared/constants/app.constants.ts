@@ -49,3 +49,8 @@ export const TRANSACTION_STATUS = {
     VERIFIED: 1,
     VOIDED: 2,
 } as const;
+
+export const OVERRIDE_ACTION = {
+    REMITTANCE: 1,
+    VOID: 2,
+} as const;

@@ -4,6 +4,7 @@ import {
     TransactionDetailRow,
     TransactionWithDetails,
     ListTransactionsQuery,
+    OverrideLogRow,
 } from './monitoring.type';
 
 const listTransactions = async (
@@ -81,7 +82,11 @@ const listTransactions = async (
                 WHEN u.id IS NULL THEN NULL
                 ELSE CONCAT(u.last_name, ', ', u.first_name)
             END AS verified_by,
-            t.transacted_at
+            t.transacted_at,
+            CAST(EXISTS (
+                SELECT 1 FROM tbl_override_logs ol
+                WHERE ol.transaction_id = t.id AND ol.action_id = 1
+            ) AS UNSIGNED) AS is_overridden
         ${baseQuery}
         ORDER BY t.id DESC
         LIMIT ${Math.floor(limit)} OFFSET ${Math.floor(offset)}
@@ -111,7 +116,11 @@ const getTransactionById = async (id: number): Promise<TransactionWithDetails | 
                 WHEN u.id IS NULL THEN NULL
                 ELSE CONCAT(u.last_name, ', ', u.first_name)
             END AS verified_by,
-            t.transacted_at
+            t.transacted_at,
+            CAST(EXISTS (
+                SELECT 1 FROM tbl_override_logs ol
+                WHERE ol.transaction_id = t.id AND ol.action_id = 1
+            ) AS UNSIGNED) AS is_overridden
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers  v ON v.id = t.supplier_id
         INNER JOIN tbl_events   e ON e.id = t.event_id
@@ -134,7 +143,35 @@ const getTransactionById = async (id: number): Promise<TransactionWithDetails | 
 
     const details = await PoolManager.query<TransactionDetailRow[]>(detailsSql, [id]);
 
-    return { ...transaction, details };
+    const overridesSql = `
+        SELECT
+            o.id,
+            o.action_id,
+            oas.code  AS action_code,
+            oas.label AS action_label,
+            o.requester_user_id,
+            CASE
+                WHEN ru.id IS NULL THEN NULL
+                ELSE CONCAT(ru.last_name, ', ', ru.first_name)
+            END AS requester_name,
+            o.approver_user_id,
+            CASE
+                WHEN au.id IS NULL THEN NULL
+                ELSE CONCAT(au.last_name, ', ', au.first_name)
+            END AS approver_name,
+            o.remarks,
+            o.created_at
+        FROM tbl_override_logs o
+        LEFT JOIN tbl_override_action_status oas ON oas.id = o.action_id
+        LEFT JOIN tbl_users ru ON ru.id = o.requester_user_id
+        LEFT JOIN tbl_users au ON au.id = o.approver_user_id
+        WHERE o.transaction_id = ?
+        ORDER BY o.created_at ASC, o.id ASC
+    `;
+
+    const overrides = await PoolManager.query<OverrideLogRow[]>(overridesSql, [id]);
+
+    return { ...transaction, details, overrides: overrides ?? [] };
 };
 
 export default { listTransactions, getTransactionById };

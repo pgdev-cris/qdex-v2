@@ -77,6 +77,7 @@ const createTransactionDetails = async (
 
 export interface InsertOverrideLogData {
     transaction_id: number;
+    action_id: number;
     requester_user_id: number;
     approver_user_id: number;
     remarks: string;
@@ -88,9 +89,15 @@ const createOverrideLog = async (
 ): Promise<void> => {
     await conn.execute(
         `INSERT INTO tbl_override_logs
-            (transaction_id, requester_user_id, approver_user_id, remarks, created_at)
-         VALUES (?, ?, ?, ?, NOW())`,
-        [data.transaction_id, data.requester_user_id, data.approver_user_id, data.remarks],
+            (transaction_id, action_id, requester_user_id, approver_user_id, remarks, created_at)
+         VALUES (?, ?, ?, ?, ?, NOW())`,
+        [
+            data.transaction_id,
+            data.action_id,
+            data.requester_user_id,
+            data.approver_user_id,
+            data.remarks,
+        ],
     );
 };
 

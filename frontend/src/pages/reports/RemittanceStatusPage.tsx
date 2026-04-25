@@ -6,6 +6,9 @@ import {
     ChevronUp,
     ChevronDown,
     ChevronsUpDown,
+    TrendingUp,
+    Wallet,
+    Scale,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -123,6 +126,27 @@ const SummaryCard = ({ label, count, color }: SummaryCardProps) => (
     </Card>
 )
 
+// ─── Financial summary card ───────────────────────────────────────────────────
+
+interface FinancialCardProps {
+    label: string
+    value: number
+    icon: React.ReactNode
+    colorClass: string
+}
+
+const FinancialCard = ({ label, value, icon, colorClass }: FinancialCardProps) => (
+    <Card className="flex-1 min-w-[180px]">
+        <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                <span className={`${colorClass} opacity-70`}>{icon}</span>
+            </div>
+            <p className={`text-xl font-bold tabular-nums ${colorClass}`}>{fmt(value)}</p>
+        </CardContent>
+    </Card>
+)
+
 // ─── Sort icon ────────────────────────────────────────────────────────────────
 
 const SortIcon = ({
@@ -220,6 +244,13 @@ export const RemittanceStatusPage = () => {
         [rows, sortKey, sortDir]
     )
 
+    const financialTotals = useMemo(() => {
+        const totalSales = rows.reduce((s, r) => s + Number(r.total_sales), 0)
+        const totalRemitted = rows.reduce((s, r) => s + Number(r.total_remitted), 0)
+        const totalBalance = totalSales - totalRemitted
+        return { totalSales, totalRemitted, totalBalance }
+    }, [rows])
+
     const thClass =
         'px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground select-none'
     const thBtn = (key: SortKey, label: string, right = false) => (
@@ -258,24 +289,36 @@ export const RemittanceStatusPage = () => {
                 </Button>
             </div>
 
-            {/* Summary cards */}
-            {summary && (
-                <div className="mb-6 flex flex-wrap gap-3">
-                    <SummaryCard
-                        label="Total Suppliers"
-                        count={summary.total_suppliers}
-                        color="text-foreground"
+            {/* Financial aggregate totals */}
+            {rows.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-3">
+                    <FinancialCard
+                        label="Total Sales"
+                        value={financialTotals.totalSales}
+                        icon={<TrendingUp className="h-4 w-4" />}
+                        colorClass="text-blue-600"
                     />
-                    <SummaryCard label="Settled" count={summary.settled} color="text-green-600" />
-                    <SummaryCard label="Partial" count={summary.partial} color="text-amber-600" />
-                    <SummaryCard label="Pending" count={summary.pending} color="text-yellow-600" />
-                    <SummaryCard
-                        label="No Activity"
-                        count={summary.no_activity}
-                        color="text-muted-foreground"
+                    <FinancialCard
+                        label="Total Remitted"
+                        value={financialTotals.totalRemitted}
+                        icon={<Wallet className="h-4 w-4" />}
+                        colorClass="text-green-600"
+                    />
+                    <FinancialCard
+                        label="Total Balance"
+                        value={financialTotals.totalBalance}
+                        icon={<Scale className="h-4 w-4" />}
+                        colorClass={
+                            financialTotals.totalBalance < 0
+                                ? 'text-destructive'
+                                : financialTotals.totalBalance > 0
+                                  ? 'text-amber-600'
+                                  : 'text-green-600'
+                        }
                     />
                 </div>
             )}
+
 
             {/* Table card */}
             <Card>

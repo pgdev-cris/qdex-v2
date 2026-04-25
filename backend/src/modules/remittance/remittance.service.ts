@@ -5,7 +5,7 @@ import SeriesRepository from '../../shared/repository/series.repository';
 import { generateRefCode } from '../../shared/utils/refcode.util';
 import remittanceRepository from './remittance.repository';
 import { validateLines } from './remittance.helper';
-import { BadRequestError } from '../../shared/errors';
+import { BadRequestError, ConflictError } from '../../shared/errors';
 import {
     TRANSACTION_TYPE,
     TRANSACTION_STATUS,
@@ -98,6 +98,14 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
     validateLines(payload.lines);
 
     const event = await eventProvider.getCurrentEvent();
+
+    // Enforce one full remittance per supplier per day
+    const existingFull = await remittanceRepository.getFullRemittanceToday(supplier.code, event.id);
+    if (existingFull) {
+        throw new ConflictError(
+            `Vendor already fully remitted today. Reference No.: ${existingFull.reference_code} (${existingFull.receipt_no})`,
+        );
+    }
 
     // Series code is scoped per event
     const seriesCode = `TRX-${event.id}`;

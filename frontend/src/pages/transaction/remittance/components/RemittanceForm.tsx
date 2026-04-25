@@ -132,8 +132,9 @@ export const RemittanceForm = ({
                                     className="flex items-center justify-between px-4 py-3 gap-4"
                                 >
                                     <span className="text-sm font-medium shrink-0">
-                                        {tenderMap.get(rec.payment_method)?.label ??
-                                            methodLabel(rec.payment_method)}
+                                        {methodLabel(rec.payment_method) !== rec.payment_method
+                                            ? methodLabel(rec.payment_method)
+                                            : (tenderMap.get(rec.payment_method)?.label ?? rec.payment_method)}
                                     </span>
                                     {rec.payment_method === 'CASH' ? (
                                         <span className="text-muted-foreground text-xs italic">

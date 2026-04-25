@@ -1,9 +1,28 @@
 import supplierProvider from '../../shared/providers/supplier.provider';
+import eventProvider from '../../shared/providers/event.provider';
+import remittanceRepository from '../remittance/remittance.repository';
+import { ConflictError } from '../../shared/errors';
 
 const baseUrl = process.env.SALES_API_URL ?? 'http://192.168.110.90:4003/qdex';
 
+/**
+ * Guards against duplicate full remittances.
+ * Throws ConflictError if a non-voided full remittance already exists today for this supplier.
+ */
+const assertNoFullRemittanceToday = async (supplierCode: number): Promise<void> => {
+    const event = await eventProvider.getCurrentEvent();
+    const existing = await remittanceRepository.getFullRemittanceToday(supplierCode, event.id);
+    if (existing) {
+        throw new ConflictError(
+            `Vendor already fully remitted today. Reference No.: ${existing.reference_code} (${existing.receipt_no})`,
+        );
+    }
+};
+
 const getSupplierSales = async (supplierCode: number) => {
     const supplier = await supplierProvider.validateSupplier(supplierCode);
+
+    await assertNoFullRemittanceToday(supplierCode);
 
     const url = `${baseUrl}/fetch-sales/${encodeURIComponent(supplierCode)}`;
 
@@ -38,6 +57,8 @@ const getSupplierSales = async (supplierCode: number) => {
 const getSupplierSalesMock = async (supplierCode: number) => {
     const supplier = await supplierProvider.validateSupplier(supplierCode);
 
+    await assertNoFullRemittanceToday(supplierCode);
+
     const supplierSales = [
         {
             payment_method: 'CASH',
@@ -55,7 +76,7 @@ const getSupplierSalesMock = async (supplierCode: number) => {
             total_count: 5,
         },
         {
-            payment_method: 'CREDIT_CARD',
+            payment_method: 'TANGENT_DEBIT',
             total: '1000.00',
             total_count: 4,
         },

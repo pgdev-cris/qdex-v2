@@ -387,10 +387,15 @@ export const RemittancePage = () => {
             setSupplierName(json.data.supplier.name ?? '')
             setStep('select-type')
         } catch (err: unknown) {
-            const msg =
-                err && typeof err === 'object' && 'message' in err
-                    ? String((err as { message: unknown }).message)
-                    : null
+            const errObj = err && typeof err === 'object' ? (err as Record<string, unknown>) : {}
+
+            // Explicit block: vendor already has a full remittance today
+            if (errObj.result === 'already_remitted') {
+                setError(String(errObj.message ?? 'Vendor already fully remitted today.'))
+                return
+            }
+
+            const msg = 'message' in errObj ? String(errObj.message) : null
             setError(msg ?? 'Could not reach the sales service. Check your connection.')
         } finally {
             setLoading(false)
@@ -528,7 +533,8 @@ export const RemittancePage = () => {
         const sortB = tenderMap.get(b.payment_method)?.sort ?? 9999
         return sortA - sortB
     })
-    const tenderLabel = (method: string) => tenderMap.get(method)?.label ?? methodLabel(method)
+    // Constants are authoritative for labels; DB label is fallback for unknown codes only
+    const tenderLabel = (method: string) => methodLabel(method) !== method ? methodLabel(method) : (tenderMap.get(method)?.label ?? method)
 
     // Determine whether any editable amount was changed from POS value, or cash differs from balance
     const detectOverrideNeeded = (): boolean => {

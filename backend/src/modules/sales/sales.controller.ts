@@ -17,7 +17,9 @@ const fetchSalesRequest = async (req: Request, res: Response) => {
         });
     }
 
-    const supplierSales = await service.getSupplierSales(supplierCode);
+    const supplierSales = process.env.POS_MOCK === 'true'
+        ? await service.getSupplierSalesMock(supplierCode)
+        : await service.getSupplierSales(supplierCode);
 
     return res.json({
         message: 'Sales fetched successfully',

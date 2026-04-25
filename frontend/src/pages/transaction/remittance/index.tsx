@@ -286,6 +286,7 @@ export const RemittancePage = () => {
     const [submitError, setSubmitError] = useState<string | null>(null)
 
     const [pendingType, setPendingType] = useState<RemitType | null>(null)
+    const [salesRefreshing, setSalesRefreshing] = useState(false)
 
     // Override state
     const [overrideOpen, setOverrideOpen] = useState(false)
@@ -398,6 +399,60 @@ export const RemittancePage = () => {
 
     const handleSearch = () => {
         handleSearchWithCode(supplierInput.trim().toUpperCase())
+    }
+
+    // Refresh sales data while on the remit step (in case POS was adjusted)
+    const handleRefreshSales = async () => {
+        if (!supplierCode) return
+        setSalesRefreshing(true)
+        setSubmitError(null)
+        try {
+            // Fetch POS sales and partial summary in parallel
+            const [salesJson, summaryRes] = await Promise.all([
+                apiFetch<SalesResponse>(`${SALES_FETCH_PATH}/${supplierCode}`, {
+                    method: 'GET',
+                    token: token ?? undefined,
+                }),
+                remitType === 'full'
+                    ? apiFetch<PartialSummaryResponse>(
+                          `/api/v1/remittance/partial-summary/${supplierCode}`,
+                          { token: token ?? undefined }
+                      ).catch(() => null)
+                    : Promise.resolve(null),
+            ])
+
+            const freshSales = salesJson.data.sales
+            setSalesData(freshSales)
+
+            if (remitType === 'full') {
+                // Re-seed editable non-CASH amounts from refreshed POS data
+                const others: Record<string, string> = {}
+                freshSales
+                    .filter((r) => r.payment_method !== 'CASH')
+                    .forEach((r) => { others[r.payment_method] = r.total })
+                setOtherAmounts(others)
+
+                // Update partial summary and recalculate cash balance from fresh POS cash
+                const freshPosCash = Number(
+                    freshSales.find((r) => r.payment_method === 'CASH')?.total ?? 0
+                )
+                if (summaryRes?.result === 'success' && summaryRes.data) {
+                    setPartialSummary(summaryRes.data)
+                    const balance = Math.max(0, freshPosCash - summaryRes.data.total_cash)
+                    setCashAmount(balance > 0 ? String(balance) : '0')
+                } else {
+                    setCashAmount(freshPosCash > 0 ? String(freshPosCash) : '')
+                }
+            }
+        } catch (err: unknown) {
+            const msg =
+                err && typeof err === 'object' && 'message' in err
+                    ? String((err as { message: unknown }).message)
+                    : null
+            setSubmitError(msg ?? 'Could not refresh sales data. Check your connection.')
+        } finally {
+            setSalesRefreshing(false)
+        }
     }
 
     // Step 2 — select type
@@ -748,6 +803,9 @@ export const RemittancePage = () => {
                 loading={loading}
                 isOverridden={!!overrideApproval}
                 overrideRemarks={overrideApproval?.remarks}
+                onRemarksChange={(remarks) =>
+                    setOverrideApproval((prev) => (prev ? { ...prev, remarks } : prev))
+                }
                 onConfirm={handleConfirm}
                 onCancel={() => !loading && setConfirmOpen(false)}
             />
@@ -821,6 +879,8 @@ export const RemittancePage = () => {
                             }}
                             onSubmit={handleSubmit}
                             onBack={() => setStep('select-type')}
+                            onRefreshSales={handleRefreshSales}
+                            salesRefreshing={salesRefreshing}
                         />
                     )}
 

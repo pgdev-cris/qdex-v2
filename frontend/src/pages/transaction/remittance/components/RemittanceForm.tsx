@@ -1,4 +1,4 @@
-import { RotateCcw, AlertCircle, Loader2, ShieldAlert } from 'lucide-react'
+import { RotateCcw, AlertCircle, Loader2, ShieldAlert, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -25,6 +25,8 @@ interface Props {
     onOtherAmountChange: (method: string, value: string) => void
     onSubmit: () => void
     onBack: () => void
+    onRefreshSales?: () => void
+    salesRefreshing?: boolean
 }
 
 export const RemittanceForm = ({
@@ -45,6 +47,8 @@ export const RemittanceForm = ({
     onOtherAmountChange,
     onSubmit,
     onBack,
+    onRefreshSales,
+    salesRefreshing = false,
 }: Props) => {
     const posCashTotal = Number(cashRecord?.total ?? 0)
     const totalPartial = partialSummary?.total_cash ?? 0
@@ -84,15 +88,30 @@ export const RemittanceForm = ({
                             )}
                         </CardDescription>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onBack}
-                        className="text-muted-foreground"
-                    >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        Back
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        {onRefreshSales && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={onRefreshSales}
+                                disabled={salesRefreshing || loading}
+                                className="text-muted-foreground"
+                                title="Refresh sales data from POS"
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 ${salesRefreshing ? 'animate-spin' : ''}`} />
+                                Refresh
+                            </Button>
+                        )}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onBack}
+                            className="text-muted-foreground"
+                        >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Back
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
 

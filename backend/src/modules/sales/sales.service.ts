@@ -41,7 +41,7 @@ const getSupplierSalesMock = async (supplierCode: number) => {
     const supplierSales = [
         {
             payment_method: 'CASH',
-            total: '6055.37',
+            total: '6055.39',
             total_count: 2,
         },
         {

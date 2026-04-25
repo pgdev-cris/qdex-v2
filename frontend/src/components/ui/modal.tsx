@@ -86,6 +86,7 @@ interface ConfirmModalProps {
     loading?: boolean
     isOverridden?: boolean
     overrideRemarks?: string
+    onRemarksChange?: (remarks: string) => void
     onConfirm: () => void
     onCancel: () => void
 }
@@ -99,6 +100,7 @@ export const ConfirmModal = ({
     loading = false,
     isOverridden = false,
     overrideRemarks,
+    onRemarksChange,
     onConfirm,
     onCancel,
 }: ConfirmModalProps) => {
@@ -152,10 +154,17 @@ export const ConfirmModal = ({
                 )}
 
                 {/* Override remarks */}
-                {isOverridden && overrideRemarks && (
+                {isOverridden && (
                     <div className="mx-6 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
-                        <p className="text-xs font-medium text-amber-700">Override Remarks</p>
-                        <p className="mt-0.5 text-sm text-amber-900">{overrideRemarks}</p>
+                        <p className="text-xs font-medium text-amber-700 mb-1">Override Remarks</p>
+                        <textarea
+                            className="w-full resize-none rounded border border-amber-300 bg-white px-2 py-1.5 text-sm text-amber-900 placeholder:text-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                            rows={2}
+                            value={overrideRemarks ?? ''}
+                            placeholder="Enter remarks…"
+                            disabled={loading}
+                            onChange={(e) => onRemarksChange?.(e.target.value)}
+                        />
                     </div>
                 )}
 

@@ -125,7 +125,7 @@ const generateMockPosSales = (
     });
 };
 
-export type RemittanceStatus = 'settled' | 'partial' | 'pending' | 'no_activity';
+export type RemittanceStatus = 'settled' | 'short' | 'over' | 'pending' | 'no_activity';
 
 export interface RemittanceStatusResult {
     supplier_id: number;
@@ -141,7 +141,8 @@ export interface RemittanceStatusResult {
 export interface RemittanceStatusSummary {
     total_suppliers: number;
     settled: number;
-    partial: number;
+    short: number;
+    over: number;
     pending: number;
     no_activity: number;
 }
@@ -153,18 +154,20 @@ export interface RemittanceStatusReport {
 
 /**
  * Derive remittance status from POS sales vs DB remitted amounts.
+ * balance = total_remitted - total_sales
  * - no_activity : no POS sales AND no remittance recorded
  * - pending     : has POS sales but nothing remitted yet
- * - settled     : remitted >= POS sales (balance <= 0)
- * - partial     : has remitted something but balance is still > 0,
- *                 OR remitted but POS sales unavailable (possible POS error)
+ * - settled     : remitted exactly equals sales (zero variance)
+ * - short       : remitted less than sales (negative balance — still owes)
+ * - over        : remitted more than sales (positive balance — overpaid)
  */
 const deriveStatus = (totalSales: number, totalRemitted: number): RemittanceStatus => {
     if (totalSales === 0 && totalRemitted === 0) return 'no_activity';
-    if (totalSales === 0 && totalRemitted > 0) return 'partial';
     if (totalRemitted === 0) return 'pending';
-    if (totalSales - totalRemitted <= 0) return 'settled';
-    return 'partial';
+    const balance = totalRemitted - totalSales;
+    if (balance === 0) return 'settled';
+    if (balance < 0) return 'short';
+    return 'over';
 };
 
 const getRemittanceStatusReport = async (
@@ -198,7 +201,7 @@ const getRemittanceStatusReport = async (
         const posData = posMap.get(r.supplier_code);
         const total_sales = posData ? Number(posData.total_revenue) : 0;
         const total_remitted = Number(r.total_remitted);
-        const balance = total_sales - total_remitted;
+        const balance = total_remitted - total_sales;
 
         return {
             supplier_id: r.supplier_id,
@@ -215,7 +218,8 @@ const getRemittanceStatusReport = async (
     const summary: RemittanceStatusSummary = {
         total_suppliers: results.length,
         settled: results.filter((r) => r.status === 'settled').length,
-        partial: results.filter((r) => r.status === 'partial').length,
+        short: results.filter((r) => r.status === 'short').length,
+        over: results.filter((r) => r.status === 'over').length,
         pending: results.filter((r) => r.status === 'pending').length,
         no_activity: results.filter((r) => r.status === 'no_activity').length,
     };

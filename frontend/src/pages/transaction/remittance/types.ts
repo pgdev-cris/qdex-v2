@@ -13,6 +13,8 @@ export interface SalesData {
     supplier: SupplierInfo
     sales: SalesRecord[]
     total_amount: number
+    prev_sales: SalesRecord[] | null
+    prev_date: string | null
 }
 
 export interface SalesResponse {

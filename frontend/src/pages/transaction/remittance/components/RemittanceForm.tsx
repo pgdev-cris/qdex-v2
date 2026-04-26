@@ -27,6 +27,9 @@ interface Props {
     onBack: () => void
     onRefreshSales?: () => void
     salesRefreshing?: boolean
+    prevSalesMap?: Map<string, number>
+    includePrevSales?: boolean
+    prevOnlyTenders?: SalesRecord[]
 }
 
 export const RemittanceForm = ({
@@ -49,6 +52,9 @@ export const RemittanceForm = ({
     onBack,
     onRefreshSales,
     salesRefreshing = false,
+    prevSalesMap = new Map(),
+    includePrevSales = false,
+    prevOnlyTenders = [],
 }: Props) => {
     const posCashTotal = Number(cashRecord?.total ?? 0)
     const totalPartial = partialSummary?.total_cash ?? 0
@@ -164,12 +170,52 @@ export const RemittanceForm = ({
                                         </div>
                                     ) : (
                                         <span className="tabular-nums text-sm font-mono">
-                                            {fmt(rec.total)}
+                                            {fmt(
+                                                Number(rec.total) +
+                                                    (includePrevSales
+                                                        ? (prevSalesMap.get(rec.payment_method) ?? 0)
+                                                        : 0),
+                                            )}
                                         </span>
                                     )}
                                 </div>
                             ))}
                         </div>
+
+                        {/* Prev-only tenders — shown as editable rows with amber badge */}
+                        {prevOnlyTenders.map((rec) => (
+                            <div
+                                key={rec.payment_method}
+                                className="flex items-center justify-between px-4 py-3 gap-4 border-t bg-amber-50"
+                            >
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-sm font-medium">
+                                        {methodLabel(rec.payment_method) !== rec.payment_method
+                                            ? methodLabel(rec.payment_method)
+                                            : rec.payment_method}
+                                    </span>
+                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                        prev.
+                                    </span>
+                                </div>
+                                <div className="relative w-36">
+                                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
+                                        ₱
+                                    </span>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        className="pl-7 text-right tabular-nums h-8 text-sm"
+                                        value={otherAmounts[rec.payment_method] ?? rec.total}
+                                        onChange={(e) =>
+                                            onOtherAmountChange(rec.payment_method, e.target.value)
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        ))}
+
                         <div className="border-t bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
                             Editable tender types are pre-filled from POS. Editing them requires
                             override approval.

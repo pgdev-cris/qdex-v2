@@ -162,16 +162,14 @@ export interface FullRemittanceTodayRow {
 }
 
 /**
- * Returns the first verified full remittance for a supplier today, or null.
- * Matches by supplier code via tbl_suppliers join.
- * Used to prevent duplicate full remittances within the same day.
+ * Returns the first verified full remittance for a supplier on a given date, or null.
+ * date should be 'YYYY-MM-DD' in Manila time.
  */
-const getFullRemittanceToday = async (
+const getFullRemittanceByDate = async (
     supplierCode: number,
     eventId: number,
+    date: string,
 ): Promise<FullRemittanceTodayRow | null> => {
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
-
     const sql = `
         SELECT
             t.reference_code,
@@ -186,12 +184,17 @@ const getFullRemittanceToday = async (
           AND DATE(t.transacted_at) = ?
         LIMIT 1
     `;
-    const rows = await PoolManager.query<FullRemittanceTodayRow[]>(sql, [
-        supplierCode,
-        eventId,
-        today,
-    ]);
+    const rows = await PoolManager.query<FullRemittanceTodayRow[]>(sql, [supplierCode, eventId, date]);
     return rows?.[0] ?? null;
+};
+
+/** Convenience wrapper — checks today's date in Manila time. */
+const getFullRemittanceToday = (
+    supplierCode: number,
+    eventId: number,
+): Promise<FullRemittanceTodayRow | null> => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+    return getFullRemittanceByDate(supplierCode, eventId, today);
 };
 
 const updateTransactionStatus = async (
@@ -207,6 +210,7 @@ export default {
     createTransactionDetails,
     createOverrideLog,
     getPartialCashSummary,
+    getFullRemittanceByDate,
     getFullRemittanceToday,
     updateTransactionStatus,
 };

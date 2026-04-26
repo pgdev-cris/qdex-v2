@@ -47,7 +47,6 @@ interface ContextPanelProps {
     remitterName: string
     remitType: RemitType | null
     salesData: SalesRecord[]
-    cashAmount: string
     receipt: Receipt | null
 }
 
@@ -78,10 +77,8 @@ const ContextPanel = ({
     remitterName,
     remitType,
     salesData,
-    cashAmount,
     receipt,
 }: ContextPanelProps) => {
-    const encodedCash = Number(cashAmount) || 0
 
     if (step === 'search') {
         return (
@@ -159,17 +156,12 @@ const ContextPanel = ({
                                 ? salesData.filter((r) => r.payment_method === 'CASH')
                                 : salesData
 
-                        const resolveAmount = (r: SalesRecord) => {
-                            if (step === 'remit' && r.payment_method === 'CASH') {
-                                return encodedCash
-                            }
-                            return Number(r.total)
-                        }
+                        const resolveAmount = (r: SalesRecord) => Number(r.total)
 
                         const visibleTotal = visibleRows.reduce((s, r) => s + resolveAmount(r), 0)
 
                         return (
-                            <Section title="Sales">
+                            <Section title="Today's Sales">
                                 <div className="flex flex-col gap-2">
                                     {visibleRows.map((r) => (
                                         <div
@@ -275,6 +267,12 @@ export const RemittancePage = () => {
     // Today's partial remittance summary for this supplier (full remittance only)
     const [partialSummary, setPartialSummary] = useState<PartialSummary | null>(null)
     const [partialSummaryLoading, setPartialSummaryLoading] = useState(false)
+
+    // Previous day's unremitted sales (shown when vendor has no full remittance yesterday)
+    const [prevSales, setPrevSales] = useState<SalesRecord[] | null>(null)
+    const [prevDate, setPrevDate] = useState<string | null>(null)
+    const [prevSalesPromptOpen, setPrevSalesPromptOpen] = useState(false)
+    const [includePrevSales, setIncludePrevSales] = useState(false)
 
     // Tender types from DB (loaded once on mount; drives is_editable + sort order)
     const [tenderTypes, setTenderTypes] = useState<TenderType[]>([])
@@ -385,6 +383,8 @@ export const RemittancePage = () => {
             setSalesData(json.data.sales)
             setSupplierCode(code)
             setSupplierName(json.data.supplier.name ?? '')
+            setPrevSales(json.data.prev_sales ?? null)
+            setPrevDate(json.data.prev_date ?? null)
             setStep('select-type')
         } catch (err: unknown) {
             const errObj = err && typeof err === 'object' ? (err as Record<string, unknown>) : {}
@@ -467,20 +467,41 @@ export const RemittancePage = () => {
         setSubmitError(null)
         setOverrideApproval(null)
         setPartialSummary(null)
+        setIncludePrevSales(false)
 
+        if (type === 'full') {
+            // Show prompt if: any non-editable prev tender exists in today's sales (auto-add),
+            // OR any prev tender is missing from today's sales entirely (new row)
+            const hasRelevantPrev = (prevSales ?? []).some(
+                (p) =>
+                    p.payment_method !== 'CASH' &&
+                    (!salesData.some((s) => s.payment_method === p.payment_method) ||
+                        !isEditableTender(p.payment_method)),
+            )
+            if (hasRelevantPrev) {
+                setPrevSalesPromptOpen(true)
+                return // wait for user answer before proceeding
+            }
+        }
+
+        await proceedWithType(type)
+    }
+
+    // Continues to remit step after the prev-sales prompt is resolved (or skipped)
+    const proceedWithType = async (type: RemitType, extraAmounts: Record<string, string> = {}) => {
         if (type === 'partial') {
             setCashAmount('')
             setOtherAmounts({})
             setStep('remit')
         } else {
-            // Seed non-CASH amounts from POS
+            // Seed non-CASH amounts from POS; merge any extra prev-only amounts
             const others: Record<string, string> = {}
             salesData
                 .filter((r) => r.payment_method !== 'CASH')
                 .forEach((r) => {
                     others[r.payment_method] = r.total
                 })
-            setOtherAmounts(others)
+            setOtherAmounts({ ...others, ...extraAmounts })
             setStep('remit')
 
             // Fetch today's partial remittances to compute remaining cash balance
@@ -509,6 +530,26 @@ export const RemittancePage = () => {
         }
     }
 
+    // Resolves the prev-sales prompt and continues to full remit
+    const handlePrevSalesAnswer = async (include: boolean) => {
+        setIncludePrevSales(include)
+        setPrevSalesPromptOpen(false)
+        if (include) {
+            // Seed prev-only tender amounts (not in today's sales) into otherAmounts
+            const extra: Record<string, string> = {}
+            ;(prevSales ?? [])
+                .filter(
+                    (p) =>
+                        p.payment_method !== 'CASH' &&
+                        !salesData.some((s) => s.payment_method === p.payment_method),
+                )
+                .forEach((p) => { extra[p.payment_method] = p.total })
+            await proceedWithType('full', extra)
+        } else {
+            await proceedWithType('full')
+        }
+    }
+
     // Computed cash balance: POS cash minus today's partial remittances
     const computedBalance =
         remitType === 'full'
@@ -528,6 +569,15 @@ export const RemittancePage = () => {
         if (tenderTypes.length === 0) return method !== 'CASH'
         return (tenderMap.get(method)?.is_editable ?? 0) === 1
     }
+    const prevSalesMap = new Map((prevSales ?? []).map((r) => [r.payment_method, Number(r.total)]))
+    // Tenders from yesterday not present in today's sales at all (any tender type)
+    const prevOnlyTenders: SalesRecord[] = includePrevSales
+        ? (prevSales ?? []).filter(
+              (p) =>
+                  p.payment_method !== 'CASH' &&
+                  !salesData.some((s) => s.payment_method === p.payment_method),
+          )
+        : []
     const sortedSales = [...salesData].sort((a, b) => {
         const sortA = tenderMap.get(a.payment_method)?.sort ?? 9999
         const sortB = tenderMap.get(b.payment_method)?.sort ?? 9999
@@ -538,6 +588,7 @@ export const RemittancePage = () => {
 
     // Determine whether any editable amount was changed from POS value, or cash differs from balance
     const detectOverrideNeeded = (): boolean => {
+        if (includePrevSales) return true // previous sales inclusion always requires override
         if (remitType === 'partial') return cashOverrideNeeded
 
         const editableChanged = salesData
@@ -568,9 +619,13 @@ export const RemittancePage = () => {
                             overridden: !!approval && cashOverrideNeeded,
                         }
                     }
+                    const prevAdd =
+                        includePrevSales && !isEditableTender(r.payment_method)
+                            ? (prevSalesMap.get(r.payment_method) ?? 0)
+                            : 0
                     const editedVal = isEditableTender(r.payment_method)
                         ? Number(otherAmounts[r.payment_method] ?? r.total)
-                        : Number(r.total)
+                        : Number(r.total) + prevAdd
                     const wasChanged =
                         isEditableTender(r.payment_method) && editedVal !== Number(r.total)
                     return {
@@ -579,6 +634,12 @@ export const RemittancePage = () => {
                         overridden: !!approval && wasChanged,
                     }
                 }),
+                // Prev-only tenders (not in today's sales, user-editable amount)
+                ...prevOnlyTenders.map((p) => ({
+                    label: `${tenderLabel(p.payment_method)} (prev.)`,
+                    value: fmt(Number(otherAmounts[p.payment_method] ?? p.total)),
+                    overridden: !!approval,
+                })),
             ]
         }
 
@@ -634,16 +695,28 @@ export const RemittancePage = () => {
 
     // Full remittance — execute after confirmation
     const executeFullRemittance = async () => {
-        const lines: ReceiptLine[] = sortedSales.map((r) => {
+        const todayLines: ReceiptLine[] = sortedSales.map((r) => {
             if (r.payment_method === 'CASH') {
                 return { method: r.payment_method, amount: cashAmount }
             }
-            // Only use the edited amount for editable tender types
+            // Editable: use operator-entered value; non-editable: POS total + prev day if included
+            const prevAdd =
+                includePrevSales && !isEditableTender(r.payment_method)
+                    ? (prevSalesMap.get(r.payment_method) ?? 0)
+                    : 0
             const amount = isEditableTender(r.payment_method)
                 ? (otherAmounts[r.payment_method] ?? r.total)
-                : r.total
+                : String(Number(r.total) + prevAdd)
             return { method: r.payment_method, amount }
         })
+        // Append prev-only tenders (zeroed-out ones are excluded)
+        const prevOnlyLines: ReceiptLine[] = prevOnlyTenders
+            .map((p) => ({
+                method: p.payment_method,
+                amount: otherAmounts[p.payment_method] ?? p.total,
+            }))
+            .filter((l) => Number(l.amount) > 0)
+        const lines = [...todayLines, ...prevOnlyLines]
 
         setConfirmOpen(false)
         setPendingType('full')
@@ -785,6 +858,10 @@ export const RemittancePage = () => {
         setOverrideApproval(null)
         setPartialSummary(null)
         setPartialSummaryLoading(false)
+        setPrevSales(null)
+        setPrevDate(null)
+        setPrevSalesPromptOpen(false)
+        setIncludePrevSales(false)
     }
 
     return (
@@ -798,6 +875,73 @@ export const RemittancePage = () => {
                 onClose={() => setOverrideOpen(false)}
                 onApproved={handleOverrideApproved}
             />
+
+            {/* Previous sales inclusion prompt */}
+            {prevSalesPromptOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="w-84 rounded-xl border bg-card p-6 shadow-xl flex flex-col gap-4">
+                        <div>
+                            <p className="font-semibold text-base">Include Previous Unremitted Sales?</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                The following non-editable tenders from <span className="font-medium">{prevDate}</span> have no full remittance and can be combined with today's totals.
+                            </p>
+                        </div>
+                        {(() => {
+                            const matched = (prevSales ?? []).filter(
+                                (p) =>
+                                    p.payment_method !== 'CASH' &&
+                                    !isEditableTender(p.payment_method) &&
+                                    salesData.some((s) => s.payment_method === p.payment_method),
+                            )
+                            const newOnly = (prevSales ?? []).filter(
+                                (p) =>
+                                    p.payment_method !== 'CASH' &&
+                                    !salesData.some((s) => s.payment_method === p.payment_method),
+                            )
+                            return (
+                                <div className="flex flex-col gap-3">
+                                    {matched.length > 0 && (
+                                        <div className="rounded-lg border bg-muted/40 px-4 py-3 flex flex-col gap-1.5">
+                                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Added to existing totals</p>
+                                            {matched.map((p) => (
+                                                <div key={p.payment_method} className="flex justify-between text-sm">
+                                                    <span className="text-muted-foreground">{methodLabel(p.payment_method)}</span>
+                                                    <span className="font-medium tabular-nums">+ {fmt(Number(p.total))}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {newOnly.length > 0 && (
+                                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col gap-1.5">
+                                            <p className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-1">New rows (editable — can zero out)</p>
+                                            {newOnly.map((p) => (
+                                                <div key={p.payment_method} className="flex justify-between text-sm">
+                                                    <span className="text-amber-800">{methodLabel(p.payment_method)}</span>
+                                                    <span className="font-medium tabular-nums text-amber-900">{fmt(Number(p.total))}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })()}
+                        <div className="flex gap-2">
+                            <button
+                                className="flex-1 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+                                onClick={() => handlePrevSalesAnswer(false)}
+                            >
+                                No, skip
+                            </button>
+                            <button
+                                className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                                onClick={() => handlePrevSalesAnswer(true)}
+                            >
+                                Yes, include
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Remittance confirm modal */}
             <ConfirmModal
@@ -887,6 +1031,9 @@ export const RemittancePage = () => {
                             onBack={() => setStep('select-type')}
                             onRefreshSales={handleRefreshSales}
                             salesRefreshing={salesRefreshing}
+                            prevSalesMap={prevSalesMap}
+                            includePrevSales={includePrevSales}
+                            prevOnlyTenders={prevOnlyTenders}
                         />
                     )}
 
@@ -899,18 +1046,49 @@ export const RemittancePage = () => {
                     )}
                 </div>
 
-                {/* Right — context panel (fixed compact width) */}
-                <div className="w-72 shrink-0 rounded-xl border bg-card p-5">
-                    <ContextPanel
-                        step={step}
-                        supplierCode={supplierCode}
-                        supplierName={supplierName}
-                        remitterName={remitterName}
-                        remitType={remitType}
-                        salesData={salesData}
-                        cashAmount={cashAmount}
-                        receipt={receipt}
-                    />
+                {/* Right — context panel + prev sales */}
+                <div className="w-72 shrink-0 flex flex-col gap-4">
+                    <div className="rounded-xl border bg-card p-5">
+                        <ContextPanel
+                            step={step}
+                            supplierCode={supplierCode}
+                            supplierName={supplierName}
+                            remitterName={remitterName}
+                            remitType={remitType}
+                            salesData={salesData}
+                            receipt={receipt}
+                        />
+                    </div>
+
+                    {/* Previous unremitted sales card */}
+                    {prevSales && prevSales.length > 0 && (step === 'select-type' || step === 'remit') && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 flex flex-col gap-3">
+                            <div>
+                                <p className="text-xs font-semibold tracking-wide text-amber-800 uppercase">
+                                    Previous Unremitted Sales
+                                </p>
+                                {prevDate && (
+                                    <p className="text-xs text-amber-700 mt-0.5">{prevDate}</p>
+                                )}
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                {prevSales.map((r) => (
+                                    <div key={r.payment_method} className="flex justify-between text-sm">
+                                        <span className="text-amber-800">{methodLabel(r.payment_method)}</span>
+                                        <span className="font-medium tabular-nums text-amber-900">
+                                            {fmt(Number(r.total))}
+                                        </span>
+                                    </div>
+                                ))}
+                                <div className="mt-1 flex justify-between border-t border-amber-200 pt-2 text-sm font-semibold">
+                                    <span className="text-amber-800">Total</span>
+                                    <span className="tabular-nums text-amber-900">
+                                        {fmt(prevSales.reduce((s, r) => s + Number(r.total), 0))}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

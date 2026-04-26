@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiFetch } from '@/lib/api'
+import { Button } from '@/components/ui/button'
 
 import type {
     Step,
@@ -883,61 +884,42 @@ export const RemittancePage = () => {
                         <div>
                             <p className="font-semibold text-base">Include Previous Unremitted Sales?</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                                The following non-editable tenders from <span className="font-medium">{prevDate}</span> have no full remittance and can be combined with today's totals.
+                                The following sales from <span className="font-medium">{prevDate}</span> have no full remittance and can be combined with today's totals.
                             </p>
                         </div>
-                        {(() => {
-                            const matched = (prevSales ?? []).filter(
-                                (p) =>
-                                    p.payment_method !== 'CASH' &&
-                                    !isEditableTender(p.payment_method) &&
-                                    salesData.some((s) => s.payment_method === p.payment_method),
-                            )
-                            const newOnly = (prevSales ?? []).filter(
-                                (p) =>
-                                    p.payment_method !== 'CASH' &&
-                                    !salesData.some((s) => s.payment_method === p.payment_method),
-                            )
-                            return (
-                                <div className="flex flex-col gap-3">
-                                    {matched.length > 0 && (
-                                        <div className="rounded-lg border bg-muted/40 px-4 py-3 flex flex-col gap-1.5">
-                                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Added to existing totals</p>
-                                            {matched.map((p) => (
-                                                <div key={p.payment_method} className="flex justify-between text-sm">
-                                                    <span className="text-muted-foreground">{methodLabel(p.payment_method)}</span>
-                                                    <span className="font-medium tabular-nums">+ {fmt(Number(p.total))}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {newOnly.length > 0 && (
-                                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col gap-1.5">
-                                            <p className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-1">New rows (editable — can zero out)</p>
-                                            {newOnly.map((p) => (
-                                                <div key={p.payment_method} className="flex justify-between text-sm">
-                                                    <span className="text-amber-800">{methodLabel(p.payment_method)}</span>
-                                                    <span className="font-medium tabular-nums text-amber-900">{fmt(Number(p.total))}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })()}
-                        <div className="flex gap-2">
-                            <button
-                                className="flex-1 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
-                                onClick={() => handlePrevSalesAnswer(false)}
+                        <div className="rounded-lg border bg-muted/40 px-4 py-3 flex flex-col gap-1.5">
+                            {(prevSales ?? [])
+                                .filter((p) => p.payment_method !== 'CASH')
+                                .map((p) => (
+                                    <div key={p.payment_method} className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">{methodLabel(p.payment_method)}</span>
+                                        <span className="font-medium tabular-nums">{fmt(Number(p.total))}</span>
+                                    </div>
+                                ))}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <div className="flex gap-2">
+                                <button
+                                    className="flex-1 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+                                    onClick={() => handlePrevSalesAnswer(false)}
+                                >
+                                    No, skip
+                                </button>
+                                <button
+                                    className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                                    onClick={() => handlePrevSalesAnswer(true)}
+                                >
+                                    Yes, include
+                                </button>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full text-muted-foreground"
+                                onClick={() => setPrevSalesPromptOpen(false)}
                             >
-                                No, skip
-                            </button>
-                            <button
-                                className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-                                onClick={() => handlePrevSalesAnswer(true)}
-                            >
-                                Yes, include
-                            </button>
+                                Cancel
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -974,7 +956,7 @@ export const RemittancePage = () => {
             {/* Two-column layout */}
             <div className="flex flex-1 items-start justify-center gap-6">
                 {/* Left — wizard */}
-                <div className="w-140 shrink-0">
+                <div className="w-160 shrink-0">
                     <StepIndicator step={step} />
 
                     {step === 'search' && (

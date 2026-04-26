@@ -48,7 +48,7 @@ const getPrevDaySales = async (
                 { payment_method: 'CASH', total: '3200.00', total_count: 5 },
                 { payment_method: 'GCASH', total: '800.00', total_count: 2 },
                 { payment_method: 'PWALLET', total: '600.00', total_count: 1 },
-                { payment_method: 'TANGENT_DEBIT', total: '500.00', total_count: 1 },
+                { payment_method: 'TANGENT_DEBIT', total: '600.00', total_count: 1 },
                 { payment_method: 'TANGENT_CREDIT', total: '1500.00', total_count: 1 },
             ] as SalesRecord[],
         };

@@ -430,12 +430,31 @@ export const RemittancePage = () => {
             const freshSales = salesJson.data.sales
             setSalesData(freshSales)
 
+            // Refresh previous day's sales from the same response
+            const freshPrevSales = salesJson.data.prev_sales ?? null
+            const freshPrevDate = salesJson.data.prev_date ?? null
+            setPrevSales(freshPrevSales)
+            setPrevDate(freshPrevDate)
+
             if (remitType === 'full') {
-                // Re-seed editable non-CASH amounts from refreshed POS data
+                // Re-seed editable non-CASH amounts from refreshed POS data,
+                // preserving prev-only tender amounts if inclusion was confirmed
                 const others: Record<string, string> = {}
                 freshSales
                     .filter((r) => r.payment_method !== 'CASH')
                     .forEach((r) => { others[r.payment_method] = r.total })
+
+                if (includePrevSales) {
+                    // Re-seed prev-only amounts from refreshed prev sales
+                    ;(freshPrevSales ?? [])
+                        .filter(
+                            (p) =>
+                                p.payment_method !== 'CASH' &&
+                                !freshSales.some((s) => s.payment_method === p.payment_method),
+                        )
+                        .forEach((p) => { others[p.payment_method] = otherAmounts[p.payment_method] ?? p.total })
+                }
+
                 setOtherAmounts(others)
 
                 // Update partial summary and recalculate cash balance from fresh POS cash

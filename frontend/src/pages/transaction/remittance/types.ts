@@ -13,6 +13,8 @@ export interface SalesData {
     supplier: SupplierInfo
     sales: SalesRecord[]
     total_amount: number
+    prev_sales: SalesRecord[] | null
+    prev_date: string | null
 }
 
 export interface SalesResponse {
@@ -39,6 +41,7 @@ export interface Receipt {
     printed_by: string
     event_name: string
     event_code: string
+    is_voided: boolean
 }
 
 //  Remittance API
@@ -92,7 +95,7 @@ export interface TenderType {
     id: number
     code: string
     label: string
-    is_editable: number  // 0 | 1
+    is_editable: number // 0 | 1
     sort: number
 }
 

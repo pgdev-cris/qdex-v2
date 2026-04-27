@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { X, Loader2 } from 'lucide-react'
+import { type ReactNode, useState } from 'react'
+import { X, Loader2, Pencil, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
@@ -86,6 +86,7 @@ interface ConfirmModalProps {
     loading?: boolean
     isOverridden?: boolean
     overrideRemarks?: string
+    onRemarksChange?: (remarks: string) => void
     onConfirm: () => void
     onCancel: () => void
 }
@@ -99,9 +100,12 @@ export const ConfirmModal = ({
     loading = false,
     isOverridden = false,
     overrideRemarks,
+    onRemarksChange,
     onConfirm,
     onCancel,
 }: ConfirmModalProps) => {
+    const [editingRemarks, setEditingRemarks] = useState(false)
+
     if (!open) return null
 
     return (
@@ -152,10 +156,46 @@ export const ConfirmModal = ({
                 )}
 
                 {/* Override remarks */}
-                {isOverridden && overrideRemarks && (
+                {isOverridden && (
                     <div className="mx-6 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
-                        <p className="text-xs font-medium text-amber-700">Override Remarks</p>
-                        <p className="mt-0.5 text-sm text-amber-900">{overrideRemarks}</p>
+                        <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-medium text-amber-700">Override Remarks</p>
+                            {!loading && (
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingRemarks((v) => !v)}
+                                    className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 transition-colors"
+                                >
+                                    {editingRemarks ? (
+                                        <>
+                                            <Check className="h-3 w-3" />
+                                            Done
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Pencil className="h-3 w-3" />
+                                            Edit
+                                        </>
+                                    )}
+                                </button>
+                            )}
+                        </div>
+                        {editingRemarks ? (
+                            <textarea
+                                autoFocus
+                                className="w-full resize-none rounded border border-amber-300 bg-white px-2 py-1.5 text-sm text-amber-900 placeholder:text-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                rows={2}
+                                value={overrideRemarks ?? ''}
+                                placeholder="Enter remarks…"
+                                onChange={(e) => onRemarksChange?.(e.target.value)}
+                            />
+                        ) : (
+                            <p className="text-sm text-amber-900">
+                                {overrideRemarks?.trim() || (
+                                    <span className="italic text-amber-400">No remarks</span>
+                                )}
+                            </p>
+                        )}
                     </div>
                 )}
 

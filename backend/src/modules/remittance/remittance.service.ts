@@ -1,19 +1,70 @@
 import PoolManager from '../../shared/db/pool.manager';
 import supplierProvider from '../../shared/providers/supplier.provider';
 import eventProvider from '../../shared/providers/event.provider';
+import userRepository from '../../shared/repository/user.repository';
 import SeriesRepository from '../../shared/repository/series.repository';
 import { generateRefCode } from '../../shared/utils/refcode.util';
 import remittanceRepository from './remittance.repository';
 import { validateLines } from './remittance.helper';
-import { BadRequestError } from '../../shared/errors';
-import { TRANSACTION_TYPE, TRANSACTION_STATUS, TENDER_TYPE } from '../../shared/constants';
+import { BadRequestError, ConflictError, NotFoundError } from '../../shared/errors';
+import {
+    TRANSACTION_TYPE,
+    TRANSACTION_STATUS,
+    TENDER_TYPE,
+    OVERRIDE_ACTION,
+} from '../../shared/constants';
 import { PartialRemitPayload, FullRemitPayload, RemitResult, VoidPayload } from './remittance.type';
+
+const posBaseUrl = process.env.SALES_API_URL ?? 'http://192.168.110.90:4003/qdex';
+
+interface PosRemittancePayload {
+    receipt_no: string;
+    supplier_code: number;
+    total_amount: number;
+    remitted_by: string;
+    verified_by: string;
+    remittance_type: 'partial' | 'full';
+}
+
+/**
+ * Notifies the POS sales service of the completed remittance.
+ * Must be called inside a DB transaction — any failure here will roll back the transaction.
+ * Skipped when POS_MOCK=true.
+ */
+const notifyPosRemittance = async (data: PosRemittancePayload): Promise<void> => {
+    if (process.env.POS_MOCK === 'true') return;
+
+    let response: Response;
+    try {
+        response = await fetch(`${posBaseUrl}/remittance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            signal: AbortSignal.timeout(10_000),
+        });
+
+        console.log('notify remittance response: ', response);
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Could not reach the sales service.';
+        throw new Error(`[POS] ${message}`);
+    }
+
+    if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(
+            `[POS] Remittance notification failed: ${errorBody?.message ?? response.statusText}`,
+        );
+    }
+};
 
 const partialRemit = async (payload: PartialRemitPayload, userId: number): Promise<RemitResult> => {
     const supplierCode = Number(payload.supplier_code);
     const supplier = await supplierProvider.validateSupplier(supplierCode);
 
     validateLines(payload.lines);
+
+    const user = await userRepository.getUserById(userId);
+    if (!user) throw new NotFoundError('Verified user not found.');
 
     const event = await eventProvider.getCurrentEvent();
 
@@ -33,7 +84,9 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
         // Increment series inside the transaction so it rolls back on failure
         const seriesRow = await SeriesRepository.incrementWithConnection(seriesCode, conn);
         if (!seriesRow) {
-            throw new BadRequestError(`Series "${seriesCode}" not configured. Make sure the event has a counter.`);
+            throw new BadRequestError(
+                `Series "${seriesCode}" not configured. Make sure the event has a counter.`,
+            );
         }
 
         // Format for display/receipt only — store the raw int in the DB
@@ -66,11 +119,22 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
         if (payload.override) {
             await remittanceRepository.createOverrideLog(conn, {
                 transaction_id: transactionId,
+                action_id: OVERRIDE_ACTION.REMITTANCE,
                 requester_user_id: userId,
                 approver_user_id: payload.override.approver_user_id,
                 remarks: payload.override.remarks,
             });
         }
+
+        // Notify POS — failure here rolls back the entire transaction
+        await notifyPosRemittance({
+            receipt_no: receiptNo,
+            supplier_code: supplierCode,
+            total_amount: totalAmount,
+            remitted_by: payload.remitter_name.trim(),
+            verified_by: `${user.last_name}, ${user.first_name}`,
+            remittance_type: 'partial',
+        });
     });
 
     return {
@@ -91,7 +155,18 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
 
     validateLines(payload.lines);
 
+    const user = await userRepository.getUserById(userId);
+    if (!user) throw new NotFoundError('Verified user not found.');
+
     const event = await eventProvider.getCurrentEvent();
+
+    // Enforce one full remittance per supplier per day
+    const existingFull = await remittanceRepository.getFullRemittanceToday(supplier.code, event.id);
+    if (existingFull) {
+        throw new ConflictError(
+            `Vendor already fully remitted today. Reference No.: ${existingFull.reference_code} (${existingFull.receipt_no})`,
+        );
+    }
 
     // Series code is scoped per event
     const seriesCode = `TRX-${event.id}`;
@@ -105,7 +180,9 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
     await PoolManager.transaction(async (conn) => {
         const seriesRow = await SeriesRepository.incrementWithConnection(seriesCode, conn);
         if (!seriesRow) {
-            throw new BadRequestError(`Series "${seriesCode}" not configured. Make sure the event has a counter.`);
+            throw new BadRequestError(
+                `Series "${seriesCode}" not configured. Make sure the event has a counter.`,
+            );
         }
 
         const paddedSeq = String(seriesRow.last_sequence).padStart(seriesRow.pad_length, '0');
@@ -137,11 +214,22 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
         if (payload.override) {
             await remittanceRepository.createOverrideLog(conn, {
                 transaction_id: transactionId,
+                action_id: OVERRIDE_ACTION.REMITTANCE,
                 requester_user_id: userId,
                 approver_user_id: payload.override.approver_user_id,
                 remarks: payload.override.remarks,
             });
         }
+
+        // Notify POS — failure here rolls back the entire transaction
+        await notifyPosRemittance({
+            receipt_no: receiptNo,
+            supplier_code: supplierCode,
+            total_amount: totalAmount,
+            remitted_by: payload.remitter_name.trim(),
+            verified_by: `${user.last_name}, ${user.first_name}`,
+            remittance_type: 'full',
+        });
     });
 
     return {
@@ -180,6 +268,7 @@ const voidRemittance = async (id: number, payload: VoidPayload, userId: number) 
 
         await remittanceRepository.createOverrideLog(conn, {
             transaction_id: id,
+            action_id: OVERRIDE_ACTION.VOID,
             requester_user_id: userId,
             approver_user_id: payload.override.approver_user_id,
             remarks: payload.override.remarks,

@@ -1,4 +1,4 @@
-import { RotateCcw, AlertCircle, Loader2, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, AlertCircle, Loader2, ShieldAlert, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -25,6 +25,11 @@ interface Props {
     onOtherAmountChange: (method: string, value: string) => void
     onSubmit: () => void
     onBack: () => void
+    onRefreshSales?: () => void
+    salesRefreshing?: boolean
+    prevSalesMap?: Map<string, number>
+    includePrevSales?: boolean
+    prevOnlyTenders?: SalesRecord[]
 }
 
 export const RemittanceForm = ({
@@ -45,6 +50,11 @@ export const RemittanceForm = ({
     onOtherAmountChange,
     onSubmit,
     onBack,
+    onRefreshSales,
+    salesRefreshing = false,
+    prevSalesMap = new Map(),
+    includePrevSales = false,
+    prevOnlyTenders = [],
 }: Props) => {
     const posCashTotal = Number(cashRecord?.total ?? 0)
     const totalPartial = partialSummary?.total_cash ?? 0
@@ -84,15 +94,30 @@ export const RemittanceForm = ({
                             )}
                         </CardDescription>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onBack}
-                        className="text-muted-foreground"
-                    >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        Back
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        {onRefreshSales && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={onRefreshSales}
+                                disabled={salesRefreshing || loading}
+                                className="text-muted-foreground"
+                                title="Refresh sales data from POS"
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 ${salesRefreshing ? 'animate-spin' : ''}`} />
+                                Refresh
+                            </Button>
+                        )}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onBack}
+                            className="text-muted-foreground"
+                        >
+                            <ArrowLeft className="h-3.5 w-3.5" />
+                            Back
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
 
@@ -113,8 +138,9 @@ export const RemittanceForm = ({
                                     className="flex items-center justify-between px-4 py-3 gap-4"
                                 >
                                     <span className="text-sm font-medium shrink-0">
-                                        {tenderMap.get(rec.payment_method)?.label ??
-                                            methodLabel(rec.payment_method)}
+                                        {methodLabel(rec.payment_method) !== rec.payment_method
+                                            ? methodLabel(rec.payment_method)
+                                            : (tenderMap.get(rec.payment_method)?.label ?? rec.payment_method)}
                                     </span>
                                     {rec.payment_method === 'CASH' ? (
                                         <span className="text-muted-foreground text-xs italic">
@@ -144,12 +170,60 @@ export const RemittanceForm = ({
                                         </div>
                                     ) : (
                                         <span className="tabular-nums text-sm font-mono">
-                                            {fmt(rec.total)}
+                                            {fmt(
+                                                Number(rec.total) +
+                                                    (includePrevSales
+                                                        ? (prevSalesMap.get(rec.payment_method) ?? 0)
+                                                        : 0),
+                                            )}
                                         </span>
                                     )}
                                 </div>
                             ))}
                         </div>
+
+                        {/* Prev-only tenders — respect is_editable for display */}
+                        {prevOnlyTenders.map((rec) => {
+                            const editable = isEditable(rec.payment_method)
+                            const label = methodLabel(rec.payment_method) !== rec.payment_method
+                                ? methodLabel(rec.payment_method)
+                                : (tenderMap.get(rec.payment_method)?.label ?? rec.payment_method)
+                            return (
+                                <div
+                                    key={rec.payment_method}
+                                    className="flex items-center justify-between px-4 py-3 gap-4 border-t bg-amber-50"
+                                >
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-sm font-medium">{label}</span>
+                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                            prev.
+                                        </span>
+                                    </div>
+                                    {editable ? (
+                                        <div className="relative w-36">
+                                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
+                                                ₱
+                                            </span>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                className="pl-7 text-right tabular-nums h-8 text-sm"
+                                                value={otherAmounts[rec.payment_method] ?? rec.total}
+                                                onChange={(e) =>
+                                                    onOtherAmountChange(rec.payment_method, e.target.value)
+                                                }
+                                            />
+                                        </div>
+                                    ) : (
+                                        <span className="tabular-nums text-sm font-mono">
+                                            {fmt(Number(otherAmounts[rec.payment_method] ?? rec.total))}
+                                        </span>
+                                    )}
+                                </div>
+                            )
+                        })}
+
                         <div className="border-t bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
                             Editable tender types are pre-filled from POS. Editing them requires
                             override approval.

@@ -77,6 +77,7 @@ const createTransactionDetails = async (
 
 export interface InsertOverrideLogData {
     transaction_id: number;
+    action_id: number;
     requester_user_id: number;
     approver_user_id: number;
     remarks: string;
@@ -88,9 +89,15 @@ const createOverrideLog = async (
 ): Promise<void> => {
     await conn.execute(
         `INSERT INTO tbl_override_logs
-            (transaction_id, requester_user_id, approver_user_id, remarks, created_at)
-         VALUES (?, ?, ?, ?, NOW())`,
-        [data.transaction_id, data.requester_user_id, data.approver_user_id, data.remarks],
+            (transaction_id, action_id, requester_user_id, approver_user_id, remarks, created_at)
+         VALUES (?, ?, ?, ?, ?, NOW())`,
+        [
+            data.transaction_id,
+            data.action_id,
+            data.requester_user_id,
+            data.approver_user_id,
+            data.remarks,
+        ],
     );
 };
 
@@ -115,6 +122,8 @@ const getPartialCashSummary = async (
     supplierCode: number,
     eventId: number,
 ): Promise<PartialCashSummary> => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+
     const rowSql = `
         SELECT
             CONCAT(COALESCE(sr.prefix, ''), LPAD(t.transaction_no, COALESCE(sr.pad_length, 6), '0')) AS receipt_no,
@@ -129,18 +138,63 @@ const getPartialCashSummary = async (
           AND t.event_id        = ?
           AND t.type            = 1       -- PARTIAL
           AND t.status         != 2       -- not VOIDED
-          AND DATE(t.transacted_at) = CURDATE()
+          AND DATE(t.transacted_at) = ?
           AND td.tender_type   = 1        -- CASH
         ORDER BY t.id ASC
     `;
 
-    const rows = await PoolManager.query<PartialTransactionRow[]>(rowSql, [supplierCode, eventId]);
+    const rows = await PoolManager.query<PartialTransactionRow[]>(rowSql, [
+        supplierCode,
+        eventId,
+        today,
+    ]);
     const transactions = rows ?? [];
 
     const total_cash = transactions.reduce((s, r) => s + Number(r.cash_amount), 0);
     const count = transactions.length;
 
     return { total_cash, count, transactions };
+};
+
+export interface FullRemittanceTodayRow {
+    reference_code: string;
+    receipt_no: string;
+}
+
+/**
+ * Returns the first verified full remittance for a supplier on a given date, or null.
+ * date should be 'YYYY-MM-DD' in Manila time.
+ */
+const getFullRemittanceByDate = async (
+    supplierCode: number,
+    eventId: number,
+    date: string,
+): Promise<FullRemittanceTodayRow | null> => {
+    const sql = `
+        SELECT
+            t.reference_code,
+            CONCAT(COALESCE(sr.prefix, ''), LPAD(t.transaction_no, COALESCE(sr.pad_length, 6), '0')) AS receipt_no
+        FROM tbl_transactions t
+        INNER JOIN tbl_suppliers s  ON s.id = t.supplier_id
+        LEFT  JOIN tbl_series    sr ON sr.code = CONCAT('TRX-', t.event_id)
+        WHERE s.code      = ?
+          AND t.event_id  = ?
+          AND t.type      = 2       -- FULL
+          AND t.status    = 1       -- VERIFIED only
+          AND DATE(t.transacted_at) = ?
+        LIMIT 1
+    `;
+    const rows = await PoolManager.query<FullRemittanceTodayRow[]>(sql, [supplierCode, eventId, date]);
+    return rows?.[0] ?? null;
+};
+
+/** Convenience wrapper — checks today's date in Manila time. */
+const getFullRemittanceToday = (
+    supplierCode: number,
+    eventId: number,
+): Promise<FullRemittanceTodayRow | null> => {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date());
+    return getFullRemittanceByDate(supplierCode, eventId, today);
 };
 
 const updateTransactionStatus = async (
@@ -156,5 +210,7 @@ export default {
     createTransactionDetails,
     createOverrideLog,
     getPartialCashSummary,
+    getFullRemittanceByDate,
+    getFullRemittanceToday,
     updateTransactionStatus,
 };

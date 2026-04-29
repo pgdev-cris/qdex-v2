@@ -312,7 +312,71 @@ export const RemittanceForm = ({
                     </div>
                 )}
 
-                {/* Partial: current cash total */}
+                {/* Partial: editable non-CASH tender inputs */}
+                {remitType === 'partial' && (() => {
+                    const editableNonCash = sortedSalesData.filter(
+                        (r) => r.payment_method !== 'CASH' && isEditable(r.payment_method),
+                    )
+                    if (editableNonCash.length === 0) return null
+                    return (
+                        <div className="rounded-lg border">
+                            <div className="divide-y">
+                                {editableNonCash.map((rec) => {
+                                    const amt = Number(otherAmounts[rec.payment_method] ?? 0)
+                                    const exceedsPOS = amt > Number(rec.total)
+                                    const label =
+                                        methodLabel(rec.payment_method) !== rec.payment_method
+                                            ? methodLabel(rec.payment_method)
+                                            : (tenderMap.get(rec.payment_method)?.label ?? rec.payment_method)
+                                    return (
+                                        <div
+                                            key={rec.payment_method}
+                                            className="flex flex-col px-4 py-3 gap-2"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-medium">{label}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    max {fmt(Number(rec.total))}
+                                                </span>
+                                            </div>
+                                            <div className="relative">
+                                                <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
+                                                    ₱
+                                                </span>
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    placeholder="0.00"
+                                                    className="pl-7 text-right tabular-nums"
+                                                    value={otherAmounts[rec.payment_method] ?? ''}
+                                                    onChange={(e) =>
+                                                        onOtherAmountChange(
+                                                            rec.payment_method,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                            {exceedsPOS && (
+                                                <p className="flex items-center gap-1 text-xs text-amber-700">
+                                                    <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                                                    Exceeds POS total — override required
+                                                </p>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                            <div className="border-t bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+                                Amounts are pre-filled from POS. Entering more than the POS total
+                                requires override approval.
+                            </div>
+                        </div>
+                    )
+                })()}
+
+                {/* Partial: current cash total reference */}
                 {remitType === 'partial' && cashRecord && (
                     <div className="rounded-lg bg-muted/50 px-4 py-3">
                         <p className="text-muted-foreground text-xs">Current Cash Total</p>
@@ -326,11 +390,18 @@ export const RemittanceForm = ({
                 <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium">
                         Cash Amount to Remit
-                        {remitType === 'partial' && (
-                            <span className="text-muted-foreground ml-1 font-normal">
-                                (max {fmt(cashRecord?.total ?? 0)})
-                            </span>
-                        )}
+                        {remitType === 'partial' && (() => {
+                            const hasEditableNonCash = sortedSalesData.some(
+                                (r) => r.payment_method !== 'CASH' && isEditable(r.payment_method),
+                            )
+                            return (
+                                <span className="text-muted-foreground ml-1 font-normal">
+                                    {hasEditableNonCash
+                                        ? `(optional, max ${fmt(cashRecord?.total ?? 0)})`
+                                        : `(max ${fmt(cashRecord?.total ?? 0)})`}
+                                </span>
+                            )
+                        })()}
                     </label>
                     <div className="relative">
                         <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">

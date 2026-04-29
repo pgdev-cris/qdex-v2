@@ -83,6 +83,8 @@ export interface PartialSummary {
     total_cash: number
     count: number
     transactions: PartialTransaction[]
+    /** Total amount already partially remitted today per tender code (e.g. { CASH: 500, GCASH: 200 }) */
+    totals_by_method: Record<string, number>
 }
 
 export interface PartialSummaryResponse {

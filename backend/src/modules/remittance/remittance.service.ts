@@ -259,6 +259,7 @@ const getPartialSummary = async (supplierCodeStr: string) => {
             cash_amount: Number(t.cash_amount),
             transacted_at: t.transacted_at,
         })),
+        totals_by_method: summary.totals_by_method,
     };
 };
 

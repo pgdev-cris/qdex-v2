@@ -112,6 +112,8 @@ export interface PartialCashSummary {
     total_cash: number;
     count: number;
     transactions: PartialTransactionRow[];
+    /** Total remitted today per tender code (e.g. { CASH: 500, GCASH: 200 }) */
+    totals_by_method: Record<string, number>;
 }
 
 /**
@@ -153,7 +155,32 @@ const getPartialCashSummary = async (
     const total_cash = transactions.reduce((s, r) => s + Number(r.cash_amount), 0);
     const count = transactions.length;
 
-    return { total_cash, count, transactions };
+    // Per-tender totals — covers all tender types used in partial remittances today
+    const methodSql = `
+        SELECT
+            tt.code         AS payment_method,
+            SUM(td.amount)  AS total_amount
+        FROM tbl_transactions      t
+        INNER JOIN tbl_suppliers   s  ON s.id  = t.supplier_id
+        INNER JOIN tbl_transaction_details td ON td.transaction_id = t.id
+        INNER JOIN tbl_tender_types tt ON tt.id = td.tender_type
+        WHERE s.id            = ?
+          AND t.event_id      = ?
+          AND t.type          = 1       -- PARTIAL
+          AND t.status       != 2       -- not VOIDED
+          AND DATE(t.transacted_at) = ?
+        GROUP BY tt.code
+    `;
+    const methodRows = await PoolManager.query<{ payment_method: string; total_amount: number }[]>(
+        methodSql,
+        [supplierCode, eventId, today],
+    );
+    const totals_by_method: Record<string, number> = {};
+    for (const row of methodRows ?? []) {
+        totals_by_method[row.payment_method] = Number(row.total_amount);
+    }
+
+    return { total_cash, count, transactions, totals_by_method };
 };
 
 export interface FullRemittanceTodayRow {

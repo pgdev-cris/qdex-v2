@@ -78,6 +78,13 @@ export interface PartialTransaction {
     transacted_at: string
 }
 
+export interface PartialNonCashTransaction {
+    receipt_no: string
+    reference_code: string
+    amount: number
+    transacted_at: string
+}
+
 export interface PartialSummary {
     supplier_code: string
     total_cash: number
@@ -85,6 +92,8 @@ export interface PartialSummary {
     transactions: PartialTransaction[]
     /** Total amount already partially remitted today per tender code (e.g. { CASH: 500, GCASH: 200 }) */
     totals_by_method: Record<string, number>
+    /** Per-transaction breakdown for each non-CASH tender remitted today */
+    transactions_by_method: Record<string, PartialNonCashTransaction[]>
 }
 
 export interface PartialSummaryResponse {

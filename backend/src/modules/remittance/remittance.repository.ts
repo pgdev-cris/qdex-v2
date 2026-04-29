@@ -108,12 +108,21 @@ export interface PartialTransactionRow {
     transacted_at: Date;
 }
 
+export interface PartialNonCashTransactionRow {
+    receipt_no: string;
+    reference_code: string;
+    amount: number;
+    transacted_at: Date;
+}
+
 export interface PartialCashSummary {
     total_cash: number;
     count: number;
     transactions: PartialTransactionRow[];
     /** Total remitted today per tender code (e.g. { CASH: 500, GCASH: 200 }) */
     totals_by_method: Record<string, number>;
+    /** Per-transaction breakdown for each non-CASH tender remitted today */
+    transactions_by_method: Record<string, PartialNonCashTransactionRow[]>;
 }
 
 /**
@@ -180,7 +189,46 @@ const getPartialCashSummary = async (
         totals_by_method[row.payment_method] = Number(row.total_amount);
     }
 
-    return { total_cash, count, transactions, totals_by_method };
+    // Per-transaction breakdown for non-CASH tenders
+    const nonCashTxSql = `
+        SELECT
+            tt.code         AS payment_method,
+            CONCAT(COALESCE(sr.prefix, ''), LPAD(t.transaction_no, COALESCE(sr.pad_length, 6), '0')) AS receipt_no,
+            t.reference_code,
+            td.amount,
+            t.transacted_at
+        FROM tbl_transactions      t
+        INNER JOIN tbl_suppliers   s  ON s.id  = t.supplier_id
+        INNER JOIN tbl_transaction_details td ON td.transaction_id = t.id
+        INNER JOIN tbl_tender_types tt ON tt.id = td.tender_type
+        LEFT  JOIN tbl_series      sr ON sr.code = CONCAT('TRX-', t.event_id)
+        WHERE s.id            = ?
+          AND t.event_id      = ?
+          AND t.type          = 1       -- PARTIAL
+          AND t.status       != 2       -- not VOIDED
+          AND DATE(t.transacted_at) = ?
+          AND td.tender_type != 1       -- exclude CASH
+        ORDER BY tt.code ASC, t.id ASC
+    `;
+    const nonCashTxRows = await PoolManager.query<
+        ({ payment_method: string } & PartialNonCashTransactionRow)[]
+    >(nonCashTxSql, [supplierCode, eventId, today]);
+
+    const transactions_by_method: Record<string, PartialNonCashTransactionRow[]> = {};
+    for (const row of nonCashTxRows ?? []) {
+        const { payment_method, ...tx } = row;
+        if (!transactions_by_method[payment_method]) {
+            transactions_by_method[payment_method] = [];
+        }
+        transactions_by_method[payment_method].push({
+            receipt_no: tx.receipt_no,
+            reference_code: tx.reference_code,
+            amount: Number(tx.amount),
+            transacted_at: tx.transacted_at,
+        });
+    }
+
+    return { total_cash, count, transactions, totals_by_method, transactions_by_method };
 };
 
 export interface FullRemittanceTodayRow {

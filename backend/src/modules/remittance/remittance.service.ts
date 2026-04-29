@@ -260,6 +260,7 @@ const getPartialSummary = async (supplierCodeStr: string) => {
             transacted_at: t.transacted_at,
         })),
         totals_by_method: summary.totals_by_method,
+        transactions_by_method: summary.transactions_by_method,
     };
 };
 

@@ -164,7 +164,7 @@ const ContextPanel = ({
                                 ? salesData.filter(
                                       (r) =>
                                           r.payment_method === 'CASH' ||
-                                          ctxIsEditable(r.payment_method),
+                                          ctxIsEditable(r.payment_method)
                                   )
                                 : salesData
 
@@ -451,7 +451,10 @@ export const RemittancePage = () => {
                 // Re-seed non-CASH amounts from refreshed POS data,
                 // preserving prev-only tender amounts if inclusion was confirmed
                 const others: Record<string, string> = {}
-                const freshTotals = summaryRes?.result === 'success' ? (summaryRes.data?.totals_by_method ?? {}) : {}
+                const freshTotals =
+                    summaryRes?.result === 'success'
+                        ? (summaryRes.data?.totals_by_method ?? {})
+                        : {}
                 freshSales
                     .filter((r) => r.payment_method !== 'CASH')
                     .forEach((r) => {
@@ -460,7 +463,11 @@ export const RemittancePage = () => {
                             ? (freshTotals[r.payment_method] ?? 0)
                             : 0
                         const value = isEditableTender(r.payment_method)
-                            ? String(Math.max(0, Number(r.total) - partialRemitted))
+                            ? String(
+                                  parseFloat(
+                                      Math.max(0, Number(r.total) - partialRemitted).toFixed(2)
+                                  )
+                              )
                             : r.total
                         others[r.payment_method] = value
                     })
@@ -471,9 +478,11 @@ export const RemittancePage = () => {
                         .filter(
                             (p) =>
                                 p.payment_method !== 'CASH' &&
-                                !freshSales.some((s) => s.payment_method === p.payment_method),
+                                !freshSales.some((s) => s.payment_method === p.payment_method)
                         )
-                        .forEach((p) => { others[p.payment_method] = otherAmounts[p.payment_method] ?? p.total })
+                        .forEach((p) => {
+                            others[p.payment_method] = otherAmounts[p.payment_method] ?? p.total
+                        })
                 }
 
                 setOtherAmounts(others)
@@ -484,7 +493,9 @@ export const RemittancePage = () => {
                 )
                 if (summaryRes?.result === 'success' && summaryRes.data) {
                     setPartialSummary(summaryRes.data)
-                    const balance = Math.max(0, freshPosCash - summaryRes.data.total_cash)
+                    const balance = parseFloat(
+                        Math.max(0, freshPosCash - summaryRes.data.total_cash).toFixed(2)
+                    )
                     setCashAmount(balance > 0 ? String(balance) : '0')
                 } else {
                     setCashAmount(freshPosCash > 0 ? String(freshPosCash) : '')
@@ -517,7 +528,7 @@ export const RemittancePage = () => {
                 (p) =>
                     p.payment_method !== 'CASH' &&
                     (!salesData.some((s) => s.payment_method === p.payment_method) ||
-                        !isEditableTender(p.payment_method)),
+                        !isEditableTender(p.payment_method))
             )
             if (hasRelevantPrev) {
                 setPrevSalesPromptOpen(true)
@@ -562,18 +573,27 @@ export const RemittancePage = () => {
                 if (res.result === 'success' && res.data) {
                     setPartialSummary(res.data)
                     const posCash = Number(cashRecord?.total ?? 0)
-                    const balance = Math.max(0, posCash - res.data.total_cash)
+                    const balance = parseFloat(
+                        Math.max(0, posCash - res.data.total_cash).toFixed(2)
+                    )
                     // Pre-fill cash with the remaining balance (zero if already fully covered)
                     setCashAmount(balance > 0 ? String(balance) : '0')
                     // Deduct any partial non-CASH remittances from editable tender amounts
                     setOtherAmounts((prev) => {
                         const updated = { ...prev, ...extraAmounts }
                         salesData
-                            .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method))
+                            .filter(
+                                (r) =>
+                                    r.payment_method !== 'CASH' &&
+                                    isEditableTender(r.payment_method)
+                            )
                             .forEach((r) => {
-                                const partialRemitted = res.data!.totals_by_method?.[r.payment_method] ?? 0
+                                const partialRemitted =
+                                    res.data!.totals_by_method?.[r.payment_method] ?? 0
                                 if (partialRemitted > 0) {
-                                    const remaining = Math.max(0, Number(r.total) - partialRemitted)
+                                    const remaining = parseFloat(
+                                        Math.max(0, Number(r.total) - partialRemitted).toFixed(2)
+                                    )
                                     updated[r.payment_method] = String(remaining)
                                 }
                             })
@@ -603,19 +623,26 @@ export const RemittancePage = () => {
                 .filter(
                     (p) =>
                         p.payment_method !== 'CASH' &&
-                        !salesData.some((s) => s.payment_method === p.payment_method),
+                        !salesData.some((s) => s.payment_method === p.payment_method)
                 )
-                .forEach((p) => { extra[p.payment_method] = p.total })
+                .forEach((p) => {
+                    extra[p.payment_method] = p.total
+                })
             await proceedWithType('full', extra)
         } else {
             await proceedWithType('full')
         }
     }
 
-    // Computed cash balance: POS cash minus today's partial remittances
+    // Computed cash balance: POS cash minus today's partial remittances (rounded to 2dp to avoid float drift)
     const computedBalance =
         remitType === 'full'
-            ? Math.max(0, Number(cashRecord?.total ?? 0) - (partialSummary?.total_cash ?? 0))
+            ? parseFloat(
+                  Math.max(
+                      0,
+                      Number(cashRecord?.total ?? 0) - (partialSummary?.total_cash ?? 0)
+                  ).toFixed(2)
+              )
             : Number(cashRecord?.total ?? 0)
 
     // True when the operator typed a cash amount that differs from the computed balance
@@ -637,7 +664,7 @@ export const RemittancePage = () => {
         ? (prevSales ?? []).filter(
               (p) =>
                   p.payment_method !== 'CASH' &&
-                  !salesData.some((s) => s.payment_method === p.payment_method),
+                  !salesData.some((s) => s.payment_method === p.payment_method)
           )
         : []
     const sortedSales = [...salesData].sort((a, b) => {
@@ -646,7 +673,10 @@ export const RemittancePage = () => {
         return sortA - sortB
     })
     // Constants are authoritative for labels; DB label is fallback for unknown codes only
-    const tenderLabel = (method: string) => methodLabel(method) !== method ? methodLabel(method) : (tenderMap.get(method)?.label ?? method)
+    const tenderLabel = (method: string) =>
+        methodLabel(method) !== method
+            ? methodLabel(method)
+            : (tenderMap.get(method)?.label ?? method)
 
     // Determine whether any editable amount was changed from POS value, or cash differs from balance
     const detectOverrideNeeded = (): boolean => {
@@ -668,7 +698,11 @@ export const RemittancePage = () => {
             .some((r) => {
                 const edited = otherAmounts[r.payment_method]
                 if (edited === undefined) return false
-                return Number(edited) !== Number(r.total)
+                // Compare against the expected remaining amount (POS − already partially remitted),
+                // not the raw POS total — otherwise a seeded deduction looks like a manual change.
+                const partialRemitted = partialSummary?.totals_by_method?.[r.payment_method] ?? 0
+                const expectedRemaining = Math.max(0, Number(r.total) - partialRemitted)
+                return Number(edited) !== expectedRemaining
             })
         return editableChanged || cashOverrideNeeded
     }
@@ -698,8 +732,12 @@ export const RemittancePage = () => {
                     const editedVal = isEditableTender(r.payment_method)
                         ? Number(otherAmounts[r.payment_method] ?? r.total)
                         : Number(r.total) + prevAdd
+                    // Override flag: compare against expected remaining (POS − partial), not raw POS
+                    const partialRemitted =
+                        partialSummary?.totals_by_method?.[r.payment_method] ?? 0
+                    const expectedRemaining = Math.max(0, Number(r.total) - partialRemitted)
                     const wasChanged =
-                        isEditableTender(r.payment_method) && editedVal !== Number(r.total)
+                        isEditableTender(r.payment_method) && editedVal !== expectedRemaining
                     return {
                         label: tenderLabel(r.payment_method),
                         value: fmt(editedVal),
@@ -997,18 +1035,29 @@ export const RemittancePage = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="w-84 rounded-xl border bg-card p-6 shadow-xl flex flex-col gap-4">
                         <div>
-                            <p className="font-semibold text-base">Include Previous Unremitted Sales?</p>
+                            <p className="font-semibold text-base">
+                                Include Previous Unremitted Sales?
+                            </p>
                             <p className="text-sm text-muted-foreground mt-1">
-                                The following sales from <span className="font-medium">{prevDate}</span> have no full remittance and can be combined with today's totals.
+                                The following sales from{' '}
+                                <span className="font-medium">{prevDate}</span> have no full
+                                remittance and can be combined with today's totals.
                             </p>
                         </div>
                         <div className="rounded-lg border bg-muted/40 px-4 py-3 flex flex-col gap-1.5">
                             {(prevSales ?? [])
                                 .filter((p) => p.payment_method !== 'CASH')
                                 .map((p) => (
-                                    <div key={p.payment_method} className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">{methodLabel(p.payment_method)}</span>
-                                        <span className="font-medium tabular-nums">{fmt(Number(p.total))}</span>
+                                    <div
+                                        key={p.payment_method}
+                                        className="flex justify-between text-sm"
+                                    >
+                                        <span className="text-muted-foreground">
+                                            {methodLabel(p.payment_method)}
+                                        </span>
+                                        <span className="font-medium tabular-nums">
+                                            {fmt(Number(p.total))}
+                                        </span>
                                     </div>
                                 ))}
                         </div>
@@ -1159,34 +1208,43 @@ export const RemittancePage = () => {
                     </div>
 
                     {/* Previous unremitted sales card */}
-                    {prevSales && prevSales.length > 0 && (step === 'select-type' || step === 'remit') && (
-                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 flex flex-col gap-3">
-                            <div>
-                                <p className="text-xs font-semibold tracking-wide text-amber-800 uppercase">
-                                    Previous Unremitted Sales
-                                </p>
-                                {prevDate && (
-                                    <p className="text-xs text-amber-700 mt-0.5">{prevDate}</p>
-                                )}
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                {prevSales.map((r) => (
-                                    <div key={r.payment_method} className="flex justify-between text-sm">
-                                        <span className="text-amber-800">{methodLabel(r.payment_method)}</span>
-                                        <span className="font-medium tabular-nums text-amber-900">
-                                            {fmt(Number(r.total))}
+                    {prevSales &&
+                        prevSales.length > 0 &&
+                        (step === 'select-type' || step === 'remit') && (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 flex flex-col gap-3">
+                                <div>
+                                    <p className="text-xs font-semibold tracking-wide text-amber-800 uppercase">
+                                        Previous Unremitted Sales
+                                    </p>
+                                    {prevDate && (
+                                        <p className="text-xs text-amber-700 mt-0.5">{prevDate}</p>
+                                    )}
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {prevSales.map((r) => (
+                                        <div
+                                            key={r.payment_method}
+                                            className="flex justify-between text-sm"
+                                        >
+                                            <span className="text-amber-800">
+                                                {methodLabel(r.payment_method)}
+                                            </span>
+                                            <span className="font-medium tabular-nums text-amber-900">
+                                                {fmt(Number(r.total))}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <div className="mt-1 flex justify-between border-t border-amber-200 pt-2 text-sm font-semibold">
+                                        <span className="text-amber-800">Total</span>
+                                        <span className="tabular-nums text-amber-900">
+                                            {fmt(
+                                                prevSales.reduce((s, r) => s + Number(r.total), 0)
+                                            )}
                                         </span>
                                     </div>
-                                ))}
-                                <div className="mt-1 flex justify-between border-t border-amber-200 pt-2 text-sm font-semibold">
-                                    <span className="text-amber-800">Total</span>
-                                    <span className="tabular-nums text-amber-900">
-                                        {fmt(prevSales.reduce((s, r) => s + Number(r.total), 0))}
-                                    </span>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
                 </div>
             </div>
         </div>

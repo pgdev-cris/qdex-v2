@@ -912,28 +912,60 @@ export const RemittancePage = () => {
 
     // Full remittance — execute after confirmation
     const executeFullRemittance = async () => {
-        const todayLines: ReceiptLine[] = sortedSales.map((r) => {
-            if (r.payment_method === 'CASH') {
-                return { method: r.payment_method, amount: cashAmount }
+        const lines: ReceiptLine[] = []
+
+        // Helper: split an entered amount into current-day vs prev-day portions and push lines
+        const pushSplitLines = (method: string, entered: number, todayBase: number, prevBase: number) => {
+            if (!includePrevSales) {
+                if (entered > 0) lines.push({ method, amount: toFixed2(entered) })
+                return
             }
-            // Editable: use operator-entered value; non-editable: POS total + prev day if included
-            const prevAdd =
-                includePrevSales && !isEditableTender(r.payment_method)
-                    ? (prevSalesMap.get(r.payment_method) ?? 0)
-                    : 0
-            const amount = isEditableTender(r.payment_method)
-                ? (otherAmounts[r.payment_method] ?? r.total)
-                : String(Number(r.total) + prevAdd)
-            return { method: r.payment_method, amount }
+            // Current-day portion: up to todayBase
+            const currentAmt = parseFloat(Math.min(entered, todayBase).toFixed(2))
+            // Prev-day portion: remainder, capped at prevBase
+            const prevAmt = parseFloat(Math.min(Math.max(0, entered - todayBase), prevBase).toFixed(2))
+            if (currentAmt > 0) lines.push({ method, amount: toFixed2(currentAmt) })
+            if (prevAmt > 0) lines.push({ method, amount: toFixed2(prevAmt), is_prev_sales: true })
+        }
+
+        sortedSales.forEach((r) => {
+            if (r.payment_method === 'CASH') {
+                // Today's remaining cash base (after partials already remitted today)
+                const todayCashBase = Math.max(
+                    0,
+                    Number(cashRecord?.total ?? 0) - (partialSummary?.total_cash ?? 0),
+                )
+                const prevCashBase = prevSalesMap.get('CASH') ?? 0
+                pushSplitLines('CASH', Number(cashAmount), todayCashBase, prevCashBase)
+                return
+            }
+
+            if (isEditableTender(r.payment_method)) {
+                // Editable: operator may have combined today + prev in one field
+                const todayBase = Math.max(
+                    0,
+                    Number(r.total) - (partialSummary?.totals_by_method?.[r.payment_method] ?? 0),
+                )
+                const prevBase = prevSalesMap.get(r.payment_method) ?? 0
+                const entered = Number(otherAmounts[r.payment_method] ?? r.total)
+                pushSplitLines(r.payment_method, entered, todayBase, prevBase)
+            } else {
+                // Non-editable: fixed POS amount; prev day is a separate known value
+                const currentAmt = Number(r.total)
+                if (currentAmt > 0) lines.push({ method: r.payment_method, amount: toFixed2(currentAmt) })
+                if (includePrevSales) {
+                    const prevAmt = prevSalesMap.get(r.payment_method) ?? 0
+                    if (prevAmt > 0)
+                        lines.push({ method: r.payment_method, amount: toFixed2(prevAmt), is_prev_sales: true })
+                }
+            }
         })
-        // Append prev-only tenders (zeroed-out ones are excluded)
-        const prevOnlyLines: ReceiptLine[] = prevOnlyTenders
-            .map((p) => ({
-                method: p.payment_method,
-                amount: otherAmounts[p.payment_method] ?? p.total,
-            }))
+
+        // Prev-only tenders — entirely prev-day
+        prevOnlyTenders
+            .map((p) => ({ method: p.payment_method, amount: otherAmounts[p.payment_method] ?? p.total }))
             .filter((l) => Number(l.amount) > 0)
-        const lines = [...todayLines, ...prevOnlyLines]
+            .forEach((l) => lines.push({ ...l, amount: toFixed2(l.amount), is_prev_sales: true }))
 
         setConfirmOpen(false)
         setPendingType('full')
@@ -946,6 +978,7 @@ export const RemittancePage = () => {
                 remitter_name: remitterName.trim(),
                 remit_type: 'full',
                 lines,
+                has_prev_sales: includePrevSales,
             }
             // Amount override takes precedence; fall back to skip-prev-sales override for audit log
             const effectiveOverride = overrideApproval ?? skipPrevSalesOverride
@@ -995,25 +1028,59 @@ export const RemittancePage = () => {
     // Partial remittance — execute after confirmation
     const executePartialRemittance = async () => {
         const lines: ReceiptLine[] = []
-        // Include cash only if > 0
+
+        // CASH — split into prev-day first, then current-day as remainder
         const cashVal = Number(cashAmount)
         if (cashVal > 0) {
-            lines.push({ method: 'CASH', amount: cashAmount })
+            if (!includePrevSales) {
+                lines.push({ method: 'CASH', amount: cashAmount })
+            } else {
+                const todayCashBase = Math.max(
+                    0,
+                    Number(cashRecord?.total ?? 0) - (partialSummary?.total_cash ?? 0),
+                )
+                const prevCashBase = prevSalesMap.get('CASH') ?? 0
+                // Prev is consumed first; current is whatever remains after prev is satisfied
+                const prevCash = parseFloat(Math.min(cashVal, prevCashBase).toFixed(2))
+                const currentCash = parseFloat(
+                    Math.min(Math.max(0, cashVal - prevCashBase), todayCashBase).toFixed(2),
+                )
+                if (prevCash > 0) lines.push({ method: 'CASH', amount: toFixed2(prevCash), is_prev_sales: true })
+                if (currentCash > 0) lines.push({ method: 'CASH', amount: toFixed2(currentCash) })
+            }
         }
-        // Include editable non-CASH tenders that have an amount > 0
+
+        // Editable non-CASH tenders — prev-day consumed first, current-day is the remainder
         sortedSales
             .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method))
             .forEach((r) => {
-                const amt = otherAmounts[r.payment_method]
-                if (amt && Number(amt) > 0) {
-                    lines.push({ method: r.payment_method, amount: amt })
+                const entered = Number(otherAmounts[r.payment_method] ?? 0)
+                if (entered <= 0) return
+                if (!includePrevSales) {
+                    lines.push({ method: r.payment_method, amount: toFixed2(entered) })
+                    return
                 }
+                const todayBase = Math.max(
+                    0,
+                    Number(r.total) - (partialSummary?.totals_by_method?.[r.payment_method] ?? 0),
+                )
+                const prevBase = prevSalesMap.get(r.payment_method) ?? 0
+                // Prev is consumed first; current is whatever remains after prev is satisfied
+                const prevAmt = parseFloat(Math.min(entered, prevBase).toFixed(2))
+                const currentAmt = parseFloat(
+                    Math.min(Math.max(0, entered - prevBase), todayBase).toFixed(2),
+                )
+                if (prevAmt > 0)
+                    lines.push({ method: r.payment_method, amount: toFixed2(prevAmt), is_prev_sales: true })
+                if (currentAmt > 0) lines.push({ method: r.payment_method, amount: toFixed2(currentAmt) })
             })
-        // Include prev-only tenders (yesterday's unremitted, not in today's POS data)
+
+        // Prev-only tenders (yesterday's unremitted, not in today's POS / non-editable in today)
+        // — entirely prev-day
         prevOnlyTenders.forEach((p) => {
             const amt = otherAmounts[p.payment_method] ?? p.total
             if (Number(amt) > 0) {
-                lines.push({ method: p.payment_method, amount: amt })
+                lines.push({ method: p.payment_method, amount: toFixed2(amt), is_prev_sales: true })
             }
         })
 
@@ -1027,6 +1094,7 @@ export const RemittancePage = () => {
                 remitter_name: remitterName.trim(),
                 remit_type: 'partial',
                 lines,
+                has_prev_sales: includePrevSales,
             }
             if (overrideApproval) {
                 body.override = {

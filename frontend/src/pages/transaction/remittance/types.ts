@@ -28,6 +28,8 @@ export interface SalesResponse {
 export interface ReceiptLine {
     method: string
     amount: string
+    /** True when this line amount came from the previous day's unremitted sales */
+    is_prev_sales?: boolean
 }
 
 export interface Receipt {

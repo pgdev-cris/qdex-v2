@@ -45,6 +45,15 @@ const getPrevDaySales = async (
     );
     if (existing) return null; // already fully remitted yesterday — nothing to show
 
+    // If any transaction today already absorbed prev-day sales, nothing left to show
+    const todayStr = manilaDate(new Date());
+    const prevAlreadyCaptured = await remittanceRepository.hasPrevSalesTransactionByDate(
+        supplierCode,
+        eventId,
+        todayStr,
+    );
+    if (prevAlreadyCaptured) return null;
+
     // Fetch partial remittances already done yesterday (real DB, even in mock mode)
     const partialDeductions = await remittanceRepository.getPartialTotalsByDate(
         supplierCode,

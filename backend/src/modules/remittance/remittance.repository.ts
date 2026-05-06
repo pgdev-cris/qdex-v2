@@ -15,6 +15,8 @@ export interface InsertTransactionData {
     verified_at: Date;
     status: number;
     type: number;
+    /** 1 if this remittance included previous-day unremitted sales, 0 otherwise */
+    has_prev_sales: 0 | 1;
 }
 
 export interface InsertDetailData {
@@ -22,6 +24,8 @@ export interface InsertDetailData {
     tender_type: number;
     amount: number;
     transaction_count: number;
+    /** 1 if this detail line came from the previous day's unremitted sales, 0 otherwise */
+    is_prev_sales: 0 | 1;
 }
 
 //  Queries
@@ -33,8 +37,8 @@ const createTransaction = async (
     const [result] = await conn.execute(
         `INSERT INTO tbl_transactions
             (event_id, supplier_id, transaction_no, transacted_at, total_amount, reference_code,
-             remitted_by, verified_by, verified_at, status, type)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             remitted_by, verified_by, verified_at, status, type, has_prev_sales)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             data.event_id,
             data.supplier_id,
@@ -47,6 +51,7 @@ const createTransaction = async (
             data.verified_at,
             data.status,
             data.type,
+            data.has_prev_sales,
         ],
     );
 
@@ -59,17 +64,18 @@ const createTransactionDetails = async (
 ): Promise<void> => {
     if (details.length === 0) return;
 
-    const placeholders = details.map(() => '(?, ?, ?, ?)').join(', ');
+    const placeholders = details.map(() => '(?, ?, ?, ?, ?)').join(', ');
     const params = details.flatMap((d) => [
         d.transaction_id,
         d.tender_type,
         d.amount,
         d.transaction_count,
+        d.is_prev_sales,
     ]);
 
     await conn.execute(
         `INSERT INTO tbl_transaction_details
-            (transaction_id, tender_type, amount, transaction_count)
+            (transaction_id, tender_type, amount, transaction_count, is_prev_sales)
          VALUES ${placeholders}`,
         params,
     );
@@ -151,6 +157,7 @@ const getPartialCashSummary = async (
           AND t.status         != 2       -- not VOIDED
           AND DATE(t.transacted_at) = ?
           AND td.tender_type   = 1        -- CASH
+          AND td.is_prev_sales  = 0       -- exclude prev-day portions
         ORDER BY t.id ASC
     `;
 
@@ -178,6 +185,7 @@ const getPartialCashSummary = async (
           AND t.type          = 1       -- PARTIAL
           AND t.status       != 2       -- not VOIDED
           AND DATE(t.transacted_at) = ?
+          AND td.is_prev_sales = 0      -- exclude prev-day portions
         GROUP BY tt.code
     `;
     const methodRows = await PoolManager.query<{ payment_method: string; total_amount: number }[]>(
@@ -208,6 +216,7 @@ const getPartialCashSummary = async (
           AND t.status       != 2       -- not VOIDED
           AND DATE(t.transacted_at) = ?
           AND td.tender_type != 1       -- exclude CASH
+          AND td.is_prev_sales = 0      -- exclude prev-day portions
         ORDER BY tt.code ASC, t.id ASC
     `;
     const nonCashTxRows = await PoolManager.query<
@@ -299,6 +308,32 @@ const getFullRemittanceByDate = async (
     return rows?.[0] ?? null;
 };
 
+/**
+ * Returns true if a non-voided transaction with has_prev_sales = 1 already exists
+ * for this supplier today. Used by getPrevDaySales to skip showing prev-day sales
+ * once they have already been absorbed into a remittance.
+ * Uses supplier.code (vendor code). date should be 'YYYY-MM-DD' Manila time.
+ */
+const hasPrevSalesTransactionByDate = async (
+    supplierCode: number,
+    eventId: number,
+    date: string,
+): Promise<boolean> => {
+    const sql = `
+        SELECT 1
+        FROM tbl_transactions t
+        INNER JOIN tbl_suppliers s ON s.id = t.supplier_id
+        WHERE s.code         = ?
+          AND t.event_id     = ?
+          AND t.has_prev_sales = 1
+          AND t.status      != 2       -- not VOIDED
+          AND DATE(t.transacted_at) = ?
+        LIMIT 1
+    `;
+    const rows = await PoolManager.query<{ '1': number }[]>(sql, [supplierCode, eventId, date]);
+    return (rows?.length ?? 0) > 0;
+};
+
 /** Convenience wrapper — checks today's date in Manila time. */
 const getFullRemittanceToday = (
     supplierCode: number,
@@ -322,6 +357,7 @@ export default {
     createOverrideLog,
     getPartialCashSummary,
     getPartialTotalsByDate,
+    hasPrevSalesTransactionByDate,
     getFullRemittanceByDate,
     getFullRemittanceToday,
     updateTransactionStatus,

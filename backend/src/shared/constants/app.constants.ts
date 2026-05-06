@@ -36,7 +36,10 @@ export const TENDER_TYPE: Record<string, number> = {
     TANGENT_DEBIT: 4,
     TANGENT_CREDIT: 5,
     HOMECREDIT: 6,
+    HOME_CREDIT: 6, // alias — POS may send either form
     GCASH_EPOS: 7,
+    SKYRO: 8,
+    SHOPEE_PAY: 9,
 };
 
 export const TRANSACTION_TYPE = {

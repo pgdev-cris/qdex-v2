@@ -77,6 +77,12 @@ export const RemittanceForm = ({
         return (tenderMap.get(method)?.is_editable ?? 0) === 1
     }
 
+    // Format a raw input string to 2 decimal places on blur
+    const toTwoDecimals = (value: string): string => {
+        const num = parseFloat(value)
+        return isNaN(num) ? '' : num.toFixed(2)
+    }
+
     return (
         <Card>
             <CardHeader>
@@ -152,6 +158,7 @@ export const RemittanceForm = ({
                                                             className="pl-7 text-right tabular-nums h-8 text-sm"
                                                             value={cashAmount}
                                                             onChange={(e) => onCashChange(e.target.value)}
+                                                            onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onCashChange(v) }}
                                                         />
                                                     </div>
                                                     {cashOverrideNeeded && (
@@ -231,6 +238,7 @@ export const RemittanceForm = ({
                                                             className="pl-7 text-right tabular-nums h-8 text-sm"
                                                             value={otherAmounts[rec.payment_method] ?? rec.total}
                                                             onChange={(e) => onOtherAmountChange(rec.payment_method, e.target.value)}
+                                                            onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onOtherAmountChange(rec.payment_method, v) }}
                                                         />
                                                     </div>
                                                     {overrideNeeded && (
@@ -324,6 +332,7 @@ export const RemittanceForm = ({
                                                         className="pl-7 text-right tabular-nums h-8 text-sm"
                                                         value={otherAmounts[rec.payment_method] ?? rec.total}
                                                         onChange={(e) => onOtherAmountChange(rec.payment_method, e.target.value)}
+                                                        onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onOtherAmountChange(rec.payment_method, v) }}
                                                     />
                                                 </div>
                                             ) : (
@@ -383,6 +392,7 @@ export const RemittanceForm = ({
                                                             e.target.value,
                                                         )
                                                     }
+                                                    onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onOtherAmountChange(rec.payment_method, v) }}
                                                 />
                                             </div>
                                             {exceedsPOS && (
@@ -403,15 +413,89 @@ export const RemittanceForm = ({
                     )
                 })()}
 
-                {/* Partial: current cash total reference */}
-                {remitType === 'partial' && cashRecord && (
-                    <div className="rounded-lg bg-muted/50 px-4 py-3">
-                        <p className="text-muted-foreground text-xs">Current Cash Total</p>
-                        <p className="mt-0.5 text-lg font-semibold tabular-nums">
-                            {fmt(cashRecord.total)}
-                        </p>
+                {/* Partial: prev-only tender inputs (yesterday's sales absent from today's POS) */}
+                {remitType === 'partial' && prevOnlyTenders.length > 0 && (
+                    <div className="rounded-lg border border-amber-200 overflow-hidden">
+                        <div className="divide-y divide-amber-100">
+                            {prevOnlyTenders.map((rec) => {
+                                const label =
+                                    methodLabel(rec.payment_method) !== rec.payment_method
+                                        ? methodLabel(rec.payment_method)
+                                        : (tenderMap.get(rec.payment_method)?.label ?? rec.payment_method)
+                                return (
+                                    <div key={rec.payment_method} className="flex flex-col px-4 py-3 gap-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-medium">{label}</span>
+                                                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                                    prev.
+                                                </span>
+                                            </div>
+                                            <span className="text-xs text-muted-foreground">
+                                                max {fmt(Number(rec.total))}
+                                            </span>
+                                        </div>
+                                        <div className="relative">
+                                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
+                                                ₱
+                                            </span>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                className="pl-7 text-right tabular-nums"
+                                                value={otherAmounts[rec.payment_method] ?? rec.total}
+                                                onChange={(e) =>
+                                                    onOtherAmountChange(rec.payment_method, e.target.value)
+                                                }
+                                                onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onOtherAmountChange(rec.payment_method, v) }}
+                                            />
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                        <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
+                            Previous day unremitted amounts. Adjust if collecting partial only.
+                        </div>
                     </div>
                 )}
+
+                {/* Partial: current cash total reference */}
+                {remitType === 'partial' && cashRecord && (() => {
+                    const prevCash = includePrevSales ? (prevSalesMap.get('CASH') ?? 0) : 0
+                    const hasPrevCash = prevCash > 0
+                    return (
+                        <div className="rounded-lg bg-muted/50 px-4 py-3">
+                            {hasPrevCash ? (
+                                <>
+                                    <p className="text-muted-foreground text-xs">Cash Total (Today + Prev. Day)</p>
+                                    <p className="mt-0.5 text-lg font-semibold tabular-nums">
+                                        {fmt(Number(cashRecord.total) + prevCash)}
+                                    </p>
+                                    <div className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted-foreground">
+                                        <div className="flex justify-between">
+                                            <span>Today</span>
+                                            <span className="tabular-nums">{fmt(cashRecord.total)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Previous day</span>
+                                            <span className="tabular-nums text-amber-700">+ {fmt(prevCash)}</span>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-muted-foreground text-xs">Current Cash Total</p>
+                                    <p className="mt-0.5 text-lg font-semibold tabular-nums">
+                                        {fmt(cashRecord.total)}
+                                    </p>
+                                </>
+                            )}
+                        </div>
+                    )
+                })()}
 
                 {/* Partial: cash input (full remittance has it inline in the Payment Summary card) */}
                 {remitType === 'partial' && (
@@ -419,14 +503,17 @@ export const RemittanceForm = ({
                         <label className="text-sm font-medium">
                             Cash Amount to Remit
                             {(() => {
-                                const hasEditableNonCash = sortedSalesData.some(
-                                    (r) => r.payment_method !== 'CASH' && isEditable(r.payment_method),
-                                )
+                                const prevCash = includePrevSales ? (prevSalesMap.get('CASH') ?? 0) : 0
+                                const maxCash = Number(cashRecord?.total ?? 0) + prevCash
+                                const hasEditableNonCash =
+                                    sortedSalesData.some(
+                                        (r) => r.payment_method !== 'CASH' && isEditable(r.payment_method),
+                                    ) || prevOnlyTenders.length > 0
                                 return (
                                     <span className="text-muted-foreground ml-1 font-normal">
                                         {hasEditableNonCash
-                                            ? `(optional, max ${fmt(cashRecord?.total ?? 0)})`
-                                            : `(max ${fmt(cashRecord?.total ?? 0)})`}
+                                            ? `(optional, max ${fmt(maxCash)})`
+                                            : `(max ${fmt(maxCash)})`}
                                     </span>
                                 )
                             })()}
@@ -443,6 +530,7 @@ export const RemittanceForm = ({
                                 className="pl-7 text-right tabular-nums"
                                 value={cashAmount}
                                 onChange={(e) => onCashChange(e.target.value)}
+                                onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onCashChange(v) }}
                             />
                         </div>
                         {cashOverrideNeeded && (

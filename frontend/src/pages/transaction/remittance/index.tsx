@@ -545,21 +545,39 @@ export const RemittancePage = () => {
             }
         }
 
+        if (type === 'partial') {
+            // Show prompt if there are any prev-day unremitted sales at all
+            if ((prevSales ?? []).length > 0) {
+                setPrevSalesPromptOpen(true)
+                return // wait for user answer before proceeding
+            }
+        }
+
         await proceedWithType(type)
     }
 
     // Continues to remit step after the prev-sales prompt is resolved (or skipped)
+    // Normalise any amount string to always 2 decimal places
+    const toFixed2 = (value: string | number): string =>
+        parseFloat(String(value)).toFixed(2)
+
     const proceedWithType = async (type: RemitType, extraAmounts: Record<string, string> = {}) => {
+        // Normalise all incoming extra amounts to 2dp
+        const normalisedExtras = Object.fromEntries(
+            Object.entries(extraAmounts).map(([k, v]) => [k, toFixed2(v)])
+        )
+
         if (type === 'partial') {
             // Seed editable non-CASH tender amounts from POS values
             const editableOthers: Record<string, string> = {}
             salesData
                 .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method))
                 .forEach((r) => {
-                    editableOthers[r.payment_method] = r.total
+                    editableOthers[r.payment_method] = toFixed2(r.total)
                 })
             setCashAmount('')
-            setOtherAmounts(editableOthers)
+            // Merge normalisedExtras: prev-only tenders + combined editable amounts (today + prev)
+            setOtherAmounts({ ...editableOthers, ...normalisedExtras })
             setStep('remit')
         } else {
             // Seed non-CASH amounts from POS; merge any extra prev-only amounts
@@ -567,9 +585,9 @@ export const RemittancePage = () => {
             salesData
                 .filter((r) => r.payment_method !== 'CASH')
                 .forEach((r) => {
-                    others[r.payment_method] = r.total
+                    others[r.payment_method] = toFixed2(r.total)
                 })
-            setOtherAmounts({ ...others, ...extraAmounts })
+            setOtherAmounts({ ...others, ...normalisedExtras })
             setStep('remit')
 
             // Fetch today's partial remittances to compute remaining balances
@@ -586,12 +604,12 @@ export const RemittancePage = () => {
                         Math.max(0, posCash - res.data.total_cash).toFixed(2)
                     )
                     // Pre-fill cash with the remaining balance (zero if already fully covered)
-                    setCashAmount(balance > 0 ? String(balance) : '0')
+                    setCashAmount(toFixed2(balance > 0 ? balance : 0))
                     // Deduct any partial non-CASH remittances from editable tender amounts.
                     // Use the seeded value in `updated` as the base — it already contains the
                     // combined today+prev amount when previous sales are being included.
                     setOtherAmounts((prev) => {
-                        const updated = { ...prev, ...extraAmounts }
+                        const updated = { ...prev, ...normalisedExtras }
                         salesData
                             .filter(
                                 (r) =>
@@ -607,28 +625,29 @@ export const RemittancePage = () => {
                                     const remaining = parseFloat(
                                         Math.max(0, baseAmt - partialRemitted).toFixed(2)
                                     )
-                                    updated[r.payment_method] = String(remaining)
+                                    updated[r.payment_method] = toFixed2(remaining)
                                 }
                             })
                         return updated
                     })
                 } else {
                     // Fallback: pre-fill with full POS cash if summary unavailable
-                    setCashAmount(cashRecord?.total ?? '')
+                    setCashAmount(toFixed2(cashRecord?.total ?? 0))
                 }
             } catch {
                 // Non-fatal — fall back to POS cash total
-                setCashAmount(cashRecord?.total ?? '')
+                setCashAmount(toFixed2(cashRecord?.total ?? 0))
             } finally {
                 setPartialSummaryLoading(false)
             }
         }
     }
 
-    // Resolves the prev-sales prompt and continues to full remit
+    // Resolves the prev-sales prompt and continues to the remit step (full or partial)
     const handlePrevSalesAnswer = async (include: boolean) => {
         setIncludePrevSales(include)
         setPrevSalesPromptOpen(false)
+        const type = remitType! // already set in handleSelectType before prompt opened
         if (include) {
             // Seed prev amounts into extra:
             //   • Prev-only tenders (not in today's sales) → seed with prev amount as new row
@@ -641,38 +660,22 @@ export const RemittancePage = () => {
                     const todaySale = salesData.find((s) => s.payment_method === p.payment_method)
                     if (!todaySale) {
                         // Prev-only: seed with prev amount
-                        extra[p.payment_method] = p.total
+                        extra[p.payment_method] = toFixed2(p.total)
                     } else if (isEditableTender(p.payment_method)) {
                         // Editable tender present in both days: pre-fill with today + prev combined
-                        extra[p.payment_method] = String(
-                            parseFloat((Number(todaySale.total) + Number(p.total)).toFixed(2))
-                        )
+                        extra[p.payment_method] = toFixed2(Number(todaySale.total) + Number(p.total))
+                    } else if (type === 'partial') {
+                        // Non-editable tender in today's sales, partial mode:
+                        // It is never shown in the editable block, so seed it as a prev-only row.
+                        extra[p.payment_method] = toFixed2(p.total)
                     }
-                    // Non-editable in today's sales: prevAdd handles it in executeFullRemittance
+                    // Non-editable in today's sales (full): prevAdd handles it in executeFullRemittance
                 })
-            await proceedWithType('full', extra)
+            await proceedWithType(type, extra)
         } else {
-            await proceedWithType('full')
+            await proceedWithType(type)
         }
     }
-
-    // Computed cash balance: POS cash minus today's partial remittances (rounded to 2dp to avoid float drift)
-    const computedBalance =
-        remitType === 'full'
-            ? parseFloat(
-                  Math.max(
-                      0,
-                      Number(cashRecord?.total ?? 0) - (partialSummary?.total_cash ?? 0)
-                  ).toFixed(2)
-              )
-            : Number(cashRecord?.total ?? 0)
-
-    // True when the operator typed a cash amount that differs from the computed balance
-    // For full: must match exact balance. For partial: must be <= current cash total.
-    const cashOverrideNeeded =
-        remitType === 'full'
-            ? !partialSummaryLoading && cashAmount !== '' && Number(cashAmount) !== computedBalance
-            : cashAmount !== '' && Number(cashAmount) > computedBalance
 
     // Helpers derived from tenderTypes
     const tenderMap = new Map(tenderTypes.map((t) => [t.code, t]))
@@ -681,13 +684,40 @@ export const RemittancePage = () => {
         return (tenderMap.get(method)?.is_editable ?? 0) === 1
     }
     const prevSalesMap = new Map((prevSales ?? []).map((r) => [r.payment_method, Number(r.total)]))
-    // Tenders from yesterday not present in today's sales at all (any tender type)
+
+    // Computed cash balance: POS cash minus today's partial remittances (rounded to 2dp to avoid float drift)
+    // For partial with prev sales included, the ceiling also covers yesterday's unremitted CASH.
+    const prevCashAmt = includePrevSales ? (prevSalesMap.get('CASH') ?? 0) : 0
+    const computedBalance =
+        remitType === 'full'
+            ? parseFloat(
+                  Math.max(
+                      0,
+                      Number(cashRecord?.total ?? 0) - (partialSummary?.total_cash ?? 0)
+                  ).toFixed(2)
+              )
+            : Number(cashRecord?.total ?? 0) + prevCashAmt
+
+    // True when the operator typed a cash amount that differs from the computed balance
+    // For full: must match exact balance. For partial: must be <= current cash total.
+    const cashOverrideNeeded =
+        remitType === 'full'
+            ? !partialSummaryLoading && cashAmount !== '' && Number(cashAmount) !== computedBalance
+            : cashAmount !== '' && Number(cashAmount) > computedBalance
+    // Tenders from yesterday that need a separate row in the partial/full form.
+    // Includes:
+    //  1. Tenders not in today's sales at all
+    //  2. (Partial only) Non-editable tenders that ARE in today's sales — they are
+    //     never shown in the editable block, so they need their own prev-only row.
     const prevOnlyTenders: SalesRecord[] = includePrevSales
-        ? (prevSales ?? []).filter(
-              (p) =>
-                  p.payment_method !== 'CASH' &&
-                  !salesData.some((s) => s.payment_method === p.payment_method)
-          )
+        ? (prevSales ?? []).filter((p) => {
+              if (p.payment_method === 'CASH') return false
+              const notInToday = !salesData.some((s) => s.payment_method === p.payment_method)
+              if (notInToday) return true
+              // Partial: also surface non-editable tenders that exist in today's sales —
+              // they are hidden from the editable block but still need to be remitted.
+              return remitType === 'partial' && !isEditableTender(p.payment_method)
+          })
         : []
     const sortedSales = [...salesData].sort((a, b) => {
         const sortA = tenderMap.get(a.payment_method)?.sort ?? 9999
@@ -810,6 +840,17 @@ export const RemittancePage = () => {
                     })
                 }
             })
+        // Prev-only tender lines (yesterday's sales not present in today's POS data)
+        prevOnlyTenders.forEach((p) => {
+            const amt = Number(otherAmounts[p.payment_method] ?? p.total)
+            if (amt > 0) {
+                partialRows.push({
+                    label: `${tenderLabel(p.payment_method)} (prev.)`,
+                    value: fmt(amt),
+                    overridden: !!approval,
+                })
+            }
+        })
         return partialRows
     }
 
@@ -828,7 +869,12 @@ export const RemittancePage = () => {
             const editableNonCashTotal = salesData
                 .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method))
                 .reduce((sum, r) => sum + Number(otherAmounts[r.payment_method] ?? 0), 0)
-            if (cashVal === 0 && editableNonCashTotal === 0) {
+            // Also count prev-only tenders (yesterday's, not in today's sales)
+            const prevOnlyTotal = prevOnlyTenders.reduce(
+                (sum, p) => sum + Number(otherAmounts[p.payment_method] ?? p.total),
+                0,
+            )
+            if (cashVal === 0 && editableNonCashTotal === 0 && prevOnlyTotal === 0) {
                 setSubmitError('Please enter an amount for at least one payment method.')
                 return
             }
@@ -963,6 +1009,13 @@ export const RemittancePage = () => {
                     lines.push({ method: r.payment_method, amount: amt })
                 }
             })
+        // Include prev-only tenders (yesterday's unremitted, not in today's POS data)
+        prevOnlyTenders.forEach((p) => {
+            const amt = otherAmounts[p.payment_method] ?? p.total
+            if (Number(amt) > 0) {
+                lines.push({ method: p.payment_method, amount: amt })
+            }
+        })
 
         setConfirmOpen(false)
         setLoading(true)

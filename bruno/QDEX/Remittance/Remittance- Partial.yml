@@ -1,0 +1,32 @@
+info:
+  name: "Remittance: Partial"
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{qdex_v2_base_url}}/api/v1/remittance/partial"
+  body:
+    type: json
+    data: |-
+      {
+          "vendor_code": "11460",
+          "vendor_name": "Sample Supplier",
+          "remitter_name": "test remitter",
+          "remit_type": "partial",
+          "lines": [
+              {
+                  "method": "CASH",
+                  "amount": "1000"
+              }
+          ]
+      }
+  auth:
+    type: bearer
+    token: "{{qdex_auth_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,28 @@
+info:
+  name: "Users: Create"
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{qdex_v2_base_url}}/api/v1/users"
+  body:
+    type: json
+    data: |-
+      {
+          "username": "test",
+          "first_name": "dummy",
+          "middle_name": "",
+          "last_name": "lastname",
+          "department": "IT",
+          "role": "role_id"
+      }
+  auth:
+    type: bearer
+    token: "{{qdex_auth_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

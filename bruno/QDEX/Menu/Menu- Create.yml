@@ -1,0 +1,31 @@
+info:
+  name: "Menu: Create"
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: http://localhost:3000/api/v1/menu
+  body:
+    type: json
+    data: |-
+      {
+          "menu": {
+              "name": "dashbaord",
+              "icon": "home",
+              "sort": 1, // change from string to int
+              "is_active": 1,
+              "parent_id": null,
+              "url": null
+          },
+          "preset_ids": [],
+          "existing_child_ids": [],
+          "children": []
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

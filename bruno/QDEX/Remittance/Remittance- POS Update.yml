@@ -1,0 +1,26 @@
+info:
+  name: "Remittance: POS Update"
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{qdex_client_base_url}}/remittance"
+  body:
+    type: json
+    data: |-
+      {
+          "receipt_no": "000030",
+          "supplier_code": 11460,
+          "total_amount": 71334,
+          "remitted_by": "Lovely Doris Tibar",
+          "verified_by": "Dionela, Daiserie",
+          "remittance_type": "full" // partial | full
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

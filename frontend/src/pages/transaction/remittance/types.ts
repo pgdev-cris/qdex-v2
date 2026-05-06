@@ -15,6 +15,8 @@ export interface SalesData {
     total_amount: number
     prev_sales: SalesRecord[] | null
     prev_date: string | null
+    /** Per-tender amounts already partially remitted on prev_date (keyed by payment_method code) */
+    prev_partial_deductions: Record<string, number> | null
 }
 
 export interface SalesResponse {

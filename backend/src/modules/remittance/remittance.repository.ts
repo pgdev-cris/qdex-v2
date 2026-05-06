@@ -237,6 +237,42 @@ export interface FullRemittanceTodayRow {
 }
 
 /**
+ * Returns the total partial-remitted amount per tender type for a supplier on a specific date.
+ * Uses supplier.code (vendor code) to match the caller's convention.
+ * date should be 'YYYY-MM-DD' in Manila time.
+ */
+const getPartialTotalsByDate = async (
+    supplierCode: number,
+    eventId: number,
+    date: string,
+): Promise<Record<string, number>> => {
+    const sql = `
+        SELECT
+            tt.code         AS payment_method,
+            SUM(td.amount)  AS total_amount
+        FROM tbl_transactions      t
+        INNER JOIN tbl_suppliers   s  ON s.id  = t.supplier_id
+        INNER JOIN tbl_transaction_details td ON td.transaction_id = t.id
+        INNER JOIN tbl_tender_types tt ON tt.id = td.tender_type
+        WHERE s.code          = ?
+          AND t.event_id      = ?
+          AND t.type          = 1       -- PARTIAL
+          AND t.status       != 2       -- not VOIDED
+          AND DATE(t.transacted_at) = ?
+        GROUP BY tt.code
+    `;
+    const rows = await PoolManager.query<{ payment_method: string; total_amount: number }[]>(
+        sql,
+        [supplierCode, eventId, date],
+    );
+    const totals: Record<string, number> = {};
+    for (const row of rows ?? []) {
+        totals[row.payment_method] = Number(row.total_amount);
+    }
+    return totals;
+};
+
+/**
  * Returns the first verified full remittance for a supplier on a given date, or null.
  * date should be 'YYYY-MM-DD' in Manila time.
  */
@@ -285,6 +321,7 @@ export default {
     createTransactionDetails,
     createOverrideLog,
     getPartialCashSummary,
+    getPartialTotalsByDate,
     getFullRemittanceByDate,
     getFullRemittanceToday,
     updateTransactionStatus,

@@ -300,9 +300,13 @@ export const RemittancePage = () => {
     const [pendingType, setPendingType] = useState<RemitType | null>(null)
     const [salesRefreshing, setSalesRefreshing] = useState(false)
 
-    // Override state
+    // Override state — main remittance (amount overrides)
     const [overrideOpen, setOverrideOpen] = useState(false)
     const [overrideApproval, setOverrideApproval] = useState<OverrideApproval | null>(null)
+
+    // Override state — skip previous unremitted sales
+    const [skipPrevOverrideOpen, setSkipPrevOverrideOpen] = useState(false)
+    const [skipPrevSalesOverride, setSkipPrevSalesOverride] = useState<OverrideApproval | null>(null)
 
     // Confirm modal
     const [confirmOpen, setConfirmOpen] = useState(false)
@@ -897,10 +901,12 @@ export const RemittancePage = () => {
                 remit_type: 'full',
                 lines,
             }
-            if (overrideApproval) {
+            // Amount override takes precedence; fall back to skip-prev-sales override for audit log
+            const effectiveOverride = overrideApproval ?? skipPrevSalesOverride
+            if (effectiveOverride) {
                 body.override = {
-                    approver_user_id: overrideApproval.approverId,
-                    remarks: overrideApproval.remarks,
+                    approver_user_id: effectiveOverride.approverId,
+                    remarks: effectiveOverride.remarks,
                 }
             }
 
@@ -1037,6 +1043,8 @@ export const RemittancePage = () => {
         setConfirmRows([])
         setOverrideOpen(false)
         setOverrideApproval(null)
+        setSkipPrevOverrideOpen(false)
+        setSkipPrevSalesOverride(null)
         setPartialSummary(null)
         setPartialSummaryLoading(false)
         setPrevSales(null)
@@ -1056,6 +1064,21 @@ export const RemittancePage = () => {
                 open={overrideOpen}
                 onClose={() => setOverrideOpen(false)}
                 onApproved={handleOverrideApproved}
+            />
+
+            {/* Override required to skip previous unremitted sales */}
+            <OverrideModal
+                open={skipPrevOverrideOpen}
+                message={`Supervisor approval is required to skip previous unremitted sales from ${prevDate ?? 'the previous day'}. Enter approver credentials to proceed.`}
+                onClose={() => {
+                    setSkipPrevOverrideOpen(false)
+                    setPrevSalesPromptOpen(true) // return to prompt if cancelled
+                }}
+                onApproved={(approverId, remarks) => {
+                    setSkipPrevSalesOverride({ approverId, remarks })
+                    setSkipPrevOverrideOpen(false)
+                    void handlePrevSalesAnswer(false)
+                }}
             />
 
             {/* Previous sales inclusion prompt */}
@@ -1121,7 +1144,10 @@ export const RemittancePage = () => {
                             <div className="flex gap-2">
                                 <button
                                     className="flex-1 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
-                                    onClick={() => handlePrevSalesAnswer(false)}
+                                    onClick={() => {
+                                        setPrevSalesPromptOpen(false)
+                                        setSkipPrevOverrideOpen(true)
+                                    }}
                                 >
                                     No, skip
                                 </button>

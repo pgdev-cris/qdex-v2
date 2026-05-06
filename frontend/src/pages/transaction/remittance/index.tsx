@@ -285,6 +285,8 @@ export const RemittancePage = () => {
     const [prevDate, setPrevDate] = useState<string | null>(null)
     const [prevSalesPromptOpen, setPrevSalesPromptOpen] = useState(false)
     const [includePrevSales, setIncludePrevSales] = useState(false)
+    /** Per-tender amounts already partially remitted on prev_date — used for breakdown display */
+    const [prevPartialDeductions, setPrevPartialDeductions] = useState<Record<string, number> | null>(null)
 
     // Tender types from DB (loaded once on mount; drives is_editable + sort order)
     const [tenderTypes, setTenderTypes] = useState<TenderType[]>([])
@@ -397,6 +399,7 @@ export const RemittancePage = () => {
             setSupplierName(json.data.supplier.name ?? '')
             setPrevSales(json.data.prev_sales ?? null)
             setPrevDate(json.data.prev_date ?? null)
+            setPrevPartialDeductions(json.data.prev_partial_deductions ?? null)
             setStep('select-type')
         } catch (err: unknown) {
             const errObj = err && typeof err === 'object' ? (err as Record<string, unknown>) : {}
@@ -444,8 +447,10 @@ export const RemittancePage = () => {
             // Refresh previous day's sales from the same response
             const freshPrevSales = salesJson.data.prev_sales ?? null
             const freshPrevDate = salesJson.data.prev_date ?? null
+            const freshPrevPartialDeductions = salesJson.data.prev_partial_deductions ?? null
             setPrevSales(freshPrevSales)
             setPrevDate(freshPrevDate)
+            setPrevPartialDeductions(freshPrevPartialDeductions)
 
             if (remitType === 'full') {
                 // Re-seed non-CASH amounts from refreshed POS data,
@@ -578,7 +583,9 @@ export const RemittancePage = () => {
                     )
                     // Pre-fill cash with the remaining balance (zero if already fully covered)
                     setCashAmount(balance > 0 ? String(balance) : '0')
-                    // Deduct any partial non-CASH remittances from editable tender amounts
+                    // Deduct any partial non-CASH remittances from editable tender amounts.
+                    // Use the seeded value in `updated` as the base — it already contains the
+                    // combined today+prev amount when previous sales are being included.
                     setOtherAmounts((prev) => {
                         const updated = { ...prev, ...extraAmounts }
                         salesData
@@ -591,8 +598,10 @@ export const RemittancePage = () => {
                                 const partialRemitted =
                                     res.data!.totals_by_method?.[r.payment_method] ?? 0
                                 if (partialRemitted > 0) {
+                                    // Base is the seeded amount (today + prev if applicable)
+                                    const baseAmt = Number(updated[r.payment_method] ?? r.total)
                                     const remaining = parseFloat(
-                                        Math.max(0, Number(r.total) - partialRemitted).toFixed(2)
+                                        Math.max(0, baseAmt - partialRemitted).toFixed(2)
                                     )
                                     updated[r.payment_method] = String(remaining)
                                 }
@@ -617,16 +626,25 @@ export const RemittancePage = () => {
         setIncludePrevSales(include)
         setPrevSalesPromptOpen(false)
         if (include) {
-            // Seed prev-only tender amounts (not in today's sales) into otherAmounts
+            // Seed prev amounts into extra:
+            //   • Prev-only tenders (not in today's sales) → seed with prev amount as new row
+            //   • Editable tenders in both days → combine today's POS amount + prev amount
+            //   • Non-editable tenders in today's sales → handled by prevAdd in executeFullRemittance
             const extra: Record<string, string> = {}
             ;(prevSales ?? [])
-                .filter(
-                    (p) =>
-                        p.payment_method !== 'CASH' &&
-                        !salesData.some((s) => s.payment_method === p.payment_method)
-                )
+                .filter((p) => p.payment_method !== 'CASH')
                 .forEach((p) => {
-                    extra[p.payment_method] = p.total
+                    const todaySale = salesData.find((s) => s.payment_method === p.payment_method)
+                    if (!todaySale) {
+                        // Prev-only: seed with prev amount
+                        extra[p.payment_method] = p.total
+                    } else if (isEditableTender(p.payment_method)) {
+                        // Editable tender present in both days: pre-fill with today + prev combined
+                        extra[p.payment_method] = String(
+                            parseFloat((Number(todaySale.total) + Number(p.total)).toFixed(2))
+                        )
+                    }
+                    // Non-editable in today's sales: prevAdd handles it in executeFullRemittance
                 })
             await proceedWithType('full', extra)
         } else {
@@ -698,10 +716,11 @@ export const RemittancePage = () => {
             .some((r) => {
                 const edited = otherAmounts[r.payment_method]
                 if (edited === undefined) return false
-                // Compare against the expected remaining amount (POS − already partially remitted),
-                // not the raw POS total — otherwise a seeded deduction looks like a manual change.
+                // Compare against the expected remaining amount (POS + prev − already partially
+                // remitted), not just the raw POS total — otherwise seeded amounts look changed.
                 const partialRemitted = partialSummary?.totals_by_method?.[r.payment_method] ?? 0
-                const expectedRemaining = Math.max(0, Number(r.total) - partialRemitted)
+                const prevAmt = includePrevSales ? (prevSalesMap.get(r.payment_method) ?? 0) : 0
+                const expectedRemaining = Math.max(0, Number(r.total) + prevAmt - partialRemitted)
                 return Number(edited) !== expectedRemaining
             })
         return editableChanged || cashOverrideNeeded
@@ -732,10 +751,18 @@ export const RemittancePage = () => {
                     const editedVal = isEditableTender(r.payment_method)
                         ? Number(otherAmounts[r.payment_method] ?? r.total)
                         : Number(r.total) + prevAdd
-                    // Override flag: compare against expected remaining (POS − partial), not raw POS
+                    // Override flag: compare against expected remaining (POS + prev − partial).
+                    // Include prev amount for editable tenders when previous sales are included.
                     const partialRemitted =
                         partialSummary?.totals_by_method?.[r.payment_method] ?? 0
-                    const expectedRemaining = Math.max(0, Number(r.total) - partialRemitted)
+                    const prevAmt =
+                        includePrevSales && isEditableTender(r.payment_method)
+                            ? (prevSalesMap.get(r.payment_method) ?? 0)
+                            : 0
+                    const expectedRemaining = Math.max(
+                        0,
+                        Number(r.total) + prevAmt - partialRemitted
+                    )
                     const wasChanged =
                         isEditableTender(r.payment_method) && editedVal !== expectedRemaining
                     return {
@@ -1014,6 +1041,7 @@ export const RemittancePage = () => {
         setPartialSummaryLoading(false)
         setPrevSales(null)
         setPrevDate(null)
+        setPrevPartialDeductions(null)
         setPrevSalesPromptOpen(false)
         setIncludePrevSales(false)
     }
@@ -1044,22 +1072,50 @@ export const RemittancePage = () => {
                                 remittance and can be combined with today's totals.
                             </p>
                         </div>
-                        <div className="rounded-lg border bg-muted/40 px-4 py-3 flex flex-col gap-1.5">
-                            {(prevSales ?? [])
-                                .filter((p) => p.payment_method !== 'CASH')
-                                .map((p) => (
-                                    <div
-                                        key={p.payment_method}
-                                        className="flex justify-between text-sm"
-                                    >
-                                        <span className="text-muted-foreground">
-                                            {methodLabel(p.payment_method)}
-                                        </span>
-                                        <span className="font-medium tabular-nums">
-                                            {fmt(Number(p.total))}
-                                        </span>
+                        <div className="rounded-lg border bg-muted/40 px-4 py-3 flex flex-col gap-2">
+                            {(prevSales ?? []).map((p) => {
+                                const deducted = prevPartialDeductions?.[p.payment_method] ?? 0
+                                const original = Number(p.total) + deducted
+                                const hasDeduction = deducted > 0
+                                return (
+                                    <div key={p.payment_method} className="flex flex-col gap-0.5">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">
+                                                {methodLabel(p.payment_method)}
+                                            </span>
+                                            {hasDeduction ? (
+                                                <span className="tabular-nums text-xs text-muted-foreground line-through">
+                                                    {fmt(original)}
+                                                </span>
+                                            ) : (
+                                                <span className="font-medium tabular-nums">
+                                                    {fmt(Number(p.total))}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {hasDeduction && (
+                                            <>
+                                                <div className="flex justify-between text-xs pl-2">
+                                                    <span className="text-muted-foreground italic">
+                                                        Less: partial remitted
+                                                    </span>
+                                                    <span className="tabular-nums text-destructive font-medium">
+                                                        − {fmt(deducted)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between text-sm pl-2 font-medium">
+                                                    <span className="text-muted-foreground">
+                                                        Remaining
+                                                    </span>
+                                                    <span className="tabular-nums">
+                                                        {fmt(Number(p.total))}
+                                                    </span>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
-                                ))}
+                                )
+                            })}
                         </div>
                         <div className="flex flex-col gap-2">
                             <div className="flex gap-2">
@@ -1221,21 +1277,51 @@ export const RemittancePage = () => {
                                     )}
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    {prevSales.map((r) => (
-                                        <div
-                                            key={r.payment_method}
-                                            className="flex justify-between text-sm"
-                                        >
-                                            <span className="text-amber-800">
-                                                {methodLabel(r.payment_method)}
-                                            </span>
-                                            <span className="font-medium tabular-nums text-amber-900">
-                                                {fmt(Number(r.total))}
-                                            </span>
-                                        </div>
-                                    ))}
+                                    {prevSales.map((r) => {
+                                        const deducted = prevPartialDeductions?.[r.payment_method] ?? 0
+                                        const original = Number(r.total) + deducted
+                                        const hasDeduction = deducted > 0
+                                        return (
+                                            <div key={r.payment_method} className="flex flex-col gap-0.5">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-amber-800">
+                                                        {methodLabel(r.payment_method)}
+                                                    </span>
+                                                    {hasDeduction ? (
+                                                        <span className="tabular-nums text-xs text-muted-foreground line-through">
+                                                            {fmt(original)}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="font-medium tabular-nums text-amber-900">
+                                                            {fmt(Number(r.total))}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {hasDeduction && (
+                                                    <>
+                                                        <div className="flex justify-between text-xs pl-2">
+                                                            <span className="text-amber-700 italic">
+                                                                Less: partial remitted
+                                                            </span>
+                                                            <span className="tabular-nums text-destructive font-medium">
+                                                                − {fmt(deducted)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between text-sm pl-2">
+                                                            <span className="text-amber-800 font-medium">
+                                                                Remaining
+                                                            </span>
+                                                            <span className="font-semibold tabular-nums text-amber-900">
+                                                                {fmt(Number(r.total))}
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
                                     <div className="mt-1 flex justify-between border-t border-amber-200 pt-2 text-sm font-semibold">
-                                        <span className="text-amber-800">Total</span>
+                                        <span className="text-amber-800">Total Remaining</span>
                                         <span className="tabular-nums text-amber-900">
                                             {fmt(
                                                 prevSales.reduce((s, r) => s + Number(r.total), 0)

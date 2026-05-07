@@ -482,259 +482,182 @@ export const RemittanceForm = ({
                     </div>
                 )}
 
-                {/* Partial: editable non-CASH tender inputs */}
-                {remitType === 'partial' &&
-                    (() => {
-                        const editableNonCash = sortedSalesData.filter(
-                            (r) =>
-                                r.payment_method !== 'CASH' &&
-                                isEditable(r.payment_method) &&
-                                isPartiable(r.payment_method)
-                        )
-                        if (editableNonCash.length === 0) return null
-                        return (
-                            <div className="rounded-lg border">
-                                <div className="divide-y">
-                                    {editableNonCash.map((rec) => {
-                                        const amt = Number(otherAmounts[rec.payment_method] ?? 0)
-                                        const prevAmt = includePrevSales
-                                            ? (prevSalesMap.get(rec.payment_method) ?? 0)
-                                            : 0
-                                        const hasPrev = prevAmt > 0
-                                        const maxAmt = Number(rec.total) + prevAmt
-                                        const exceedsPOS = amt > maxAmt
-                                        const label =
-                                            methodLabel(rec.payment_method) !== rec.payment_method
-                                                ? methodLabel(rec.payment_method)
-                                                : (tenderMap.get(rec.payment_method)?.label ??
-                                                  rec.payment_method)
-                                        return (
-                                            <div
-                                                key={rec.payment_method}
-                                                className="flex flex-col px-4 py-3 gap-2"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2 shrink-0">
-                                                        <span className="text-sm font-medium">
-                                                            {label}
-                                                        </span>
-                                                        {hasPrev && (
-                                                            <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
-                                                                prev.
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        max {fmt(maxAmt)}
-                                                    </span>
-                                                </div>
-                                                <div className="relative">
-                                                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
-                                                        ₱
-                                                    </span>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        placeholder="0.00"
-                                                        className="pl-7 text-right tabular-nums"
-                                                        value={
-                                                            otherAmounts[rec.payment_method] ?? ''
-                                                        }
-                                                        onChange={(e) =>
-                                                            onOtherAmountChange(
-                                                                rec.payment_method,
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                        onBlur={(e) => {
-                                                            const v = toTwoDecimals(e.target.value)
-                                                            if (v)
-                                                                onOtherAmountChange(
-                                                                    rec.payment_method,
-                                                                    v
-                                                                )
-                                                        }}
-                                                    />
-                                                </div>
-                                                {exceedsPOS && (
-                                                    <p className="flex items-center gap-1 text-xs text-amber-700">
-                                                        <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
-                                                        Exceeds POS total — override required
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                                <div className="border-t bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
-                                    Amounts are pre-filled from POS. Entering more than the POS
-                                    total requires override approval.
-                                </div>
-                            </div>
-                        )
-                    })()}
+                {/* Partial: top note */}
+                {remitType === 'partial' && (!!cashRecord && isPartiable('CASH') || sortedSalesData.some((r) => r.payment_method !== 'CASH' && isEditable(r.payment_method) && isPartiable(r.payment_method)) || prevOnlyTenders.length > 0) && (
+                    <p className="text-xs text-muted-foreground">
+                        Amounts are pre-filled from POS. Entering more than the POS total requires override approval.
+                    </p>
+                )}
 
-                {/* Partial: prev-only tender inputs (yesterday's sales absent from today's POS) */}
-                {remitType === 'partial' && prevOnlyTenders.length > 0 && (
-                    <div className="rounded-lg border border-amber-200 overflow-hidden">
-                        <div className="divide-y divide-amber-100">
-                            {prevOnlyTenders.map((rec) => {
-                                const label =
-                                    methodLabel(rec.payment_method) !== rec.payment_method
-                                        ? methodLabel(rec.payment_method)
-                                        : (tenderMap.get(rec.payment_method)?.label ??
-                                          rec.payment_method)
-                                return (
-                                    <div
-                                        key={rec.payment_method}
-                                        className="flex flex-col px-4 py-3 gap-2"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm font-medium">{label}</span>
+                {/* Partial: cash card */}
+                {remitType === 'partial' && !!cashRecord && isPartiable('CASH') && (() => {
+                    const prevCash = includePrevSales ? (prevSalesMap.get('CASH') ?? 0) : 0
+                    const hasPrevCash = prevCash > 0
+                    const maxCash = Number(cashRecord.total) + prevCash
+                    const hasOtherTenders = sortedSalesData.some((r) => r.payment_method !== 'CASH' && isEditable(r.payment_method) && isPartiable(r.payment_method)) || prevOnlyTenders.length > 0
+                    return (
+                        <div className="rounded-lg border overflow-hidden flex flex-col">
+                            <div className="flex flex-col px-4 py-3 gap-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-sm font-medium">Cash</span>
+                                        {hasPrevCash && (
+                                            <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                                prev.
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                                        {hasOtherTenders ? `optional, max ${fmt(maxCash)}` : `max ${fmt(maxCash)}`}
+                                    </span>
+                                </div>
+                                <div className="relative">
+                                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">₱</span>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        className="pl-7 text-right tabular-nums"
+                                        value={cashAmount}
+                                        onChange={(e) => onCashChange(e.target.value)}
+                                        onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onCashChange(v) }}
+                                    />
+                                </div>
+                                {hasPrevCash && (
+                                    <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                                        <div className="flex justify-between">
+                                            <span>Today</span>
+                                            <span className="tabular-nums">{fmt(cashRecord.total)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Previous day</span>
+                                            <span className="tabular-nums text-amber-700">+ {fmt(prevCash)}</span>
+                                        </div>
+                                    </div>
+                                )}
+                                {cashOverrideNeeded && (
+                                    <p className="flex items-center gap-1 text-xs text-amber-700">
+                                        <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                                        Exceeds POS total — override required
+                                    </p>
+                                )}
+                            </div>
+                            {hasPrevCash && (
+                                <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
+                                    Previous day unremitted amounts. Adjust if collecting partial only.
+                                </div>
+                            )}
+                        </div>
+                    )
+                })()}
+
+                {/* Partial: editable non-CASH cards */}
+                {remitType === 'partial' && sortedSalesData
+                    .filter((r) => r.payment_method !== 'CASH' && isEditable(r.payment_method) && isPartiable(r.payment_method))
+                    .map((rec) => {
+                        const amt = Number(otherAmounts[rec.payment_method] ?? 0)
+                        const prevAmt = includePrevSales ? (prevSalesMap.get(rec.payment_method) ?? 0) : 0
+                        const hasPrev = prevAmt > 0
+                        const maxAmt = Number(rec.total) + prevAmt
+                        const exceedsPOS = amt > maxAmt
+                        const label =
+                            methodLabel(rec.payment_method) !== rec.payment_method
+                                ? methodLabel(rec.payment_method)
+                                : (tenderMap.get(rec.payment_method)?.label ?? rec.payment_method)
+                        return (
+                            <div key={rec.payment_method} className="rounded-lg border overflow-hidden flex flex-col">
+                                <div className="flex flex-col px-4 py-3 gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-sm font-medium">{label}</span>
+                                            {hasPrev && (
                                                 <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
                                                     prev.
                                                 </span>
-                                            </div>
-                                            <span className="text-xs text-muted-foreground">
-                                                max {fmt(Number(rec.total))}
-                                            </span>
+                                            )}
                                         </div>
-                                        <div className="relative">
-                                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
-                                                ₱
-                                            </span>
-                                            <Input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                placeholder="0.00"
-                                                className="pl-7 text-right tabular-nums"
-                                                value={
-                                                    otherAmounts[rec.payment_method] ?? rec.total
-                                                }
-                                                onChange={(e) =>
-                                                    onOtherAmountChange(
-                                                        rec.payment_method,
-                                                        e.target.value
-                                                    )
-                                                }
-                                                onBlur={(e) => {
-                                                    const v = toTwoDecimals(e.target.value)
-                                                    if (v)
-                                                        onOtherAmountChange(rec.payment_method, v)
-                                                }}
-                                            />
-                                        </div>
+                                        <span className="text-xs uppercase tracking-wide text-muted-foreground">max {fmt(maxAmt)}</span>
                                     </div>
-                                )
-                            })}
-                        </div>
-                        <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
-                            Previous day unremitted amounts. Adjust if collecting partial only.
-                        </div>
-                    </div>
-                )}
-
-                {/* Partial: current cash total reference */}
-                {remitType === 'partial' &&
-                    cashRecord &&
-                    isPartiable('CASH') &&
-                    (() => {
-                        const prevCash = includePrevSales ? (prevSalesMap.get('CASH') ?? 0) : 0
-                        const hasPrevCash = prevCash > 0
-                        return (
-                            <div className="rounded-lg bg-muted/50 px-4 py-3">
-                                {hasPrevCash ? (
-                                    <>
-                                        <p className="text-muted-foreground text-xs">
-                                            Cash Total (Today + Prev. Day)
-                                        </p>
-                                        <p className="mt-0.5 text-lg font-semibold tabular-nums">
-                                            {fmt(Number(cashRecord.total) + prevCash)}
-                                        </p>
-                                        <div className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted-foreground">
+                                    <div className="relative">
+                                        <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">₱</span>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            placeholder="0.00"
+                                            className="pl-7 text-right tabular-nums"
+                                            value={otherAmounts[rec.payment_method] ?? ''}
+                                            onChange={(e) => onOtherAmountChange(rec.payment_method, e.target.value)}
+                                            onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onOtherAmountChange(rec.payment_method, v) }}
+                                        />
+                                    </div>
+                                    {hasPrev && (
+                                        <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
                                             <div className="flex justify-between">
                                                 <span>Today</span>
-                                                <span className="tabular-nums">
-                                                    {fmt(cashRecord.total)}
-                                                </span>
+                                                <span className="tabular-nums">{fmt(Number(rec.total))}</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>Previous day</span>
-                                                <span className="tabular-nums text-amber-700">
-                                                    + {fmt(prevCash)}
-                                                </span>
+                                                <span className="tabular-nums text-amber-700">+ {fmt(prevAmt)}</span>
                                             </div>
                                         </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className="text-muted-foreground text-xs">
-                                            Current Cash Total
+                                    )}
+                                    {exceedsPOS && (
+                                        <p className="flex items-center gap-1 text-xs text-amber-700">
+                                            <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                                            Exceeds POS total — override required
                                         </p>
-                                        <p className="mt-0.5 text-lg font-semibold tabular-nums">
-                                            {fmt(cashRecord.total)}
-                                        </p>
-                                    </>
+                                    )}
+                                </div>
+                                {hasPrev && (
+                                    <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
+                                        Previous day unremitted amounts. Adjust if collecting partial only.
+                                    </div>
                                 )}
                             </div>
                         )
-                    })()}
+                    })}
 
-                {/* Partial: cash input (full remittance has it inline in the Payment Summary card) */}
-                {remitType === 'partial' && isPartiable('CASH') && (
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium">
-                            Cash Amount to Remit
-                            {(() => {
-                                const prevCash = includePrevSales
-                                    ? (prevSalesMap.get('CASH') ?? 0)
-                                    : 0
-                                const maxCash = Number(cashRecord?.total ?? 0) + prevCash
-                                const hasEditableNonCash =
-                                    sortedSalesData.some(
-                                        (r) =>
-                                            r.payment_method !== 'CASH' &&
-                                            isEditable(r.payment_method) &&
-                                            isPartiable(r.payment_method)
-                                    ) || prevOnlyTenders.length > 0
-                                return (
-                                    <span className="text-muted-foreground ml-1 font-normal">
-                                        {hasEditableNonCash
-                                            ? `(optional, max ${fmt(maxCash)})`
-                                            : `(max ${fmt(maxCash)})`}
-                                    </span>
-                                )
-                            })()}
-                        </label>
-                        <div className="relative">
-                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
-                                ₱
-                            </span>
-                            <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                placeholder="0.00"
-                                className="pl-7 text-right tabular-nums"
-                                value={cashAmount}
-                                onChange={(e) => onCashChange(e.target.value)}
-                                onBlur={(e) => {
-                                    const v = toTwoDecimals(e.target.value)
-                                    if (v) onCashChange(v)
-                                }}
-                            />
+                {/* Partial: prev-only tender cards (yesterday's sales absent from today's POS) */}
+                {remitType === 'partial' && prevOnlyTenders.map((rec) => {
+                    const label =
+                        methodLabel(rec.payment_method) !== rec.payment_method
+                            ? methodLabel(rec.payment_method)
+                            : (tenderMap.get(rec.payment_method)?.label ?? rec.payment_method)
+                    return (
+                        <div key={rec.payment_method} className="rounded-lg border border-amber-200 overflow-hidden flex flex-col">
+                            <div className="flex flex-col px-4 py-3 gap-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">{label}</span>
+                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                            prev.
+                                        </span>
+                                    </div>
+                                    <span className="text-xs uppercase tracking-wide text-muted-foreground">max {fmt(Number(rec.total))}</span>
+                                </div>
+                                <div className="relative">
+                                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">₱</span>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        className="pl-7 text-right tabular-nums"
+                                        value={otherAmounts[rec.payment_method] ?? rec.total}
+                                        onChange={(e) => onOtherAmountChange(rec.payment_method, e.target.value)}
+                                        onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onOtherAmountChange(rec.payment_method, v) }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
+                                Previous day unremitted amounts. Adjust if collecting partial only.
+                            </div>
                         </div>
-                        {cashOverrideNeeded && (
-                            <p className="flex items-center justify-end gap-1 text-xs text-amber-700">
-                                <ShieldAlert className="h-3 w-3 shrink-0" />
-                                Override required
-                            </p>
-                        )}
-                    </div>
-                )}
+                    )
+                })}
 
                 {submitError && (
                     <p className="flex items-center gap-1.5 text-sm text-destructive">

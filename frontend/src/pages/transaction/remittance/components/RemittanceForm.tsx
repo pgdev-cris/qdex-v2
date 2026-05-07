@@ -162,7 +162,7 @@ export const RemittanceForm = ({
                                         ? (prevSalesMap.get('CASH') ?? 0)
                                         : 0
                                     const hasPrevCash = prevCash > 0
-                                    const maxCash = posCashTotal + prevCash
+                                    const maxCash = balance + prevCash
                                     return (
                                         <div
                                             key="CASH"
@@ -570,7 +570,7 @@ export const RemittanceForm = ({
                 {remitType === 'partial' && !!cashRecord && isPartiable('CASH') && (() => {
                     const prevCash = includePrevSales ? (prevSalesMap.get('CASH') ?? 0) : 0
                     const hasPrevCash = prevCash > 0
-                    const maxCash = Number(cashRecord.total) + prevCash
+                    const maxCash = balance + prevCash
                     const hasOtherTenders = sortedSalesData.some((r) => r.payment_method !== 'CASH' && isEditable(r.payment_method) && isPartiable(r.payment_method)) || prevOnlyTenders.length > 0
                     return (
                         <div className="rounded-lg border overflow-hidden flex flex-col">

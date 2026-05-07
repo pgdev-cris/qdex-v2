@@ -464,6 +464,11 @@ export const RemittancePage = () => {
             setPrevPartialDeductions(freshPrevPartialDeductions)
 
             if (remitType === 'full') {
+                // Build a lookup for refreshed prev-day sales amounts
+                const freshPrevSalesMap = new Map(
+                    (freshPrevSales ?? []).map((r) => [r.payment_method, Number(r.total)])
+                )
+
                 // Re-seed non-CASH amounts from refreshed POS data,
                 // preserving prev-only tender amounts if inclusion was confirmed
                 const others: Record<string, string> = {}
@@ -474,18 +479,19 @@ export const RemittancePage = () => {
                 freshSales
                     .filter((r) => r.payment_method !== 'CASH')
                     .forEach((r) => {
-                        // Deduct any partial non-CASH remittances for editable tenders
-                        const partialRemitted = isEditableTender(r.payment_method)
-                            ? (freshTotals[r.payment_method] ?? 0)
-                            : 0
-                        const value = isEditableTender(r.payment_method)
-                            ? String(
-                                  parseFloat(
-                                      Math.max(0, Number(r.total) - partialRemitted).toFixed(2)
-                                  )
-                              )
-                            : r.total
-                        others[r.payment_method] = value
+                        if (isEditableTender(r.payment_method)) {
+                            // Base = today + prev (when included); deduct any partial remittances
+                            const prevAmt = includePrevSales
+                                ? (freshPrevSalesMap.get(r.payment_method) ?? 0)
+                                : 0
+                            const partialRemitted = freshTotals[r.payment_method] ?? 0
+                            const value = parseFloat(
+                                Math.max(0, Number(r.total) + prevAmt - partialRemitted).toFixed(2)
+                            )
+                            others[r.payment_method] = String(value)
+                        } else {
+                            others[r.payment_method] = r.total
+                        }
                     })
 
                 if (includePrevSales) {
@@ -507,14 +513,21 @@ export const RemittancePage = () => {
                 const freshPosCash = Number(
                     freshSales.find((r) => r.payment_method === 'CASH')?.total ?? 0
                 )
+                const freshPrevCash = includePrevSales
+                    ? (freshPrevSalesMap.get('CASH') ?? 0)
+                    : 0
                 if (summaryRes?.result === 'success' && summaryRes.data) {
                     setPartialSummary(summaryRes.data)
                     const balance = parseFloat(
-                        Math.max(0, freshPosCash - summaryRes.data.total_cash).toFixed(2)
+                        Math.max(
+                            0,
+                            freshPosCash + freshPrevCash - summaryRes.data.total_cash
+                        ).toFixed(2)
                     )
                     setCashAmount(balance > 0 ? String(balance) : '0')
                 } else {
-                    setCashAmount(freshPosCash > 0 ? String(freshPosCash) : '')
+                    const total = freshPosCash + freshPrevCash
+                    setCashAmount(total > 0 ? String(total) : '')
                 }
             }
         } catch (err: unknown) {
@@ -696,15 +709,15 @@ export const RemittancePage = () => {
     }
     const prevSalesMap = new Map((prevSales ?? []).map((r) => [r.payment_method, Number(r.total)]))
 
-    // Computed cash balance: POS cash minus today's partial remittances (rounded to 2dp to avoid float drift)
-    // For partial with prev sales included, the ceiling also covers yesterday's unremitted CASH.
+    // Computed cash balance: (POS cash + prev cash) minus today's partial remittances (rounded to 2dp to avoid float drift)
+    // For both full and partial with prev sales included, the ceiling covers yesterday's unremitted CASH.
     const prevCashAmt = includePrevSales ? (prevSalesMap.get('CASH') ?? 0) : 0
     const computedBalance =
         remitType === 'full'
             ? parseFloat(
                   Math.max(
                       0,
-                      Number(cashRecord?.total ?? 0) - (partialSummary?.total_cash ?? 0)
+                      Number(cashRecord?.total ?? 0) + prevCashAmt - (partialSummary?.total_cash ?? 0)
                   ).toFixed(2)
               )
             : Number(cashRecord?.total ?? 0) + prevCashAmt

@@ -143,6 +143,10 @@ export const RemittanceForm = ({
                             Payment Summary
                         </p>
 
+                        <p className="text-xs text-muted-foreground">
+                            Amounts are pre-filled from POS. Entering more than the POS total requires override approval.
+                        </p>
+
                         {/* Each tender is its own mini-card for clear visual separation */}
                         <div className="flex flex-col gap-3">
                             {sortedSalesData.map((rec) => {
@@ -154,45 +158,76 @@ export const RemittanceForm = ({
 
                                 // ── Cash ──────────────────────────────────────────
                                 if (rec.payment_method === 'CASH') {
+                                    const prevCash = includePrevSales
+                                        ? (prevSalesMap.get('CASH') ?? 0)
+                                        : 0
+                                    const hasPrevCash = prevCash > 0
+                                    const maxCash = posCashTotal + prevCash
                                     return (
                                         <div
                                             key="CASH"
-                                            className="rounded-lg border overflow-hidden"
+                                            className="rounded-lg border overflow-hidden flex flex-col"
                                         >
-                                            <div className="flex items-center justify-between px-4 py-3 gap-4">
-                                                <span className="text-sm font-medium shrink-0">
-                                                    {label}
-                                                </span>
-                                                <div className="flex flex-col items-end gap-1">
-                                                    <div className="relative w-36">
-                                                        <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
-                                                            ₱
+                                            <div className="flex flex-col px-4 py-3 gap-2">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <span className="text-sm font-medium">
+                                                            {label}
                                                         </span>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            placeholder="0.00"
-                                                            className="pl-7 text-right tabular-nums h-8 text-sm"
-                                                            value={cashAmount}
-                                                            onChange={(e) =>
-                                                                onCashChange(e.target.value)
-                                                            }
-                                                            onBlur={(e) => {
-                                                                const v = toTwoDecimals(
-                                                                    e.target.value
-                                                                )
-                                                                if (v) onCashChange(v)
-                                                            }}
-                                                        />
+                                                        {hasPrevCash && (
+                                                            <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                                                prev.
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                    {cashOverrideNeeded && (
-                                                        <p className="flex items-center gap-1 text-xs text-amber-700">
-                                                            <ShieldAlert className="h-3 w-3 shrink-0" />
-                                                            Override required
-                                                        </p>
-                                                    )}
+                                                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                                                        max {fmt(maxCash)}
+                                                    </span>
                                                 </div>
+                                                <div className="relative">
+                                                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
+                                                        ₱
+                                                    </span>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        placeholder="0.00"
+                                                        className="pl-7 text-right tabular-nums"
+                                                        value={cashAmount}
+                                                        onChange={(e) =>
+                                                            onCashChange(e.target.value)
+                                                        }
+                                                        onBlur={(e) => {
+                                                            const v = toTwoDecimals(
+                                                                e.target.value
+                                                            )
+                                                            if (v) onCashChange(v)
+                                                        }}
+                                                    />
+                                                </div>
+                                                {hasPrevCash && (
+                                                    <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                                                        <div className="flex justify-between">
+                                                            <span>Today</span>
+                                                            <span className="tabular-nums">
+                                                                {fmt(posCashTotal)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span>Previous day</span>
+                                                            <span className="tabular-nums text-amber-700">
+                                                                + {fmt(prevCash)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {cashOverrideNeeded && (
+                                                    <p className="flex items-center gap-1 text-xs text-amber-700">
+                                                        <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                                                        Exceeds POS total — override required
+                                                    </p>
+                                                )}
                                             </div>
                                             {/* Cash partial breakdown — only when there are partials */}
                                             {partialSummaryLoading ? (
@@ -207,7 +242,7 @@ export const RemittanceForm = ({
                                                             Cash Sales (POS)
                                                         </span>
                                                         <span className="tabular-nums text-xs font-semibold">
-                                                            {fmt(posCashTotal)}
+                                                            {fmt(maxCash)}
                                                         </span>
                                                     </div>
                                                     <div className="px-4 pt-2 pb-1">
@@ -254,6 +289,11 @@ export const RemittanceForm = ({
                                                     </div>
                                                 </div>
                                             ) : null}
+                                            {hasPrevCash && (
+                                                <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
+                                                    Previous day unremitted amounts. Adjust if collecting partial only.
+                                                </div>
+                                            )}
                                         </div>
                                     )
                                 }
@@ -269,13 +309,18 @@ export const RemittanceForm = ({
                                         0
                                     )
                                     const posAmt = Number(rec.total)
+                                    const prevAmt = includePrevSales
+                                        ? (prevSalesMap.get(rec.payment_method) ?? 0)
+                                        : 0
+                                    const hasPrev = prevAmt > 0
+                                    const maxAmt = posAmt + prevAmt
                                     const remaining = parseFloat(
-                                        Math.max(0, posAmt - totalRemitted).toFixed(2)
+                                        Math.max(0, maxAmt - totalRemitted).toFixed(2)
                                     )
                                     const partialAmt =
                                         partialSummary?.totals_by_method?.[rec.payment_method] ?? 0
                                     const expectedRemaining = parseFloat(
-                                        Math.max(0, posAmt - partialAmt).toFixed(2)
+                                        Math.max(0, maxAmt - partialAmt).toFixed(2)
                                     )
                                     const editedAmt = Number(
                                         otherAmounts[rec.payment_method] ?? rec.total
@@ -285,52 +330,78 @@ export const RemittanceForm = ({
                                     return (
                                         <div
                                             key={rec.payment_method}
-                                            className="rounded-lg border overflow-hidden"
+                                            className="rounded-lg border overflow-hidden flex flex-col"
                                         >
-                                            <div className="flex items-center justify-between px-4 py-3 gap-4">
-                                                <span className="text-sm font-medium shrink-0">
-                                                    {label}
-                                                </span>
-                                                <div className="flex flex-col items-end gap-1">
-                                                    <div className="relative w-36">
-                                                        <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
-                                                            ₱
+                                            <div className="flex flex-col px-4 py-3 gap-2">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <span className="text-sm font-medium">
+                                                            {label}
                                                         </span>
-                                                        <Input
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            placeholder={rec.total}
-                                                            className="pl-7 text-right tabular-nums h-8 text-sm"
-                                                            value={
-                                                                otherAmounts[rec.payment_method] ??
-                                                                rec.total
-                                                            }
-                                                            onChange={(e) =>
+                                                        {hasPrev && (
+                                                            <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                                                prev.
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                                                        max {fmt(maxAmt)}
+                                                    </span>
+                                                </div>
+                                                <div className="relative">
+                                                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
+                                                        ₱
+                                                    </span>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        placeholder={rec.total}
+                                                        className="pl-7 text-right tabular-nums"
+                                                        value={
+                                                            otherAmounts[rec.payment_method] ??
+                                                            rec.total
+                                                        }
+                                                        onChange={(e) =>
+                                                            onOtherAmountChange(
+                                                                rec.payment_method,
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        onBlur={(e) => {
+                                                            const v = toTwoDecimals(
+                                                                e.target.value
+                                                            )
+                                                            if (v)
                                                                 onOtherAmountChange(
                                                                     rec.payment_method,
-                                                                    e.target.value
+                                                                    v
                                                                 )
-                                                            }
-                                                            onBlur={(e) => {
-                                                                const v = toTwoDecimals(
-                                                                    e.target.value
-                                                                )
-                                                                if (v)
-                                                                    onOtherAmountChange(
-                                                                        rec.payment_method,
-                                                                        v
-                                                                    )
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    {overrideNeeded && (
-                                                        <p className="flex items-center gap-1 text-xs text-amber-700">
-                                                            <ShieldAlert className="h-3 w-3 shrink-0" />
-                                                            Override required
-                                                        </p>
-                                                    )}
+                                                        }}
+                                                    />
                                                 </div>
+                                                {hasPrev && (
+                                                    <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                                                        <div className="flex justify-between">
+                                                            <span>Today</span>
+                                                            <span className="tabular-nums">
+                                                                {fmt(posAmt)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span>Previous day</span>
+                                                            <span className="tabular-nums text-amber-700">
+                                                                + {fmt(prevAmt)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {overrideNeeded && (
+                                                    <p className="flex items-center gap-1 text-xs text-amber-700">
+                                                        <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                                                        Exceeds POS total — override required
+                                                    </p>
+                                                )}
                                             </div>
                                             {/* Non-CASH partial breakdown — only when there are partials */}
                                             {!partialSummaryLoading && txs.length > 0 && (
@@ -340,7 +411,7 @@ export const RemittanceForm = ({
                                                             {label} (POS)
                                                         </span>
                                                         <span className="tabular-nums text-xs font-semibold">
-                                                            {fmt(posAmt)}
+                                                            {fmt(maxAmt)}
                                                         </span>
                                                     </div>
                                                     <div className="px-4 pt-2 pb-1">
@@ -386,6 +457,11 @@ export const RemittanceForm = ({
                                                     </div>
                                                 </div>
                                             )}
+                                            {hasPrev && (
+                                                <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
+                                                    Previous day unremitted amounts. Adjust if collecting partial only.
+                                                </div>
+                                            )}
                                         </div>
                                     )
                                 }
@@ -417,7 +493,6 @@ export const RemittanceForm = ({
                         {prevOnlyTenders.length > 0 && (
                             <div className="flex flex-col gap-3">
                                 {prevOnlyTenders.map((rec) => {
-                                    const editable = isEditable(rec.payment_method)
                                     const label =
                                         methodLabel(rec.payment_method) !== rec.payment_method
                                             ? methodLabel(rec.payment_method)
@@ -426,16 +501,23 @@ export const RemittanceForm = ({
                                     return (
                                         <div
                                             key={rec.payment_method}
-                                            className="rounded-lg border border-amber-200 bg-amber-50 flex items-center justify-between px-4 py-3 gap-4"
+                                            className="rounded-lg border border-amber-200 overflow-hidden flex flex-col"
                                         >
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <span className="text-sm font-medium">{label}</span>
-                                                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
-                                                    prev.
-                                                </span>
-                                            </div>
-                                            {editable ? (
-                                                <div className="relative w-36">
+                                            <div className="flex flex-col px-4 py-3 gap-2">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium">
+                                                            {label}
+                                                        </span>
+                                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                                            prev.
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                                                        max {fmt(Number(rec.total))}
+                                                    </span>
+                                                </div>
+                                                <div className="relative">
                                                     <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
                                                         ₱
                                                     </span>
@@ -443,7 +525,8 @@ export const RemittanceForm = ({
                                                         type="number"
                                                         min="0"
                                                         step="0.01"
-                                                        className="pl-7 text-right tabular-nums h-8 text-sm"
+                                                        placeholder="0.00"
+                                                        className="pl-7 text-right tabular-nums"
                                                         value={
                                                             otherAmounts[rec.payment_method] ??
                                                             rec.total
@@ -464,16 +547,10 @@ export const RemittanceForm = ({
                                                         }}
                                                     />
                                                 </div>
-                                            ) : (
-                                                <span className="tabular-nums text-sm font-mono">
-                                                    {fmt(
-                                                        Number(
-                                                            otherAmounts[rec.payment_method] ??
-                                                                rec.total
-                                                        )
-                                                    )}
-                                                </span>
-                                            )}
+                                            </div>
+                                            <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
+                                                Previous day unremitted amounts. Adjust if collecting partial only.
+                                            </div>
                                         </div>
                                     )
                                 })}

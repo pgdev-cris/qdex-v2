@@ -33,7 +33,11 @@ const assertNoFullRemittanceToday = async (supplierCode: number): Promise<void> 
 const getPrevDaySales = async (
     supplierCode: number,
     eventId: number,
-): Promise<{ sales: SalesRecord[]; date: string; partial_deductions: Record<string, number> } | null> => {
+): Promise<{
+    sales: SalesRecord[];
+    date: string;
+    partial_deductions: Record<string, number>;
+} | null> => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = manilaDate(yesterday);
@@ -153,6 +157,7 @@ const getSupplierSalesMock = async (supplierCode: number) => {
         { payment_method: 'GCASH', total: '1000.00', total_count: 3 },
         { payment_method: 'PWALLET', total: '1000.00', total_count: 5 },
         { payment_method: 'TANGENT_DEBIT', total: '1000.00', total_count: 4 },
+        { payment_method: 'SKYRO', total: '600.00', total_count: 2 },
     ] as SalesRecord[];
 
     const prevDay = await getPrevDaySales(supplierCode, event.id);

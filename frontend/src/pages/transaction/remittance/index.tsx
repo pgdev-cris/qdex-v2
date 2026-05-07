@@ -159,12 +159,16 @@ const ContextPanel = ({
 
                 {salesData.length > 0 &&
                     (() => {
+                        const ctxIsPartiable = (method: string): boolean => {
+                            if (tenderTypes.length === 0) return true
+                            return (ctxTenderMap.get(method)?.is_partiable ?? 0) === 1
+                        }
                         const visibleRows =
                             remitType === 'partial'
                                 ? salesData.filter(
                                       (r) =>
-                                          r.payment_method === 'CASH' ||
-                                          ctxIsEditable(r.payment_method)
+                                          (r.payment_method === 'CASH' && ctxIsPartiable('CASH')) ||
+                                          (r.payment_method !== 'CASH' && ctxIsEditable(r.payment_method) && ctxIsPartiable(r.payment_method))
                                   )
                                 : salesData
 
@@ -568,10 +572,10 @@ export const RemittancePage = () => {
         )
 
         if (type === 'partial') {
-            // Seed editable non-CASH tender amounts from POS values
+            // Seed editable non-CASH tender amounts from POS values (partiable only)
             const editableOthers: Record<string, string> = {}
             salesData
-                .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method))
+                .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method) && isPartiableTender(r.payment_method))
                 .forEach((r) => {
                     editableOthers[r.payment_method] = toFixed2(r.total)
                 })
@@ -664,8 +668,8 @@ export const RemittancePage = () => {
                     } else if (isEditableTender(p.payment_method)) {
                         // Editable tender present in both days: pre-fill with today + prev combined
                         extra[p.payment_method] = toFixed2(Number(todaySale.total) + Number(p.total))
-                    } else if (type === 'partial') {
-                        // Non-editable tender in today's sales, partial mode:
+                    } else if (type === 'partial' && isPartiableTender(p.payment_method)) {
+                        // Non-editable but partiable tender in today's sales, partial mode:
                         // It is never shown in the editable block, so seed it as a prev-only row.
                         extra[p.payment_method] = toFixed2(p.total)
                     }
@@ -682,6 +686,10 @@ export const RemittancePage = () => {
     const isEditableTender = (method: string): boolean => {
         if (tenderTypes.length === 0) return method !== 'CASH'
         return (tenderMap.get(method)?.is_editable ?? 0) === 1
+    }
+    const isPartiableTender = (method: string): boolean => {
+        if (tenderTypes.length === 0) return true // fallback: show all when types haven't loaded
+        return (tenderMap.get(method)?.is_partiable ?? 0) === 1
     }
     const prevSalesMap = new Map((prevSales ?? []).map((r) => [r.payment_method, Number(r.total)]))
 
@@ -712,6 +720,8 @@ export const RemittancePage = () => {
     const prevOnlyTenders: SalesRecord[] = includePrevSales
         ? (prevSales ?? []).filter((p) => {
               if (p.payment_method === 'CASH') return false
+              // In partial mode, skip tenders that are not partiable
+              if (remitType === 'partial' && !isPartiableTender(p.payment_method)) return false
               const notInToday = !salesData.some((s) => s.payment_method === p.payment_method)
               if (notInToday) return true
               // Partial: also surface non-editable tenders that exist in today's sales —
@@ -819,17 +829,17 @@ export const RemittancePage = () => {
             { label: 'Remitter', value: remitterName.trim() || '—' },
             { label: 'Type', value: 'Partial Remittance' },
         ]
-        // Cash line — omit if 0
-        if (cashVal > 0) {
+        // Cash line — omit if 0 or not partiable
+        if (isPartiableTender('CASH') && cashVal > 0) {
             partialRows.push({
                 label: 'Cash to Remit',
                 value: fmt(cashVal),
                 overridden: !!approval && cashOverrideNeeded,
             })
         }
-        // Editable non-CASH lines
+        // Editable non-CASH lines (partiable only)
         sortedSales
-            .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method))
+            .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method) && isPartiableTender(r.payment_method))
             .forEach((r) => {
                 const amt = Number(otherAmounts[r.payment_method] ?? 0)
                 if (amt > 0) {
@@ -862,19 +872,20 @@ export const RemittancePage = () => {
 
         if (remitType === 'partial') {
             // Cash is optional for partial — but at least one tender must have an amount > 0
-            if (isNaN(cashVal) || cashVal < 0) {
+            if (isPartiableTender('CASH') && (isNaN(cashVal) || cashVal < 0)) {
                 setSubmitError('Please enter a valid cash amount.')
                 return
             }
+            const effectiveCashVal = isPartiableTender('CASH') ? cashVal : 0
             const editableNonCashTotal = salesData
-                .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method))
+                .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method) && isPartiableTender(r.payment_method))
                 .reduce((sum, r) => sum + Number(otherAmounts[r.payment_method] ?? 0), 0)
             // Also count prev-only tenders (yesterday's, not in today's sales)
             const prevOnlyTotal = prevOnlyTenders.reduce(
                 (sum, p) => sum + Number(otherAmounts[p.payment_method] ?? p.total),
                 0,
             )
-            if (cashVal === 0 && editableNonCashTotal === 0 && prevOnlyTotal === 0) {
+            if (effectiveCashVal === 0 && editableNonCashTotal === 0 && prevOnlyTotal === 0) {
                 setSubmitError('Please enter an amount for at least one payment method.')
                 return
             }
@@ -1029,9 +1040,9 @@ export const RemittancePage = () => {
     const executePartialRemittance = async () => {
         const lines: ReceiptLine[] = []
 
-        // CASH — split into prev-day first, then current-day as remainder
+        // CASH — split into prev-day first, then current-day as remainder (only if partiable)
         const cashVal = Number(cashAmount)
-        if (cashVal > 0) {
+        if (isPartiableTender('CASH') && cashVal > 0) {
             if (!includePrevSales) {
                 lines.push({ method: 'CASH', amount: cashAmount })
             } else {
@@ -1050,9 +1061,9 @@ export const RemittancePage = () => {
             }
         }
 
-        // Editable non-CASH tenders — prev-day consumed first, current-day is the remainder
+        // Editable non-CASH tenders (partiable only) — prev-day consumed first, current-day is the remainder
         sortedSales
-            .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method))
+            .filter((r) => r.payment_method !== 'CASH' && isEditableTender(r.payment_method) && isPartiableTender(r.payment_method))
             .forEach((r) => {
                 const entered = Number(otherAmounts[r.payment_method] ?? 0)
                 if (entered <= 0) return

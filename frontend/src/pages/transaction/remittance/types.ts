@@ -110,7 +110,8 @@ export interface TenderType {
     id: number
     code: string
     label: string
-    is_editable: number // 0 | 1
+    is_editable: number  // 0 | 1
+    is_partiable: number // 0 | 1 — whether this tender appears in partial remittance
     sort: number
 }
 

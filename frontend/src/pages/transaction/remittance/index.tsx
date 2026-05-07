@@ -316,6 +316,9 @@ export const RemittancePage = () => {
     const [confirmOpen, setConfirmOpen] = useState(false)
     const [confirmRows, setConfirmRows] = useState<ConfirmRow[]>([])
 
+    // Reset confirmation
+    const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+
     const inputRef = useRef<HTMLInputElement>(null)
     const cashRecord = salesData.find((r) => r.payment_method === 'CASH')
 
@@ -1303,6 +1306,36 @@ export const RemittancePage = () => {
                 </div>
             )}
 
+            {/* Reset transaction confirmation */}
+            {resetConfirmOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="w-80 rounded-xl border bg-card p-6 shadow-xl flex flex-col gap-4">
+                        <div>
+                            <p className="font-semibold text-base">Reset Transaction?</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                This will clear all entered data and return to the supplier search screen. This action cannot be undone.
+                            </p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setResetConfirmOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                className="flex-1"
+                                onClick={() => { setResetConfirmOpen(false); handleReset() }}
+                            >
+                                Reset
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Remittance confirm modal */}
             <ConfirmModal
                 open={confirmOpen}
@@ -1321,14 +1354,26 @@ export const RemittancePage = () => {
             />
 
             {/* Page header */}
-            <div className="mb-6">
-                <h1 className="flex items-center gap-2 text-2xl font-semibold">
-                    <ArrowLeftRight className="text-muted-foreground h-5 w-5" />
-                    Remittance
-                </h1>
-                <p className="text-muted-foreground mt-1 text-sm">
-                    Process supplier remittances quickly and accurately.
-                </p>
+            <div className="mb-6 flex items-start justify-between">
+                <div>
+                    <h1 className="flex items-center gap-2 text-2xl font-semibold">
+                        <ArrowLeftRight className="text-muted-foreground h-5 w-5" />
+                        Remittance
+                    </h1>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                        Process supplier remittances quickly and accurately.
+                    </p>
+                </div>
+                {step !== 'receipt' && step !== 'search' && (
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setResetConfirmOpen(true)}
+                        disabled={loading}
+                    >
+                        Reset Transaction
+                    </Button>
+                )}
             </div>
 
             {/* Two-column layout */}

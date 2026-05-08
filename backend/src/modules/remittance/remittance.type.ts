@@ -1,6 +1,8 @@
 export interface RemitLine {
     method: string;
     amount: string | number;
+    /** True when this detail line amount came from the previous day's unremitted sales */
+    is_prev_sales?: boolean;
 }
 
 export interface OverrideInfo {
@@ -13,6 +15,8 @@ export interface PartialRemitPayload {
     remitter_name: string;
     lines: RemitLine[];
     override?: OverrideInfo;
+    /** True when this remittance includes previous-day unremitted sales */
+    has_prev_sales?: boolean;
 }
 
 export interface FullRemitPayload {
@@ -20,6 +24,8 @@ export interface FullRemitPayload {
     remitter_name: string;
     lines: RemitLine[];
     override?: OverrideInfo;
+    /** True when this remittance includes previous-day unremitted sales */
+    has_prev_sales?: boolean;
 }
 
 export interface VoidPayload {

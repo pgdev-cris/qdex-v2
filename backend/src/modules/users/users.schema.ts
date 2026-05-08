@@ -32,6 +32,12 @@ export const UserIdParamSchema = z.object({
     id: z.string().regex(/^\d+$/, 'id must be a number'),
 });
 
+export const ChangePasswordSchema = z.object({
+    old_password: z.string().min(1, 'Old password is required'),
+    new_password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>;
 export type UpdateUserStatus = z.infer<typeof UpdateUserStatusSchema>;
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordSchema>;

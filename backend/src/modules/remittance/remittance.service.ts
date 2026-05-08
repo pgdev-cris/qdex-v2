@@ -105,6 +105,7 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
             verified_at: now,
             status: TRANSACTION_STATUS.VERIFIED,
             type: TRANSACTION_TYPE.PARTIAL,
+            has_prev_sales: payload.has_prev_sales ? 1 : 0,
         });
 
         const details = payload.lines.map((l) => ({
@@ -112,6 +113,7 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
             tender_type: TENDER_TYPE[l.method.toUpperCase()],
             amount: Number(l.amount),
             transaction_count: 1,
+            is_prev_sales: l.is_prev_sales ? 1 : 0 as 0 | 1,
         }));
 
         await remittanceRepository.createTransactionDetails(conn, details);
@@ -200,6 +202,7 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
             verified_at: now,
             status: TRANSACTION_STATUS.VERIFIED,
             type: TRANSACTION_TYPE.FULL,
+            has_prev_sales: payload.has_prev_sales ? 1 : 0,
         });
 
         const details = payload.lines.map((l) => ({
@@ -207,6 +210,7 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
             tender_type: TENDER_TYPE[l.method.toUpperCase()],
             amount: Number(l.amount),
             transaction_count: 1,
+            is_prev_sales: l.is_prev_sales ? 1 : 0 as 0 | 1,
         }));
 
         await remittanceRepository.createTransactionDetails(conn, details);

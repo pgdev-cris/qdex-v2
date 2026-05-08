@@ -10,6 +10,8 @@ interface OverrideModalProps {
     open: boolean
     onClose: () => void
     onApproved: (approverId: number, remarks: string) => void
+    /** Custom warning message shown in the amber info box. Defaults to the generic override text. */
+    message?: string
 }
 
 interface OverrideResponse {
@@ -18,7 +20,7 @@ interface OverrideResponse {
     data?: { approver_id: number }
 }
 
-export const OverrideModal = ({ open, onClose, onApproved }: OverrideModalProps) => {
+export const OverrideModal = ({ open, onClose, onApproved, message }: OverrideModalProps) => {
     const { token } = useAuth()
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
@@ -95,8 +97,8 @@ export const OverrideModal = ({ open, onClose, onApproved }: OverrideModalProps)
                 <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
                     <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                     <p className="text-sm text-amber-800">
-                        This transaction contains overridden values. Have an authorized approver
-                        enter their credentials to proceed.
+                        {message ??
+                            'This transaction contains overridden values. Have an authorized approver enter their credentials to proceed.'}
                     </p>
                 </div>
 

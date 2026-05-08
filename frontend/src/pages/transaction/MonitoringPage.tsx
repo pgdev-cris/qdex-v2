@@ -351,7 +351,7 @@ const TransactionDetailModal = ({
 const PAGE_LIMIT = 20
 
 export const MonitoringPage = () => {
-    const { currentEvent } = useAuth()
+    const { currentEvent, token } = useAuth()
     const [rows, setRows] = useState<TransactionRow[]>([])
     const [loading, setLoading] = useState(false)
     const [total, setTotal] = useState(0)
@@ -397,7 +397,7 @@ export const MonitoringPage = () => {
 
                 const res = await apiFetch<ListResponse>(
                     `/api/v1/monitoring?${params.toString()}`,
-                    { method: 'GET' }
+                    { method: 'GET', token: token ?? undefined }
                 )
 
                 setRows(res.data)
@@ -422,6 +422,7 @@ export const MonitoringPage = () => {
         try {
             const res = await apiFetch<DetailResponse>(`/api/v1/monitoring/${id}`, {
                 method: 'GET',
+                token: token ?? undefined,
             })
             setDetail(res.data)
         } catch (err) {
@@ -436,7 +437,7 @@ export const MonitoringPage = () => {
         try {
             const res = await apiFetch<{ result: string; data: Receipt }>(
                 `/api/v1/monitoring/${id}/reprint`,
-                { method: 'GET' }
+                { method: 'GET', token: token ?? undefined }
             )
             setReprintData(res.data)
             // Wait for state update and DOM render
@@ -468,6 +469,7 @@ export const MonitoringPage = () => {
                         remarks,
                     },
                 }),
+                token: token ?? undefined,
             })
             setOverrideOpen(false)
             setVoidingId(null)

@@ -9,17 +9,6 @@ import {
 } from './monitoring.type';
 import { Receipt } from '../remittance/remittance.type';
 
-const TYPE_LABEL: Record<number, string> = {
-    [TRANSACTION_TYPE.PARTIAL]: 'Partial',
-    [TRANSACTION_TYPE.FULL]: 'Full',
-};
-
-const STATUS_LABEL: Record<number, string> = {
-    [TRANSACTION_STATUS.PENDING]: 'Pending',
-    [TRANSACTION_STATUS.VERIFIED]: 'Verified',
-    [TRANSACTION_STATUS.VOIDED]: 'Voided',
-};
-
 const listTransactions = async (
     query: ListTransactionsQuery,
 ): Promise<PaginatedResult<TransactionRow>> => {
@@ -91,5 +80,4 @@ const reprintTransaction = async (id: number, printedBy: string): Promise<Receip
     };
 };
 
-export { TYPE_LABEL, STATUS_LABEL };
 export default { listTransactions, getTransaction, reprintTransaction };

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Users, Search, UserPlus, Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Users, Search, UserPlus, Pencil, Trash2, ToggleLeft, ToggleRight, KeyRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -116,6 +116,7 @@ export const UsersPage = () => {
         id?: number
     } | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
+    const [pwModal, setPwModal] = useState<{ user: User; oldPassword: string; newPassword: string; repeatPassword: string } | null>(null)
 
     //  Fetch users
 
@@ -291,6 +292,29 @@ export const UsersPage = () => {
         }
     }
 
+    //  Change password
+
+    const handleChangePassword = async () => {
+        if (!pwModal) return
+        if (pwModal.newPassword !== pwModal.repeatPassword) {
+            setError('Passwords do not match.')
+            return
+        }
+        setSaving(true)
+        setError(null)
+        try {
+            await apiFetch(`/api/v1/users/${pwModal.user.id}/password`, {
+                method: 'PATCH',
+                body: JSON.stringify({ old_password: pwModal.oldPassword, new_password: pwModal.newPassword }),
+            })
+            setPwModal(null)
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : 'Failed to change password.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
     //  Format
 
     //  Format
@@ -358,7 +382,7 @@ export const UsersPage = () => {
                                 {COLUMNS.map((col) => (
                                     <th
                                         key={col}
-                                        className="px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground"
+                                        className={`px-4 py-3 text-xs font-medium tracking-wide text-muted-foreground ${col === 'Actions' ? 'text-center' : 'text-left'}`}
                                     >
                                         {col}
                                     </th>
@@ -421,8 +445,8 @@ export const UsersPage = () => {
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {fmtDate(user.created_at)}
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-1">
+                                        <td className="px-4 py-3 text-center">
+                                            <div className="flex items-center justify-center gap-1">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon-sm"
@@ -447,6 +471,14 @@ export const UsersPage = () => {
                                                     title="Edit"
                                                 >
                                                     <Pencil className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    onClick={() => setPwModal({ user, oldPassword: '', newPassword: '', repeatPassword: '' })}
+                                                    title="Change Password"
+                                                >
+                                                    <KeyRound className="h-3.5 w-3.5" />
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
@@ -622,6 +654,64 @@ export const UsersPage = () => {
                 onConfirm={handleDelete}
                 onCancel={() => setDeleteTarget(null)}
             />
+
+            {/* Change password modal */}
+            <Modal
+                open={pwModal !== null}
+                onClose={() => setPwModal(null)}
+                title="Change Password"
+                description={
+                    pwModal
+                        ? `Set a new password for ${pwModal.user.first_name} ${pwModal.user.last_name}.`
+                        : ''
+                }
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => setPwModal(null)} disabled={saving}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleChangePassword} disabled={saving}>
+                            {saving ? 'Saving…' : 'Change Password'}
+                        </Button>
+                    </>
+                }
+            >
+                {pwModal && (
+                    <div className="flex flex-col gap-4">
+                        <FormField label="Old Password" required>
+                            <Input
+                                type="password"
+                                placeholder="••••••••"
+                                value={pwModal.oldPassword}
+                                onChange={(e) =>
+                                    setPwModal((m) => m ? { ...m, oldPassword: e.target.value } : m)
+                                }
+                            />
+                        </FormField>
+                        <FormField label="New Password" required hint="Min. 8 chars.">
+                            <Input
+                                type="password"
+                                placeholder="••••••••"
+                                value={pwModal.newPassword}
+                                onChange={(e) =>
+                                    setPwModal((m) => m ? { ...m, newPassword: e.target.value } : m)
+                                }
+                            />
+                        </FormField>
+                        <FormField label="Repeat New Password" required>
+                            <Input
+                                type="password"
+                                placeholder="••••••••"
+                                value={pwModal.repeatPassword}
+                                onChange={(e) =>
+                                    setPwModal((m) => m ? { ...m, repeatPassword: e.target.value } : m)
+                                }
+                            />
+                        </FormField>
+                        {error && <p className="text-sm text-destructive">{error}</p>}
+                    </div>
+                )}
+            </Modal>
         </div>
     )
 }

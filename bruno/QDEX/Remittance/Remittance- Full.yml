@@ -1,0 +1,36 @@
+info:
+  name: "Remittance: Full"
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{qdex_v2_base_url}}/api/v1/remittance"
+  body:
+    type: json
+    data: |-
+      {
+          "vendor_code": "11460",
+          "vendor_name": "Sample Supplier",
+          "remitter_name": "test remitter",
+          "remit_type": "partial",
+          "lines": [
+              {
+                  "method": "CASH",
+                  "amount": "1000"
+              },
+              {
+                  "method": "CREDIT_CARD",
+                  "amount": "1000"
+              }
+          ]
+      }
+  auth:
+    type: bearer
+    token: "{{qdex_auth_token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

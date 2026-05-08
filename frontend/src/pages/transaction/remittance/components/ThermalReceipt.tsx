@@ -90,18 +90,17 @@ const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                     aria-hidden
                     style={{
                         position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%) rotate(-25deg)',
                         fontWeight: 'bold',
                         fontSize: '72pt',
                         color: '#000',
                         opacity: 0.12,
-                        transform: 'rotate(-25deg)',
                         pointerEvents: 'none',
                         zIndex: 0,
                         letterSpacing: '6pt',
+                        whiteSpace: 'nowrap',
                     }}
                 >
                     VOID

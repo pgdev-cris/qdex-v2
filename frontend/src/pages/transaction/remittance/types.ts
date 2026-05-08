@@ -28,6 +28,8 @@ export interface SalesResponse {
 export interface ReceiptLine {
     method: string
     amount: string
+    /** True when this line amount came from the previous day's unremitted sales */
+    is_prev_sales?: boolean
 }
 
 export interface Receipt {
@@ -108,7 +110,8 @@ export interface TenderType {
     id: number
     code: string
     label: string
-    is_editable: number // 0 | 1
+    is_editable: number  // 0 | 1
+    allow_partial_remit: number // 0 | 1 — whether this tender appears in partial remittance
     sort: number
 }
 

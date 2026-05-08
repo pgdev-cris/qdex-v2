@@ -85,7 +85,7 @@ interface Props {
     onClose: () => void
 }
 
-const BLANK: Filters = { from: '', to: '', supplier_code: '', type: '', status: '' }
+const BLANK: Filters = { from: '', to: '', supplier_code: '', type: '', status: '1' }
 
 export const TransactionReportModal = ({ open, onClose }: Props) => {
     const today = new Date().toISOString().slice(0, 10)

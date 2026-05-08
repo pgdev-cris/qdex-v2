@@ -161,7 +161,7 @@ const ContextPanel = ({
                     (() => {
                         const ctxIsPartiable = (method: string): boolean => {
                             if (tenderTypes.length === 0) return true
-                            return (ctxTenderMap.get(method)?.is_partiable ?? 0) === 1
+                            return (ctxTenderMap.get(method)?.allow_partial_remit ?? 0) === 1
                         }
                         const visibleRows =
                             remitType === 'partial'
@@ -716,7 +716,7 @@ export const RemittancePage = () => {
     }
     const isPartiableTender = (method: string): boolean => {
         if (tenderTypes.length === 0) return true // fallback: show all when types haven't loaded
-        return (tenderMap.get(method)?.is_partiable ?? 0) === 1
+        return (tenderMap.get(method)?.allow_partial_remit ?? 0) === 1
     }
     const prevSalesMap = new Map((prevSales ?? []).map((r) => [r.payment_method, Number(r.total)]))
 

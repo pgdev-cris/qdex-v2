@@ -77,11 +77,11 @@ export const RemittanceForm = ({
         return (tenderMap.get(method)?.is_editable ?? 0) === 1
     }
 
-    // A row appears in partial remittance only when is_partiable = 1
+    // A row appears in partial remittance only when allow_partial_remit = 1
     // If tenderTypes haven't loaded yet, show all by default
     const isPartiable = (method: string): boolean => {
         if (tenderTypes.length === 0) return true
-        return (tenderMap.get(method)?.is_partiable ?? 0) === 1
+        return (tenderMap.get(method)?.allow_partial_remit ?? 0) === 1
     }
 
     // Format a raw input string to 2 decimal places on blur

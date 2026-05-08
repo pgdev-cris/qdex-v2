@@ -291,7 +291,7 @@ export const RemittanceForm = ({
                                             ) : null}
                                             {hasPrevCash && (
                                                 <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
-                                                    Previous day unremitted amounts. Adjust if collecting partial only.
+                                                    Includes previous day unremitted amounts.
                                                 </div>
                                             )}
                                         </div>
@@ -459,7 +459,7 @@ export const RemittanceForm = ({
                                             )}
                                             {hasPrev && (
                                                 <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
-                                                    Previous day unremitted amounts. Adjust if collecting partial only.
+                                                    Includes previous day unremitted amounts.
                                                 </div>
                                             )}
                                         </div>
@@ -622,7 +622,7 @@ export const RemittanceForm = ({
                             </div>
                             {hasPrevCash && (
                                 <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
-                                    Previous day unremitted amounts. Adjust if collecting partial only.
+                                    Includes previous day unremitted amounts.
                                 </div>
                             )}
                         </div>
@@ -690,7 +690,7 @@ export const RemittanceForm = ({
                                 </div>
                                 {hasPrev && (
                                     <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
-                                        Previous day unremitted amounts. Adjust if collecting partial only.
+                                        Includes previous day unremitted amounts.
                                     </div>
                                 )}
                             </div>

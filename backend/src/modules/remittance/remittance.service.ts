@@ -27,12 +27,56 @@ interface PosRemittancePayload {
 }
 
 /**
+ * Notifies the POS sales service that a remittance has been voided.
+ * Must be called inside a DB transaction — any failure here will roll back the transaction.
+ * Skipped when POS_MOCK=true.
+ */
+const notifyPosVoid = async (receiptNo: string): Promise<void> => {
+    if (process.env.POS_MOCK === 'true') {
+        console.log('[POS] POS_MOCK=true — skipping void notification for receipt:', receiptNo);
+        return;
+    }
+
+    console.log('[POS] Sending void notification to POS:', { receipt_no: receiptNo });
+
+    let response: Response;
+    try {
+        response = await fetch(`${posBaseUrl}/void/${encodeURIComponent(receiptNo)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(10_000),
+        });
+
+        console.log('[POS] Void notification response — status:', response.status, response.statusText);
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Could not reach the sales service.';
+        console.error('[POS] Void notification error:', message);
+        throw new Error(`[POS] ${message}`);
+    }
+
+    if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+        console.error('[POS] Void notification failed:', errorBody);
+        throw new Error(
+            `[POS] Void notification failed: ${errorBody?.message ?? response.statusText}`,
+        );
+    }
+
+    console.log('[POS] Void notification sent successfully for receipt:', receiptNo);
+};
+
+/**
  * Notifies the POS sales service of the completed remittance.
  * Must be called inside a DB transaction — any failure here will roll back the transaction.
  * Skipped when POS_MOCK=true.
  */
 const notifyPosRemittance = async (data: PosRemittancePayload): Promise<void> => {
-    if (process.env.POS_MOCK === 'true') return;
+    if (process.env.POS_MOCK === 'true') {
+        console.log('[POS] POS_MOCK=true — skipping remittance notification:', data);
+        return;
+    }
+
+    console.log('[POS] Sending remittance notification to POS:', data);
 
     let response: Response;
     try {
@@ -43,21 +87,27 @@ const notifyPosRemittance = async (data: PosRemittancePayload): Promise<void> =>
             signal: AbortSignal.timeout(10_000),
         });
 
-        console.log('notify remittance response: ', response);
+        console.log('[POS] Remittance notification response — status:', response.status, response.statusText);
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Could not reach the sales service.';
+        console.error('[POS] Remittance notification error:', message);
         throw new Error(`[POS] ${message}`);
     }
 
     if (!response.ok) {
         const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+        console.error('[POS] Remittance notification failed:', errorBody);
         throw new Error(
             `[POS] Remittance notification failed: ${errorBody?.message ?? response.statusText}`,
         );
     }
+
+    console.log('[POS] Remittance notification sent successfully:', { receipt_no: data.receipt_no, type: data.remittance_type });
 };
 
 const partialRemit = async (payload: PartialRemitPayload, userId: number): Promise<RemitResult> => {
+    console.log('[Remittance] partialRemit called — supplier_code:', payload.supplier_code, '| userId:', userId, '| lines:', payload.lines);
+
     const supplierCode = Number(payload.supplier_code);
     const supplier = await supplierProvider.validateSupplier(supplierCode);
 
@@ -129,6 +179,7 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
         }
 
         // Notify POS — failure here rolls back the entire transaction
+        console.log('[Remittance] Partial — notifying POS for receipt:', receiptNo, '| total_amount:', totalAmount);
         await notifyPosRemittance({
             receipt_no: receiptNo,
             supplier_code: supplierCode,
@@ -138,6 +189,8 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
             remittance_type: 'partial',
         });
     });
+
+    console.log('[Remittance] partialRemit completed — receipt_no:', receiptNo, '| reference_code:', referenceCode);
 
     return {
         receipt_no: receiptNo,
@@ -152,6 +205,8 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
 };
 
 const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<RemitResult> => {
+    console.log('[Remittance] fullRemit called — supplier_code:', payload.supplier_code, '| userId:', userId, '| lines:', payload.lines);
+
     const supplierCode = Number(payload.supplier_code);
     const supplier = await supplierProvider.validateSupplier(supplierCode);
 
@@ -226,6 +281,7 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
         }
 
         // Notify POS — failure here rolls back the entire transaction
+        console.log('[Remittance] Full — notifying POS for receipt:', receiptNo, '| total_amount:', totalAmount);
         await notifyPosRemittance({
             receipt_no: receiptNo,
             supplier_code: supplierCode,
@@ -235,6 +291,8 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
             remittance_type: 'full',
         });
     });
+
+    console.log('[Remittance] fullRemit completed — receipt_no:', receiptNo, '| reference_code:', referenceCode);
 
     return {
         receipt_no: receiptNo,
@@ -269,6 +327,17 @@ const getPartialSummary = async (supplierCodeStr: string) => {
 };
 
 const voidRemittance = async (id: number, payload: VoidPayload, userId: number) => {
+    console.log('[Remittance] voidRemittance called — transaction id:', id, '| userId:', userId);
+
+    const transaction = await remittanceRepository.getTransactionById(id);
+    if (!transaction) throw new NotFoundError('Transaction not found.');
+
+    if (transaction.status === TRANSACTION_STATUS.VOIDED) {
+        throw new ConflictError('Transaction is already voided.');
+    }
+
+    console.log('[Remittance] Voiding transaction — receipt_no:', transaction.receipt_no, '| current status:', transaction.status);
+
     await PoolManager.transaction(async (conn) => {
         await remittanceRepository.updateTransactionStatus(conn, id, TRANSACTION_STATUS.VOIDED);
 
@@ -279,7 +348,13 @@ const voidRemittance = async (id: number, payload: VoidPayload, userId: number) 
             approver_user_id: payload.override.approver_user_id,
             remarks: payload.override.remarks,
         });
+
+        // Notify POS — failure here rolls back the entire transaction
+        console.log('[Remittance] Void — notifying POS for receipt:', transaction.receipt_no);
+        await notifyPosVoid(transaction.receipt_no);
     });
+
+    console.log('[Remittance] voidRemittance completed — transaction id:', id, '| receipt_no:', transaction.receipt_no);
 };
 
 export default { partialRemit, fullRemit, getPartialSummary, voidRemittance };

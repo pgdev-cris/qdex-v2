@@ -343,6 +343,35 @@ const getFullRemittanceToday = (
     return getFullRemittanceByDate(supplierCode, eventId, today);
 };
 
+export interface TransactionRow {
+    id: number;
+    receipt_no: string;
+    reference_code: string;
+    supplier_id: number;
+    status: number;
+}
+
+/**
+ * Fetches a single transaction by its primary key, including the formatted receipt_no.
+ * Returns null if not found.
+ */
+const getTransactionById = async (id: number): Promise<TransactionRow | null> => {
+    const sql = `
+        SELECT
+            t.id,
+            CONCAT(COALESCE(sr.prefix, ''), LPAD(t.transaction_no, COALESCE(sr.pad_length, 6), '0')) AS receipt_no,
+            t.reference_code,
+            t.supplier_id,
+            t.status
+        FROM tbl_transactions t
+        LEFT JOIN tbl_series sr ON sr.code = CONCAT('TRX-', t.event_id)
+        WHERE t.id = ?
+        LIMIT 1
+    `;
+    const rows = await PoolManager.query<TransactionRow[]>(sql, [id]);
+    return rows?.[0] ?? null;
+};
+
 const updateTransactionStatus = async (
     conn: PoolConnection,
     id: number,
@@ -360,5 +389,6 @@ export default {
     hasPrevSalesTransactionByDate,
     getFullRemittanceByDate,
     getFullRemittanceToday,
+    getTransactionById,
     updateTransactionStatus,
 };

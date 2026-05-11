@@ -27,6 +27,36 @@ interface PosRemittancePayload {
 }
 
 /**
+ * Notifies the POS sales service that a remittance has been voided.
+ * Must be called inside a DB transaction — any failure here will roll back the transaction.
+ * Skipped when POS_MOCK=true.
+ */
+const notifyPosVoid = async (receiptNo: string): Promise<void> => {
+    if (process.env.POS_MOCK === 'true') return;
+
+    let response: Response;
+    try {
+        response = await fetch(`${posBaseUrl}/void/${encodeURIComponent(receiptNo)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(10_000),
+        });
+
+        console.log('notify void response: ', response);
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Could not reach the sales service.';
+        throw new Error(`[POS] ${message}`);
+    }
+
+    if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(
+            `[POS] Void notification failed: ${errorBody?.message ?? response.statusText}`,
+        );
+    }
+};
+
+/**
  * Notifies the POS sales service of the completed remittance.
  * Must be called inside a DB transaction — any failure here will roll back the transaction.
  * Skipped when POS_MOCK=true.
@@ -269,6 +299,13 @@ const getPartialSummary = async (supplierCodeStr: string) => {
 };
 
 const voidRemittance = async (id: number, payload: VoidPayload, userId: number) => {
+    const transaction = await remittanceRepository.getTransactionById(id);
+    if (!transaction) throw new NotFoundError('Transaction not found.');
+
+    if (transaction.status === TRANSACTION_STATUS.VOIDED) {
+        throw new ConflictError('Transaction is already voided.');
+    }
+
     await PoolManager.transaction(async (conn) => {
         await remittanceRepository.updateTransactionStatus(conn, id, TRANSACTION_STATUS.VOIDED);
 
@@ -279,6 +316,9 @@ const voidRemittance = async (id: number, payload: VoidPayload, userId: number) 
             approver_user_id: payload.override.approver_user_id,
             remarks: payload.override.remarks,
         });
+
+        // Notify POS — failure here rolls back the entire transaction
+        await notifyPosVoid(transaction.receipt_no);
     });
 };
 

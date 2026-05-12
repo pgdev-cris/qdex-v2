@@ -46,6 +46,8 @@ export interface Receipt {
     event_name: string;
     event_code: string;
     is_voided: boolean;
+    /** True when every line in this remittance came from previous-day unremitted sales */
+    is_prev_sales_only: boolean;
 }
 
 export interface RemitResult {
@@ -57,4 +59,6 @@ export interface RemitResult {
     remit_type: 'partial' | 'full';
     lines: RemitLine[];
     remitted_at: string;
+    /** True when every line in this remittance came from previous-day unremitted sales */
+    is_prev_sales_only: boolean;
 }

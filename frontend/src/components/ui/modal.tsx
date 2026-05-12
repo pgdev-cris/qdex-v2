@@ -82,6 +82,8 @@ interface ConfirmModalProps {
     title: string
     description?: string
     rows?: ConfirmRow[]
+    /** Optional notice banner rendered below the summary rows */
+    notice?: ReactNode
     confirmLabel?: string
     loading?: boolean
     isOverridden?: boolean
@@ -96,6 +98,7 @@ export const ConfirmModal = ({
     title,
     description,
     rows,
+    notice,
     confirmLabel = 'Confirm',
     loading = false,
     isOverridden = false,
@@ -154,6 +157,9 @@ export const ConfirmModal = ({
                         ))}
                     </div>
                 )}
+
+                {/* Notice banner */}
+                {notice && <div className="px-6 pb-3">{notice}</div>}
 
                 {/* Override remarks */}
                 {isOverridden && (

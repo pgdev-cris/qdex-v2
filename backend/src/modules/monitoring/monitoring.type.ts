@@ -14,6 +14,8 @@ export interface TransactionRow {
     verified_by: string | null;
     transacted_at: string;
     is_overridden: number; // 0 | 1
+    /** 1 when every detail line in this remittance is a previous-day carryover */
+    is_prev_sales_only: number; // 0 | 1
 }
 
 export interface TransactionDetailRow {
@@ -25,6 +27,8 @@ export interface TransactionDetailRow {
     tender_label: string | null;
     amount: number;
     transaction_count: number;
+    /** 1 when this line came from the previous day's unremitted sales */
+    is_prev_sales: number; // 0 | 1
 }
 
 export interface OverrideLogRow {

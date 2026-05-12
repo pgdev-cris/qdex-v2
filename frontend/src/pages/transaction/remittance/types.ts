@@ -46,6 +46,8 @@ export interface Receipt {
     event_name: string
     event_code: string
     is_voided: boolean
+    /** True when every line in this remittance came from previous-day unremitted sales */
+    is_prev_sales_only: boolean
 }
 
 //  Remittance API
@@ -59,6 +61,8 @@ export interface RemittanceApiData {
     remit_type: string
     lines: ReceiptLine[]
     remitted_at: string
+    /** True when every line in this remittance came from previous-day unremitted sales */
+    is_prev_sales_only: boolean
 }
 
 export interface RemittanceApiResponse {
@@ -110,7 +114,7 @@ export interface TenderType {
     id: number
     code: string
     label: string
-    is_editable: number  // 0 | 1
+    is_editable: number // 0 | 1
     allow_partial_remit: number // 0 | 1 — whether this tender appears in partial remittance
     sort: number
 }

@@ -17,6 +17,8 @@ export interface InsertTransactionData {
     type: number;
     /** 1 if this remittance included previous-day unremitted sales, 0 otherwise */
     has_prev_sales: 0 | 1;
+    /** 1 if every detail line in this remittance is a previous-day carryover, 0 otherwise */
+    is_prev_sales_only: 0 | 1;
 }
 
 export interface InsertDetailData {
@@ -37,8 +39,8 @@ const createTransaction = async (
     const [result] = await conn.execute(
         `INSERT INTO tbl_transactions
             (event_id, supplier_id, transaction_no, transacted_at, total_amount, reference_code,
-             remitted_by, verified_by, verified_at, status, type, has_prev_sales)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             remitted_by, verified_by, verified_at, status, type, has_prev_sales, is_prev_sales_only)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             data.event_id,
             data.supplier_id,
@@ -52,6 +54,7 @@ const createTransaction = async (
             data.status,
             data.type,
             data.has_prev_sales,
+            data.is_prev_sales_only,
         ],
     );
 
@@ -334,6 +337,43 @@ const hasPrevSalesTransactionByDate = async (
     return (rows?.length ?? 0) > 0;
 };
 
+/**
+ * Returns the total amount already remitted per tender for is_prev_sales = 1 detail lines
+ * on a specific date. Used to compute remaining prev-day amounts when a supplier has already
+ * done a partial remittance that included some (but not all) prev-day tenders.
+ * Uses supplier.code (vendor code). date should be 'YYYY-MM-DD' Manila time.
+ */
+const getPrevSalesRemittedByDate = async (
+    supplierCode: number,
+    eventId: number,
+    date: string,
+): Promise<Record<string, number>> => {
+    const sql = `
+        SELECT
+            tt.code         AS payment_method,
+            SUM(td.amount)  AS total_amount
+        FROM tbl_transactions      t
+        INNER JOIN tbl_suppliers   s  ON s.id  = t.supplier_id
+        INNER JOIN tbl_transaction_details td ON td.transaction_id = t.id
+        INNER JOIN tbl_tender_types tt ON tt.id = td.tender_type
+        WHERE s.code          = ?
+          AND t.event_id      = ?
+          AND t.status       != 2       -- not VOIDED
+          AND DATE(t.transacted_at) = ?
+          AND td.is_prev_sales = 1      -- only prev-day portions
+        GROUP BY tt.code
+    `;
+    const rows = await PoolManager.query<{ payment_method: string; total_amount: number }[]>(
+        sql,
+        [supplierCode, eventId, date],
+    );
+    const totals: Record<string, number> = {};
+    for (const row of rows ?? []) {
+        totals[row.payment_method] = Number(row.total_amount);
+    }
+    return totals;
+};
+
 /** Convenience wrapper — checks today's date in Manila time. */
 const getFullRemittanceToday = (
     supplierCode: number,
@@ -387,6 +427,7 @@ export default {
     getPartialCashSummary,
     getPartialTotalsByDate,
     hasPrevSalesTransactionByDate,
+    getPrevSalesRemittedByDate,
     getFullRemittanceByDate,
     getFullRemittanceToday,
     getTransactionById,

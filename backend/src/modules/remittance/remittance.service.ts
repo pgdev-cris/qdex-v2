@@ -122,6 +122,7 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
     const seriesCode = `TRX-${event.id}`;
 
     const totalAmount = payload.lines.reduce((sum, l) => sum + Number(l.amount), 0);
+    const isPrevSalesOnly = payload.lines.length > 0 && payload.lines.every((l) => l.is_prev_sales);
     const now = new Date();
     const referenceCode = generateRefCode();
 
@@ -156,6 +157,7 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
             status: TRANSACTION_STATUS.VERIFIED,
             type: TRANSACTION_TYPE.PARTIAL,
             has_prev_sales: payload.has_prev_sales ? 1 : 0,
+            is_prev_sales_only: isPrevSalesOnly ? 1 : 0,
         });
 
         const details = payload.lines.map((l) => ({
@@ -201,6 +203,7 @@ const partialRemit = async (payload: PartialRemitPayload, userId: number): Promi
         remit_type: 'partial',
         lines: payload.lines,
         remitted_at: now.toISOString(),
+        is_prev_sales_only: isPrevSalesOnly,
     };
 };
 
@@ -229,6 +232,7 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
     const seriesCode = `TRX-${event.id}`;
 
     const totalAmount = payload.lines.reduce((sum, l) => sum + Number(l.amount), 0);
+    const isPrevSalesOnly = payload.lines.length > 0 && payload.lines.every((l) => l.is_prev_sales);
     const now = new Date();
     const referenceCode = generateRefCode();
 
@@ -258,6 +262,7 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
             status: TRANSACTION_STATUS.VERIFIED,
             type: TRANSACTION_TYPE.FULL,
             has_prev_sales: payload.has_prev_sales ? 1 : 0,
+            is_prev_sales_only: isPrevSalesOnly ? 1 : 0,
         });
 
         const details = payload.lines.map((l) => ({
@@ -303,6 +308,7 @@ const fullRemit = async (payload: FullRemitPayload, userId: number): Promise<Rem
         remit_type: 'full',
         lines: payload.lines,
         remitted_at: now.toISOString(),
+        is_prev_sales_only: isPrevSalesOnly,
     };
 };
 

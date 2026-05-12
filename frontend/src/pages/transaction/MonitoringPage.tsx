@@ -39,12 +39,16 @@ interface TransactionRow {
     verified_by: string | null
     transacted_at: string
     is_overridden: number // 0 | 1
+    /** 1 when every detail line is a previous-day carryover */
+    is_prev_sales_only: number // 0 | 1
 }
 
 interface TransactionDetail {
     tender_type: number
     amount: number
     transaction_count: number
+    /** 1 when this line came from the previous day's unremitted sales */
+    is_prev_sales: number // 0 | 1
 }
 
 interface OverrideLog {
@@ -243,6 +247,13 @@ const TransactionDetailModal = ({
                     </div>
                 </div>
 
+                {/* Unremitted Sales notice */}
+                {transaction.is_prev_sales_only === 1 && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 tracking-wide text-center">
+                        *** UNREMITTED SALES ***
+                    </div>
+                )}
+
                 {/* Payment lines */}
                 <div>
                     <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -264,7 +275,14 @@ const TransactionDetailModal = ({
                                 {transaction.details.map((d, i) => (
                                     <tr key={i} className="border-b last:border-0">
                                         <td className="px-3 py-2">
-                                            {tenderLabelById(d.tender_type)}
+                                            <div className="flex items-center gap-2">
+                                                {tenderLabelById(d.tender_type)}
+                                                {d.is_prev_sales === 1 && (
+                                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                                        prev.
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-3 py-2 text-right font-mono">
                                             {fmt(d.amount)}
@@ -667,7 +685,14 @@ export const MonitoringPage = () => {
                                                 </p>
                                             </td>
                                             <td className="px-2 md:px-4 py-3 text-center">
-                                                <TypeBadge type={row.type} />
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <TypeBadge type={row.type} />
+                                                    {row.is_prev_sales_only === 1 && (
+                                                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 whitespace-nowrap">
+                                                            Prev. Sales
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-2 md:px-4 py-3 font-mono">
                                                 {fmt(row.total_amount)}

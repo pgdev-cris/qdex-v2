@@ -52,9 +52,11 @@ const reprintTransaction = async (id: number, printedBy: string): Promise<Receip
         remitter_name: transaction.remitted_by,
         remit_type: transaction.remit_type === TRANSACTION_TYPE.FULL ? 'full' : 'partial',
         is_voided: transaction.status === TRANSACTION_STATUS.VOIDED,
+        is_prev_sales_only: transaction.is_prev_sales_only === 1,
         lines: transaction.details.map((d) => ({
             method: d.tender_code ?? `TENDER_${d.tender_type}`,
             amount: String(d.amount),
+            is_prev_sales: d.is_prev_sales === 1,
         })),
         verified_at: new Date(transaction.transacted_at).toLocaleString('en-US', {
             year: 'numeric',

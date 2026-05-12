@@ -86,7 +86,8 @@ const listTransactions = async (
             CAST(EXISTS (
                 SELECT 1 FROM tbl_override_logs ol
                 WHERE ol.transaction_id = t.id AND ol.action_id = 1
-            ) AS UNSIGNED) AS is_overridden
+            ) AS UNSIGNED) AS is_overridden,
+            t.is_prev_sales_only + 0 AS is_prev_sales_only
         ${baseQuery}
         ORDER BY t.id DESC
         LIMIT ${Math.floor(limit)} OFFSET ${Math.floor(offset)}
@@ -120,7 +121,8 @@ const getTransactionById = async (id: number): Promise<TransactionWithDetails | 
             CAST(EXISTS (
                 SELECT 1 FROM tbl_override_logs ol
                 WHERE ol.transaction_id = t.id AND ol.action_id = 1
-            ) AS UNSIGNED) AS is_overridden
+            ) AS UNSIGNED) AS is_overridden,
+            t.is_prev_sales_only + 0 AS is_prev_sales_only
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers  v ON v.id = t.supplier_id
         INNER JOIN tbl_events   e ON e.id = t.event_id
@@ -140,7 +142,8 @@ const getTransactionById = async (id: number): Promise<TransactionWithDetails | 
             tt.code  AS tender_code,
             tt.label AS tender_label,
             td.amount,
-            td.transaction_count
+            td.transaction_count,
+            td.is_prev_sales + 0 AS is_prev_sales
         FROM tbl_transaction_details td
         LEFT JOIN tbl_tender_types tt ON tt.id = td.tender_type
         WHERE td.transaction_id = ?

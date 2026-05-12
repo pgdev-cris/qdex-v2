@@ -694,10 +694,16 @@ export const RemittancePage = () => {
                         // Prev-only: seed with prev amount
                         extra[p.payment_method] = toFixed2(p.total)
                     } else if (isEditableTender(p.payment_method)) {
-                        // Editable tender present in both days: pre-fill with today + prev combined
-                        extra[p.payment_method] = toFixed2(
-                            Number(todaySale.total) + Number(p.total)
-                        )
+                        if (type === 'partial' && !isPartiableTender(p.payment_method)) {
+                            // Editable but NOT partiable, partial mode: today's amount belongs to
+                            // full remittance only. Only carry the prev-day amount as a prev-only row.
+                            extra[p.payment_method] = toFixed2(p.total)
+                        } else {
+                            // Editable and partiable (or full mode): combine today + prev
+                            extra[p.payment_method] = toFixed2(
+                                Number(todaySale.total) + Number(p.total)
+                            )
+                        }
                     } else if (type === 'partial') {
                         // Non-editable tender in today's sales, partial mode:
                         // It is never shown in the editable block, so seed the prev-day amount
@@ -757,9 +763,15 @@ export const RemittancePage = () => {
               if (p.payment_method === 'CASH') return false
               const notInToday = !salesData.some((s) => s.payment_method === p.payment_method)
               if (notInToday) return true
-              // Partial: also surface non-editable tenders that exist in today's sales —
-              // they are hidden from the editable block but still need to be remitted.
-              return remitType === 'partial' && !isEditableTender(p.payment_method)
+              // Partial: surface tenders that exist in today's sales but aren't shown in
+              // the editable block. This covers:
+              //   • Non-editable tenders (fixed amount, never in editable block)
+              //   • Editable-but-not-partiable tenders (today's amount goes to full
+              //     remittance only; prev-day amount still needs to be collected here)
+              return (
+                  remitType === 'partial' &&
+                  (!isEditableTender(p.payment_method) || !isPartiableTender(p.payment_method))
+              )
           })
         : []
     const sortedSales = [...salesData].sort((a, b) => {

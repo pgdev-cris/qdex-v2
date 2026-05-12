@@ -46,15 +46,8 @@ export const genTransIds = (): { transNo: string; refCode: string } => {
     return { transNo, refCode }
 }
 
-export const methodLabel = (code: string): string => {
-    const map: Record<string, string> = {
-        CASH: 'Cash',
-        GCASH: 'GCash',
-        PWALLET: 'Puregold Wallet',
-        TANGENT_DEBIT: '(Tangent) Credit Card',
-        TANGENT_CREDIT: '(Tangent) Debit Card',
-        HOMECREDIT: 'Home Credit',
-        GCASH_EPOS: 'GCash E-POS',
-    }
-    return map[code] ?? code
-}
+// Tender label lookup moved to @/constants/tender.constants so it's shared
+// with the monitoring page and anywhere else that needs to resolve a tender
+// code/id to a display label. Re-exported here as `methodLabel` to keep
+// existing callers working without churn.
+export { tenderLabelByCode as methodLabel } from '@/constants/tender.constants'

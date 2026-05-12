@@ -102,7 +102,7 @@ interface Props {
     onClose: () => void
 }
 
-const BLANK: Filters = { from: '', to: '', supplier_code: '', status: '' }
+const BLANK: Filters = { from: '', to: '', supplier_code: '', status: '1' }
 
 export const SupplierPerTenderModal = ({ open, onClose }: Props) => {
     const today = new Date().toISOString().slice(0, 10)

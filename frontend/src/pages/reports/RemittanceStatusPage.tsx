@@ -6,6 +6,9 @@ import {
     ChevronUp,
     ChevronDown,
     ChevronsUpDown,
+    TrendingUp,
+    Wallet,
+    Scale,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -20,7 +23,7 @@ const toISO = (d: Date | undefined) => (d ? format(d, 'yyyy-MM-dd') : '')
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type RemittanceStatus = 'settled' | 'partial' | 'pending' | 'no_activity'
+type RemittanceStatus = 'settled' | 'short' | 'over' | 'pending' | 'no_activity'
 
 interface RemittanceStatusRow {
     supplier_id: number
@@ -36,7 +39,8 @@ interface RemittanceStatusRow {
 interface RemittanceStatusSummary {
     total_suppliers: number
     settled: number
-    partial: number
+    short: number
+    over: number
     pending: number
     no_activity: number
 }
@@ -60,10 +64,11 @@ type SortKey = keyof Pick<
 type SortDir = 'asc' | 'desc'
 
 const STATUS_ORDER: Record<RemittanceStatus, number> = {
-    pending: 0,
-    partial: 1,
-    settled: 2,
-    no_activity: 3,
+    short: 0,
+    over: 1,
+    pending: 2,
+    settled: 3,
+    no_activity: 4,
 }
 
 const compareRows = (
@@ -87,7 +92,8 @@ const compareRows = (
 
 const STATUS_CONFIG: Record<RemittanceStatus, { label: string; className: string }> = {
     settled: { label: 'Settled', className: 'bg-green-50 text-green-700 border-green-200' },
-    partial: { label: 'Partial', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+    short: { label: 'Short', className: 'bg-red-50 text-red-700 border-red-200' },
+    over: { label: 'Over', className: 'bg-blue-50 text-blue-700 border-blue-200' },
     pending: { label: 'Pending', className: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
     no_activity: {
         label: 'No Activity',
@@ -119,6 +125,27 @@ const SummaryCard = ({ label, count, color }: SummaryCardProps) => (
         <CardContent className="p-4">
             <p className="text-xs font-medium text-muted-foreground">{label}</p>
             <p className={`mt-1 text-2xl font-bold tabular-nums ${color}`}>{count}</p>
+        </CardContent>
+    </Card>
+)
+
+// ─── Financial summary card ───────────────────────────────────────────────────
+
+interface FinancialCardProps {
+    label: string
+    value: number
+    icon: React.ReactNode
+    colorClass: string
+}
+
+const FinancialCard = ({ label, value, icon, colorClass }: FinancialCardProps) => (
+    <Card className="flex-1 min-w-[180px]">
+        <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                <span className={`${colorClass} opacity-70`}>{icon}</span>
+            </div>
+            <p className={`text-xl font-bold tabular-nums ${colorClass}`}>{fmt(value)}</p>
         </CardContent>
     </Card>
 )
@@ -220,13 +247,20 @@ export const RemittanceStatusPage = () => {
         [rows, sortKey, sortDir]
     )
 
+    const financialTotals = useMemo(() => {
+        const totalSales = rows.reduce((s, r) => s + Number(r.total_sales), 0)
+        const totalRemitted = rows.reduce((s, r) => s + Number(r.total_remitted), 0)
+        const totalBalance = totalRemitted - totalSales
+        return { totalSales, totalRemitted, totalBalance }
+    }, [rows])
+
     const thClass =
         'px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground select-none'
-    const thBtn = (key: SortKey, label: string, right = false) => (
-        <th className={thClass + (right ? ' text-right' : '')}>
+    const thBtn = (key: SortKey, label: string, align: 'left' | 'right' | 'center' = 'left') => (
+        <th className={thClass + (align === 'right' ? ' text-right' : align === 'center' ? ' flex justify-center' : '')}>
             <button
                 onClick={() => handleSort(key)}
-                className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${right ? 'flex-row-reverse' : ''}`}
+                className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${align === 'right' ? 'flex-row-reverse' : ''}`}
             >
                 {label}
                 <SortIcon columnKey={key} sortKey={sortKey} sortDir={sortDir} />
@@ -258,24 +292,36 @@ export const RemittanceStatusPage = () => {
                 </Button>
             </div>
 
-            {/* Summary cards */}
-            {summary && (
-                <div className="mb-6 flex flex-wrap gap-3">
-                    <SummaryCard
-                        label="Total Suppliers"
-                        count={summary.total_suppliers}
-                        color="text-foreground"
+            {/* Financial aggregate totals */}
+            {rows.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-3">
+                    <FinancialCard
+                        label="Total Sales"
+                        value={financialTotals.totalSales}
+                        icon={<TrendingUp className="h-4 w-4" />}
+                        colorClass="text-blue-600"
                     />
-                    <SummaryCard label="Settled" count={summary.settled} color="text-green-600" />
-                    <SummaryCard label="Partial" count={summary.partial} color="text-amber-600" />
-                    <SummaryCard label="Pending" count={summary.pending} color="text-yellow-600" />
-                    <SummaryCard
-                        label="No Activity"
-                        count={summary.no_activity}
-                        color="text-muted-foreground"
+                    <FinancialCard
+                        label="Total Remitted"
+                        value={financialTotals.totalRemitted}
+                        icon={<Wallet className="h-4 w-4" />}
+                        colorClass="text-green-600"
+                    />
+                    <FinancialCard
+                        label="Total Balance"
+                        value={financialTotals.totalBalance}
+                        icon={<Scale className="h-4 w-4" />}
+                        colorClass={
+                            financialTotals.totalBalance < 0
+                                ? 'text-red-600'
+                                : financialTotals.totalBalance > 0
+                                  ? 'text-blue-600'
+                                  : 'text-green-600'
+                        }
                     />
                 </div>
             )}
+
 
             {/* Table card */}
             <Card>
@@ -333,10 +379,10 @@ export const RemittanceStatusPage = () => {
                                 <tr className="border-b">
                                     {thBtn('supplier_code', 'Code')}
                                     {thBtn('supplier_name', 'Supplier')}
-                                    {thBtn('total_sales', 'Total Sales', true)}
-                                    {thBtn('total_remitted', 'Total Remitted', true)}
-                                    {thBtn('balance', 'Balance', true)}
-                                    {thBtn('status', 'Status')}
+                                    {thBtn('total_sales', 'Total Sales', 'right')}
+                                    {thBtn('total_remitted', 'Total Remitted', 'right')}
+                                    {thBtn('balance', 'Balance', 'right')}
+                                    {thBtn('status', 'Status', 'center')}
                                 </tr>
                             </thead>
                             <tbody>
@@ -398,9 +444,9 @@ export const RemittanceStatusPage = () => {
                                                 <td
                                                     className={`px-4 py-3 text-right tabular-nums font-medium ${
                                                         balanceNegative
-                                                            ? 'text-destructive'
+                                                            ? 'text-red-600'
                                                             : row.balance > 0
-                                                              ? 'text-amber-600'
+                                                              ? 'text-blue-600'
                                                               : 'text-green-600'
                                                     }`}
                                                 >
@@ -413,7 +459,7 @@ export const RemittanceStatusPage = () => {
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3">
+                                                <td className="px-4 py-3 text-center">
                                                     <StatusBadge status={row.status} />
                                                 </td>
                                             </tr>
@@ -449,9 +495,9 @@ export const RemittanceStatusPage = () => {
                                     <div
                                         className={`w-[140px] px-4 py-3 text-right tabular-nums text-sm font-semibold ${
                                             totBalance < 0
-                                                ? 'text-destructive'
+                                                ? 'text-red-600'
                                                 : totBalance > 0
-                                                  ? 'text-amber-600'
+                                                  ? 'text-blue-600'
                                                   : 'text-green-600'
                                         }`}
                                     >

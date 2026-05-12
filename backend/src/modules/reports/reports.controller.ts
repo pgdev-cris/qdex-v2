@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import service from './reports.service';
 import { HTTP_STATUS } from '../../shared/constants';
-import { RemittanceReportQuery, TransactionReportQuery, RemittanceStatusQuery } from './reports.schema';
+import {
+    RemittanceReportQuery,
+    TransactionReportQuery,
+    RemittanceStatusQuery,
+} from './reports.schema';
 
 /**
  * GET /api/v1/reports/remittances

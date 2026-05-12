@@ -1,6 +1,6 @@
 import monitoringRepository from './monitoring.repository';
 import { NotFoundError } from '../../shared/errors';
-import { TRANSACTION_TYPE, TRANSACTION_STATUS, TENDER_TYPE } from '../../shared/constants';
+import { TRANSACTION_TYPE, TRANSACTION_STATUS } from '../../shared/constants';
 import {
     ListTransactionsQuery,
     PaginatedResult,
@@ -8,21 +8,6 @@ import {
     TransactionWithDetails,
 } from './monitoring.type';
 import { Receipt } from '../remittance/remittance.type';
-
-const TENDER_LABEL: Record<number, string> = Object.fromEntries(
-    Object.entries(TENDER_TYPE).map(([label, id]) => [id, label]),
-);
-
-const TYPE_LABEL: Record<number, string> = {
-    [TRANSACTION_TYPE.PARTIAL]: 'Partial',
-    [TRANSACTION_TYPE.FULL]: 'Full',
-};
-
-const STATUS_LABEL: Record<number, string> = {
-    [TRANSACTION_STATUS.PENDING]: 'Pending',
-    [TRANSACTION_STATUS.VERIFIED]: 'Verified',
-    [TRANSACTION_STATUS.VOIDED]: 'Voided',
-};
 
 const listTransactions = async (
     query: ListTransactionsQuery,
@@ -66,9 +51,12 @@ const reprintTransaction = async (id: number, printedBy: string): Promise<Receip
         supplier_name: transaction.supplier_name,
         remitter_name: transaction.remitted_by,
         remit_type: transaction.remit_type === TRANSACTION_TYPE.FULL ? 'full' : 'partial',
+        is_voided: transaction.status === TRANSACTION_STATUS.VOIDED,
+        is_prev_sales_only: transaction.is_prev_sales_only === 1,
         lines: transaction.details.map((d) => ({
-            method: TENDER_LABEL[d.tender_type] || 'UNKNOWN',
+            method: d.tender_code ?? `TENDER_${d.tender_type}`,
             amount: String(d.amount),
+            is_prev_sales: d.is_prev_sales === 1,
         })),
         verified_at: new Date(transaction.transacted_at).toLocaleString('en-US', {
             year: 'numeric',
@@ -94,5 +82,4 @@ const reprintTransaction = async (id: number, printedBy: string): Promise<Receip
     };
 };
 
-export { TYPE_LABEL, STATUS_LABEL, TENDER_LABEL };
 export default { listTransactions, getTransaction, reprintTransaction };

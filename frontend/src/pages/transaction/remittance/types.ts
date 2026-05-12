@@ -13,6 +13,10 @@ export interface SalesData {
     supplier: SupplierInfo
     sales: SalesRecord[]
     total_amount: number
+    prev_sales: SalesRecord[] | null
+    prev_date: string | null
+    /** Per-tender amounts already partially remitted on prev_date (keyed by payment_method code) */
+    prev_partial_deductions: Record<string, number> | null
 }
 
 export interface SalesResponse {
@@ -24,6 +28,8 @@ export interface SalesResponse {
 export interface ReceiptLine {
     method: string
     amount: string
+    /** True when this line amount came from the previous day's unremitted sales */
+    is_prev_sales?: boolean
 }
 
 export interface Receipt {
@@ -39,6 +45,9 @@ export interface Receipt {
     printed_by: string
     event_name: string
     event_code: string
+    is_voided: boolean
+    /** True when every line in this remittance came from previous-day unremitted sales */
+    is_prev_sales_only: boolean
 }
 
 //  Remittance API
@@ -52,6 +61,8 @@ export interface RemittanceApiData {
     remit_type: string
     lines: ReceiptLine[]
     remitted_at: string
+    /** True when every line in this remittance came from previous-day unremitted sales */
+    is_prev_sales_only: boolean
 }
 
 export interface RemittanceApiResponse {
@@ -75,11 +86,22 @@ export interface PartialTransaction {
     transacted_at: string
 }
 
+export interface PartialNonCashTransaction {
+    receipt_no: string
+    reference_code: string
+    amount: number
+    transacted_at: string
+}
+
 export interface PartialSummary {
     supplier_code: string
     total_cash: number
     count: number
     transactions: PartialTransaction[]
+    /** Total amount already partially remitted today per tender code (e.g. { CASH: 500, GCASH: 200 }) */
+    totals_by_method: Record<string, number>
+    /** Per-transaction breakdown for each non-CASH tender remitted today */
+    transactions_by_method: Record<string, PartialNonCashTransaction[]>
 }
 
 export interface PartialSummaryResponse {
@@ -92,7 +114,8 @@ export interface TenderType {
     id: number
     code: string
     label: string
-    is_editable: number  // 0 | 1
+    is_editable: number // 0 | 1
+    allow_partial_remit: number // 0 | 1 — whether this tender appears in partial remittance
     sort: number
 }
 

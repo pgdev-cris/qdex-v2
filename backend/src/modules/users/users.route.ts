@@ -7,6 +7,7 @@ import {
     UpdateUserRequestSchema,
     UpdateUserStatusSchema,
     UserIdParamSchema,
+    ChangePasswordSchema,
 } from './users.schema';
 
 const router = Router();
@@ -44,6 +45,14 @@ router.patch(
     jwtValidator,
     requestValidator({ params: UserIdParamSchema, body: UpdateUserStatusSchema }),
     controller.setUserStatusRequest,
+);
+
+// PATCH /api/v1/users/:id/password  — change user password
+router.patch(
+    '/:id/password',
+    jwtValidator,
+    requestValidator({ params: UserIdParamSchema, body: ChangePasswordSchema }),
+    controller.changePasswordRequest,
 );
 
 export default router;

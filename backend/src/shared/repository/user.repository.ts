@@ -104,10 +104,24 @@ const setUserStatus = async (id: number, status: number): Promise<boolean> => {
     return (result?.affectedRows ?? 0) > 0;
 };
 
+const getUserPasswordById = async (id: number): Promise<string | null> => {
+    const query = `SELECT password FROM tbl_users WHERE id = ? AND status != 9 LIMIT 1`;
+    const rows = await PoolManager.query<{ password: string }[]>(query, [id]);
+    return rows?.[0]?.password ?? null;
+};
+
+const changePassword = async (id: number, hashedPassword: string): Promise<boolean> => {
+    const query = `UPDATE tbl_users SET password = ? WHERE id = ? AND status != 9`;
+    const result = await PoolManager.execute(query, [hashedPassword, id]);
+    return (result?.affectedRows ?? 0) > 0;
+};
+
 export default {
     getUsers,
     getUserById,
+    getUserPasswordById,
     createUser,
     updateUser,
     setUserStatus,
+    changePassword,
 };

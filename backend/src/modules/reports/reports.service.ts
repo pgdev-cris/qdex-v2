@@ -90,7 +90,42 @@ const getSupplierPerTenderReport = async (
     };
 };
 
-export type RemittanceStatus = 'settled' | 'partial' | 'pending' | 'no_activity';
+// ─── Mock POS data ────────────────────────────────────────────────────────────
+// Set POS_MOCK=true in your .env to generate deterministic dummy sales data
+// when the cloud POS API is unreachable (e.g. working off-network).
+
+const POS_MOCK = process.env.POS_MOCK === 'true';
+
+/**
+ * Generates stable dummy POS sales for each supplier based on their code + date.
+ * The values are deterministic so the same inputs always produce the same amounts,
+ * making it easy to spot regressions during offline development.
+ */
+const generateMockPosSales = (
+    supplierCodes: number[],
+    date: string,
+): SalesPerVendorByDate[] => {
+    const dateSeed = parseInt(date.replace(/-/g, ''), 10) || 20240101;
+    return supplierCodes.map((code) => {
+        // Simple but stable pseudo-random from code + date
+        const seed = ((code * 6364136223846793005 + dateSeed) >>> 0) % 100_000;
+        const total = Math.round((seed % 90_000) + 10_000); // ₱10,000 – ₱100,000
+        const gcash = Math.round(total * 0.30);
+        const creditCard = Math.round(total * 0.10);
+        const cash = total - gcash - creditCard;
+        return {
+            vendor_code: code,
+            cash: String(cash),
+            gcash: String(gcash),
+            pwallet: '0',
+            credit_card: String(creditCard),
+            home_credit: '0',
+            total_revenue: String(total),
+        };
+    });
+};
+
+export type RemittanceStatus = 'settled' | 'short' | 'over' | 'pending' | 'no_activity';
 
 export interface RemittanceStatusResult {
     supplier_id: number;
@@ -106,7 +141,8 @@ export interface RemittanceStatusResult {
 export interface RemittanceStatusSummary {
     total_suppliers: number;
     settled: number;
-    partial: number;
+    short: number;
+    over: number;
     pending: number;
     no_activity: number;
 }
@@ -118,18 +154,20 @@ export interface RemittanceStatusReport {
 
 /**
  * Derive remittance status from POS sales vs DB remitted amounts.
+ * balance = total_remitted - total_sales
  * - no_activity : no POS sales AND no remittance recorded
  * - pending     : has POS sales but nothing remitted yet
- * - settled     : remitted >= POS sales (balance <= 0)
- * - partial     : has remitted something but balance is still > 0,
- *                 OR remitted but POS sales unavailable (possible POS error)
+ * - settled     : remitted exactly equals sales (zero variance)
+ * - short       : remitted less than sales (negative balance — still owes)
+ * - over        : remitted more than sales (positive balance — overpaid)
  */
 const deriveStatus = (totalSales: number, totalRemitted: number): RemittanceStatus => {
     if (totalSales === 0 && totalRemitted === 0) return 'no_activity';
-    if (totalSales === 0 && totalRemitted > 0) return 'partial';
     if (totalRemitted === 0) return 'pending';
-    if (totalSales - totalRemitted <= 0) return 'settled';
-    return 'partial';
+    const balance = totalRemitted - totalSales;
+    if (balance === 0) return 'settled';
+    if (balance < 0) return 'short';
+    return 'over';
 };
 
 const getRemittanceStatusReport = async (
@@ -138,17 +176,24 @@ const getRemittanceStatusReport = async (
     // Use `from` date for POS lookup; fall back to today if not provided
     const posDate = query.from ?? format(new Date(), 'yyyy-MM-dd');
 
-    // Fetch POS sales and DB remittance totals in parallel
-    const [posResponse, dbRows] = await Promise.all([
-        posClient
+    // Fetch DB rows first; POS data depends on mock flag or live API
+    const dbRows = await repository.getRemittanceStatus(query);
+
+    let posData: SalesPerVendorByDate[];
+    if (POS_MOCK) {
+        // Offline / dev mode — generate deterministic dummy sales per supplier
+        const supplierCodes = dbRows.map((r) => r.supplier_code);
+        posData = generateMockPosSales(supplierCodes, posDate);
+    } else {
+        const posResponse = await posClient
             .getSalesPerVendorByDate(posDate)
-            .catch(() => ({ data: [] as SalesPerVendorByDate[] })),
-        repository.getRemittanceStatus(query),
-    ]);
+            .catch(() => ({ data: [] as SalesPerVendorByDate[] }));
+        posData = posResponse.data ?? [];
+    }
 
     // Build a vendor_code → POS data map for O(1) lookups
     const posMap = new Map<number, SalesPerVendorByDate>();
-    for (const vendor of posResponse.data ?? []) {
+    for (const vendor of posData) {
         posMap.set(vendor.vendor_code, vendor);
     }
 
@@ -156,7 +201,7 @@ const getRemittanceStatusReport = async (
         const posData = posMap.get(r.supplier_code);
         const total_sales = posData ? Number(posData.total_revenue) : 0;
         const total_remitted = Number(r.total_remitted);
-        const balance = total_sales - total_remitted;
+        const balance = total_remitted - total_sales;
 
         return {
             supplier_id: r.supplier_id,
@@ -173,7 +218,8 @@ const getRemittanceStatusReport = async (
     const summary: RemittanceStatusSummary = {
         total_suppliers: results.length,
         settled: results.filter((r) => r.status === 'settled').length,
-        partial: results.filter((r) => r.status === 'partial').length,
+        short: results.filter((r) => r.status === 'short').length,
+        over: results.filter((r) => r.status === 'over').length,
         pending: results.filter((r) => r.status === 'pending').length,
         no_activity: results.filter((r) => r.status === 'no_activity').length,
     };

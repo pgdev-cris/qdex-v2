@@ -1,0 +1,74 @@
+info:
+  name: "Cloud: Get Vendor Sales"
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{qdex_client_base_url}}/fetch-sales/:vendor_code?date=2026-04-25"
+  params:
+    - name: date
+      value: 2026-04-25
+      type: query
+    - name: vendor_code
+      value: "10496"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+examples:
+  - name: "Cloud: Get Vendor Sales"
+    request:
+      url: http://192.168.110.90:4003/qdex/fetch-sales/:vendor_code
+      method: GET
+      params:
+        - name: vendor_code
+          value: "11460"
+          type: path
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: Access-Control-Allow-Credentials
+          value: "true"
+        - name: Vary
+          value: "*"
+        - name: Access-Control-Allow-Origin
+          value: "*"
+        - name: Access-Control-Allow-Methods
+          value: GET
+        - name: Access-Control-Allow-Headers
+          value: user-agent, accept, cache-control, host, accept-encoding, connection, postman-token
+        - name: Access-Control-Expose-Headers
+          value: user-agent, accept, cache-control, host, accept-encoding, connection, postman-token
+        - name: Content-Type
+          value: application/json;charset=utf-8
+        - name: Date
+          value: Tue, 07 Apr 2026 05:24:24 GMT
+        - name: Content-Length
+          value: "214"
+      body:
+        type: json
+        data: |-
+          {
+              "result": "success",
+              "message": "Operation successful",
+              "status": 200,
+              "data": [
+                  {
+                      "payment_method": "CASH",
+                      "total": "5000.00",
+                      "transaction_count": 1
+                  },
+                  {
+                      "payment_method": "GCASH_EPOS",
+                      "total": "14590.00",
+                      "transaction_count": 1
+                  }
+              ]
+          }

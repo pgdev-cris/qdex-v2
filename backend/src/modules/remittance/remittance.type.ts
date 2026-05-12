@@ -1,6 +1,8 @@
 export interface RemitLine {
     method: string;
     amount: string | number;
+    /** True when this detail line amount came from the previous day's unremitted sales */
+    is_prev_sales?: boolean;
 }
 
 export interface OverrideInfo {
@@ -13,6 +15,8 @@ export interface PartialRemitPayload {
     remitter_name: string;
     lines: RemitLine[];
     override?: OverrideInfo;
+    /** True when this remittance includes previous-day unremitted sales */
+    has_prev_sales?: boolean;
 }
 
 export interface FullRemitPayload {
@@ -20,6 +24,8 @@ export interface FullRemitPayload {
     remitter_name: string;
     lines: RemitLine[];
     override?: OverrideInfo;
+    /** True when this remittance includes previous-day unremitted sales */
+    has_prev_sales?: boolean;
 }
 
 export interface VoidPayload {
@@ -39,6 +45,9 @@ export interface Receipt {
     printed_by: string;
     event_name: string;
     event_code: string;
+    is_voided: boolean;
+    /** True when every line in this remittance came from previous-day unremitted sales */
+    is_prev_sales_only: boolean;
 }
 
 export interface RemitResult {
@@ -50,4 +59,6 @@ export interface RemitResult {
     remit_type: 'partial' | 'full';
     lines: RemitLine[];
     remitted_at: string;
+    /** True when every line in this remittance came from previous-day unremitted sales */
+    is_prev_sales_only: boolean;
 }

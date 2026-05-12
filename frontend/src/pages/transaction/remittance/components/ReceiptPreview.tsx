@@ -91,9 +91,14 @@ export const ReceiptPreview = ({ receipt, onPrint, onReset }: Props) => {
                                     : 'FULL REMITTANCE'}
                             </p>
                             <p>Supplier Copy</p>
+                            {receipt.is_prev_sales_only && (
+                                <p className="mt-1 font-bold tracking-wider">
+                                    *** UNREMITTED SALES ***
+                                </p>
+                            )}
                             {receipt.is_voided && (
                                 <p
-                                    className="mt-2 border-2 border-black py-1 font-bold tracking-widest"
+                                    className="mt-2 py-1 font-bold tracking-widest"
                                     style={{ fontSize: '14pt' }}
                                 >
                                     *** VOID — NOT VALID ***

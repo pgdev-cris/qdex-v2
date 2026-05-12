@@ -7,6 +7,7 @@ import {
     CheckCircle2,
     User,
     Building2,
+    AlertTriangle,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiFetch } from '@/lib/api'
@@ -262,6 +263,7 @@ const buildReceiptFromApi = (
         event_name: eventName,
         event_code: eventCode,
         is_voided: false,
+        is_prev_sales_only: apiData.is_prev_sales_only ?? false,
     }
 }
 
@@ -322,6 +324,7 @@ export const RemittancePage = () => {
     // Confirm modal
     const [confirmOpen, setConfirmOpen] = useState(false)
     const [confirmRows, setConfirmRows] = useState<ConfirmRow[]>([])
+    const [isAllPrevSalesRemit, setIsAllPrevSalesRemit] = useState(false)
 
     // Reset confirmation
     const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
@@ -848,7 +851,9 @@ export const RemittancePage = () => {
                 ...prevOnlyTenders.map((p) => ({
                     label: `${tenderLabel(p.payment_method)} (prev.)`,
                     value: fmt(Number(otherAmounts[p.payment_method] ?? p.total)),
-                    overridden: !!approval,
+                    // Only flag as overridden when the user collected less than the full prev-day
+                    // amount — not simply because an override exists for an unrelated reason.
+                    overridden: !!approval && Number(otherAmounts[p.payment_method] ?? p.total) < Number(p.total),
                 })),
             ]
         }
@@ -891,11 +896,62 @@ export const RemittancePage = () => {
                 partialRows.push({
                     label: `${tenderLabel(p.payment_method)} (prev.)`,
                     value: fmt(amt),
-                    overridden: !!approval,
+                    // Only flag as overridden when the user collected less than the full prev-day
+                    // amount — not simply because an override exists for an unrelated reason.
+                    overridden: !!approval && amt < Number(p.total),
                 })
             }
         })
         return partialRows
+    }
+
+    // Returns true when every amount that will be submitted is entirely from prev-day sales.
+    // Used to show the "Unremitted Sales" notice in the confirm modal and tag the receipt.
+    const computeIsAllPrevSalesPartial = (): boolean => {
+        if (!includePrevSales || prevSalesMap.size === 0) return false
+
+        let hasAnyAmount = false
+        let hasAnyCurrentDay = false
+
+        // CASH
+        const cashVal = Number(cashAmount)
+        if (isPartiableTender('CASH') && cashVal > 0) {
+            hasAnyAmount = true
+            const prevCash = prevSalesMap.get('CASH') ?? 0
+            const todayBalance = Math.max(
+                0,
+                Number(cashRecord?.total ?? 0) - (partialSummary?.total_cash ?? 0)
+            )
+            // Prev is consumed first; current portion is the remainder capped at today's balance
+            const currentCash = Math.min(Math.max(0, cashVal - prevCash), todayBalance)
+            if (currentCash > 0) hasAnyCurrentDay = true
+        }
+
+        // Editable partiable non-CASH
+        for (const r of salesData) {
+            if (r.payment_method === 'CASH') continue
+            if (!isEditableTender(r.payment_method) || !isPartiableTender(r.payment_method))
+                continue
+            const entered = Number(otherAmounts[r.payment_method] ?? 0)
+            if (entered <= 0) continue
+            hasAnyAmount = true
+            const prevBase = prevSalesMap.get(r.payment_method) ?? 0
+            const todayBalance = Math.max(
+                0,
+                Number(r.total) - (partialSummary?.totals_by_method?.[r.payment_method] ?? 0)
+            )
+            const currentAmt = Math.min(Math.max(0, entered - prevBase), todayBalance)
+            if (currentAmt > 0) hasAnyCurrentDay = true
+        }
+
+        // Prev-only tenders always count as prev-day
+        const prevOnlyAmt = prevOnlyTenders.reduce(
+            (s, p) => s + Number(otherAmounts[p.payment_method] ?? p.total),
+            0
+        )
+        if (prevOnlyAmt > 0) hasAnyAmount = true
+
+        return hasAnyAmount && !hasAnyCurrentDay
     }
 
     // Step 3 — validate then either open override or confirm modal
@@ -947,6 +1003,7 @@ export const RemittancePage = () => {
 
         // Build confirm rows using current override approval state
         setConfirmRows(buildConfirmRows(overrideApproval))
+        setIsAllPrevSalesRemit(remitType === 'partial' ? computeIsAllPrevSalesPartial() : false)
         setConfirmOpen(true)
     }
 
@@ -957,6 +1014,7 @@ export const RemittancePage = () => {
         setOverrideOpen(false)
         // Immediately open confirm modal with override-tagged rows
         setConfirmRows(buildConfirmRows(approval))
+        setIsAllPrevSalesRemit(remitType === 'partial' ? computeIsAllPrevSalesPartial() : false)
         setConfirmOpen(true)
     }
 
@@ -1238,6 +1296,7 @@ export const RemittancePage = () => {
         setPendingType(null)
         setConfirmOpen(false)
         setConfirmRows([])
+        setIsAllPrevSalesRemit(false)
         setOverrideOpen(false)
         setOverrideApproval(null)
         setSkipPrevOverrideOpen(false)
@@ -1408,6 +1467,22 @@ export const RemittancePage = () => {
                 title="Confirm Remittance"
                 description="Please review the details below before proceeding."
                 rows={confirmRows}
+                notice={
+                    isAllPrevSalesRemit ? (
+                        <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                            <div>
+                                <p className="text-xs font-semibold text-blue-800">
+                                    Unremitted Sales
+                                </p>
+                                <p className="text-xs text-blue-700">
+                                    This remittance covers previous day's unremitted sales only.
+                                    No amount from today's sales is included.
+                                </p>
+                            </div>
+                        </div>
+                    ) : undefined
+                }
                 confirmLabel="Process Remittance"
                 loading={loading}
                 isOverridden={!!overrideApproval}

@@ -119,12 +119,22 @@ const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                             : 'FULL REMITTANCE'}
                     </div>
                     <div style={{ fontWeight: 'bold' }}>{copyLabel}</div>
+                    {receipt.is_prev_sales_only && (
+                        <div
+                            style={{
+                                marginTop: '6pt',
+                                fontWeight: 'bold',
+                                fontSize: '10pt',
+                                letterSpacing: '2pt',
+                            }}
+                        >
+                            *** UNREMITTED SALES ***
+                        </div>
+                    )}
                     {receipt.is_voided && (
                         <div
                             style={{
                                 marginTop: '6pt',
-                                padding: '4pt 0',
-                                border: '2pt solid #000',
                                 fontWeight: 'bold',
                                 fontSize: '14pt',
                                 letterSpacing: '4pt',

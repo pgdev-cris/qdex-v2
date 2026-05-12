@@ -17,6 +17,8 @@ export interface InsertTransactionData {
     type: number;
     /** 1 if this remittance included previous-day unremitted sales, 0 otherwise */
     has_prev_sales: 0 | 1;
+    /** 1 if every detail line in this remittance is a previous-day carryover, 0 otherwise */
+    is_prev_sales_only: 0 | 1;
 }
 
 export interface InsertDetailData {
@@ -37,8 +39,8 @@ const createTransaction = async (
     const [result] = await conn.execute(
         `INSERT INTO tbl_transactions
             (event_id, supplier_id, transaction_no, transacted_at, total_amount, reference_code,
-             remitted_by, verified_by, verified_at, status, type, has_prev_sales)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             remitted_by, verified_by, verified_at, status, type, has_prev_sales, is_prev_sales_only)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             data.event_id,
             data.supplier_id,
@@ -52,6 +54,7 @@ const createTransaction = async (
             data.status,
             data.type,
             data.has_prev_sales,
+            data.is_prev_sales_only,
         ],
     );
 

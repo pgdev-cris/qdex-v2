@@ -698,9 +698,10 @@ export const RemittancePage = () => {
                         extra[p.payment_method] = toFixed2(
                             Number(todaySale.total) + Number(p.total)
                         )
-                    } else if (type === 'partial' && isPartiableTender(p.payment_method)) {
-                        // Non-editable but partiable tender in today's sales, partial mode:
-                        // It is never shown in the editable block, so seed it as a prev-only row.
+                    } else if (type === 'partial') {
+                        // Non-editable tender in today's sales, partial mode:
+                        // It is never shown in the editable block, so seed the prev-day amount
+                        // as a prev-only row. allow_partial_remit does not gate prev-day sales.
                         extra[p.payment_method] = toFixed2(p.total)
                     }
                     // Non-editable in today's sales (full): prevAdd handles it in executeFullRemittance
@@ -749,11 +750,11 @@ export const RemittancePage = () => {
     //  1. Tenders not in today's sales at all
     //  2. (Partial only) Non-editable tenders that ARE in today's sales — they are
     //     never shown in the editable block, so they need their own prev-only row.
+    // NOTE: allow_partial_remit only gates today's current sales. When includePrevSales
+    // is true, ALL prev-day tenders must be collected regardless of that flag.
     const prevOnlyTenders: SalesRecord[] = includePrevSales
         ? (prevSales ?? []).filter((p) => {
               if (p.payment_method === 'CASH') return false
-              // In partial mode, skip tenders that are not partiable
-              if (remitType === 'partial' && !isPartiableTender(p.payment_method)) return false
               const notInToday = !salesData.some((s) => s.payment_method === p.payment_method)
               if (notInToday) return true
               // Partial: also surface non-editable tenders that exist in today's sales —
@@ -814,8 +815,10 @@ export const RemittancePage = () => {
                 { label: 'Type', value: 'Full Remittance' },
                 ...sortedSales.map((r) => {
                     if (r.payment_method === 'CASH') {
+                        const prevCash = includePrevSales ? (prevSalesMap.get('CASH') ?? 0) : 0
+                        const cashIsAllPrev = prevCash > 0 && cashVal <= prevCash
                         return {
-                            label: tenderLabel(r.payment_method),
+                            label: cashIsAllPrev ? `${tenderLabel(r.payment_method)} (prev.)` : tenderLabel(r.payment_method),
                             value: fmt(cashVal),
                             overridden: !!approval && cashOverrideNeeded,
                         }
@@ -841,8 +844,12 @@ export const RemittancePage = () => {
                     )
                     const wasChanged =
                         isEditableTender(r.payment_method) && editedVal !== expectedRemaining
+                    // Label as (prev.) when editable and the entire entered amount is within
+                    // the prev-day portion (today's sales contribute nothing to this line)
+                    const isAllPrev =
+                        isEditableTender(r.payment_method) && prevAmt > 0 && editedVal <= prevAmt
                     return {
-                        label: tenderLabel(r.payment_method),
+                        label: isAllPrev ? `${tenderLabel(r.payment_method)} (prev.)` : tenderLabel(r.payment_method),
                         value: fmt(editedVal),
                         overridden: !!approval && wasChanged,
                     }
@@ -865,8 +872,10 @@ export const RemittancePage = () => {
         ]
         // Cash line — omit if 0 or not partiable
         if (isPartiableTender('CASH') && cashVal > 0) {
+            const prevCash = includePrevSales ? (prevSalesMap.get('CASH') ?? 0) : 0
+            const cashIsAllPrev = prevCash > 0 && cashVal <= prevCash
             partialRows.push({
-                label: 'Cash to Remit',
+                label: cashIsAllPrev ? 'Cash to Remit (prev.)' : 'Cash to Remit',
                 value: fmt(cashVal),
                 overridden: !!approval && cashOverrideNeeded,
             })
@@ -882,8 +891,10 @@ export const RemittancePage = () => {
             .forEach((r) => {
                 const amt = Number(otherAmounts[r.payment_method] ?? 0)
                 if (amt > 0) {
+                    const prevBase = includePrevSales ? (prevSalesMap.get(r.payment_method) ?? 0) : 0
+                    const isAllPrev = prevBase > 0 && amt <= prevBase
                     partialRows.push({
-                        label: tenderLabel(r.payment_method),
+                        label: isAllPrev ? `${tenderLabel(r.payment_method)} (prev.)` : tenderLabel(r.payment_method),
                         value: fmt(amt),
                         overridden: !!approval && amt > Number(r.total),
                     })

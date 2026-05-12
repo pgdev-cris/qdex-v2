@@ -498,58 +498,69 @@ export const RemittanceForm = ({
                                             ? methodLabel(rec.payment_method)
                                             : (tenderMap.get(rec.payment_method)?.label ??
                                               rec.payment_method)
+                                    const editable = isEditable(rec.payment_method)
                                     return (
                                         <div
                                             key={rec.payment_method}
                                             className="rounded-lg border border-amber-200 overflow-hidden flex flex-col"
                                         >
-                                            <div className="flex flex-col px-4 py-3 gap-2">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-medium">
-                                                            {label}
-                                                        </span>
-                                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
-                                                            prev.
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                                                        max {fmt(Number(rec.total))}
+                                            <div className={`flex px-4 py-3 gap-2 ${editable ? 'flex-col' : 'items-center justify-between'}`}>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-medium">
+                                                        {label}
+                                                    </span>
+                                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                                        prev.
                                                     </span>
                                                 </div>
-                                                <div className="relative">
-                                                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
-                                                        ₱
+                                                {editable ? (
+                                                    <>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                                                                max {fmt(Number(rec.total))}
+                                                            </span>
+                                                        </div>
+                                                        <div className="relative">
+                                                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">
+                                                                ₱
+                                                            </span>
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.01"
+                                                                placeholder="0.00"
+                                                                className="pl-7 text-right tabular-nums"
+                                                                value={
+                                                                    otherAmounts[rec.payment_method] ??
+                                                                    rec.total
+                                                                }
+                                                                onChange={(e) =>
+                                                                    onOtherAmountChange(
+                                                                        rec.payment_method,
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                onBlur={(e) => {
+                                                                    const v = toTwoDecimals(e.target.value)
+                                                                    if (v)
+                                                                        onOtherAmountChange(
+                                                                            rec.payment_method,
+                                                                            v
+                                                                        )
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <span className="tabular-nums text-sm font-mono">
+                                                        {fmt(Number(rec.total))}
                                                     </span>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        placeholder="0.00"
-                                                        className="pl-7 text-right tabular-nums"
-                                                        value={
-                                                            otherAmounts[rec.payment_method] ??
-                                                            rec.total
-                                                        }
-                                                        onChange={(e) =>
-                                                            onOtherAmountChange(
-                                                                rec.payment_method,
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                        onBlur={(e) => {
-                                                            const v = toTwoDecimals(e.target.value)
-                                                            if (v)
-                                                                onOtherAmountChange(
-                                                                    rec.payment_method,
-                                                                    v
-                                                                )
-                                                        }}
-                                                    />
-                                                </div>
+                                                )}
                                             </div>
                                             <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
-                                                Previous day unremitted amounts. Adjust if collecting partial only.
+                                                {editable
+                                                    ? 'Previous day unremitted amounts. Adjust if collecting partial only.'
+                                                    : 'Previous day unremitted amounts.'}
                                             </div>
                                         </div>
                                     )
@@ -703,34 +714,45 @@ export const RemittanceForm = ({
                         methodLabel(rec.payment_method) !== rec.payment_method
                             ? methodLabel(rec.payment_method)
                             : (tenderMap.get(rec.payment_method)?.label ?? rec.payment_method)
+                    const editable = isEditable(rec.payment_method)
                     return (
                         <div key={rec.payment_method} className="rounded-lg border border-amber-200 overflow-hidden flex flex-col">
-                            <div className="flex flex-col px-4 py-3 gap-2">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium">{label}</span>
-                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
-                                            prev.
-                                        </span>
-                                    </div>
-                                    <span className="text-xs uppercase tracking-wide text-muted-foreground">max {fmt(Number(rec.total))}</span>
+                            <div className={`flex px-4 py-3 gap-2 ${editable ? 'flex-col' : 'items-center justify-between'}`}>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium">{label}</span>
+                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">
+                                        prev.
+                                    </span>
                                 </div>
-                                <div className="relative">
-                                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">₱</span>
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="0.00"
-                                        className="pl-7 text-right tabular-nums"
-                                        value={otherAmounts[rec.payment_method] ?? rec.total}
-                                        onChange={(e) => onOtherAmountChange(rec.payment_method, e.target.value)}
-                                        onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onOtherAmountChange(rec.payment_method, v) }}
-                                    />
-                                </div>
+                                {editable ? (
+                                    <>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs uppercase tracking-wide text-muted-foreground">max {fmt(Number(rec.total))}</span>
+                                        </div>
+                                        <div className="relative">
+                                            <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 select-none text-sm">₱</span>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                className="pl-7 text-right tabular-nums"
+                                                value={otherAmounts[rec.payment_method] ?? rec.total}
+                                                onChange={(e) => onOtherAmountChange(rec.payment_method, e.target.value)}
+                                                onBlur={(e) => { const v = toTwoDecimals(e.target.value); if (v) onOtherAmountChange(rec.payment_method, v) }}
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <span className="tabular-nums text-sm font-mono">
+                                        {fmt(Number(rec.total))}
+                                    </span>
+                                )}
                             </div>
                             <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-2 text-xs text-amber-700">
-                                Previous day unremitted amounts. Adjust if collecting partial only.
+                                {editable
+                                    ? 'Previous day unremitted amounts. Adjust if collecting partial only.'
+                                    : 'Previous day unremitted amounts.'}
                             </div>
                         </div>
                     )

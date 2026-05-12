@@ -74,9 +74,9 @@ const gap = { marginTop: '8pt' }
 const gapSm = { marginTop: '5pt' }
 
 const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string }) => {
-    const cashLine = receipt.lines.find((l) => l.method === 'CASH')
+    const cashLines = receipt.lines.filter((l) => l.method === 'CASH')
     const cardLines = receipt.lines.filter((l) => l.method !== 'CASH')
-    const cashTotal = Number(cashLine?.amount ?? 0)
+    const cashTotal = cashLines.reduce((s, l) => s + Number(l.amount), 0)
     const cardsTotal = cardLines.reduce((s, l) => s + Number(l.amount), 0)
     const grandTotal = receipt.lines.reduce((s, l) => s + Number(l.amount), 0)
 
@@ -168,9 +168,15 @@ const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                 <div style={{ fontWeight: 'bold' }}>Remittance Details:</div>
 
                 {/* Cash Breakdown */}
-                {cashLine && (
+                {cashLines.length > 0 && (
                     <div style={{ ...gapSm, lineHeight: '1.8' }}>
-                        <Row label="  Cash Total:" value={fmtAmt(cashTotal)} />
+                        {cashLines.map((l, i) => (
+                            <Row
+                                key={`cash-${i}`}
+                                label={`  Cash${l.is_prev_sales ? ' (prev.)' : ''} Total:`}
+                                value={fmtAmt(l.amount)}
+                            />
+                        ))}
                     </div>
                 )}
 
@@ -178,16 +184,16 @@ const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                 {cardLines.length > 0 && (
                     <div style={{ ...gapSm, lineHeight: '1.8' }}>
                         <div style={{ fontWeight: 'bold' }}>Online Payments Breakdown</div>
-                        {cardLines.map((l) => (
+                        {cardLines.map((l, i) => (
                             <div
-                                key={l.method}
+                                key={`${l.method}-${i}`}
                                 style={{
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     marginLeft: '8px',
                                 }}
                             >
-                                <span> {tenderLabelByCode(l.method)}</span>
+                                <span> {tenderLabelByCode(l.method)}{l.is_prev_sales ? ' (prev.)' : ''}</span>
                                 <span>{fmtAmt(l.amount)}</span>
                             </div>
                         ))}

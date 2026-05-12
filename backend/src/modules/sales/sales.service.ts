@@ -49,20 +49,22 @@ const getPrevDaySales = async (
     );
     if (existing) return null; // already fully remitted yesterday — nothing to show
 
-    // If any transaction today already absorbed prev-day sales, nothing left to show
-    const todayStr = manilaDate(new Date());
-    const prevAlreadyCaptured = await remittanceRepository.hasPrevSalesTransactionByDate(
-        supplierCode,
-        eventId,
-        todayStr,
-    );
-    if (prevAlreadyCaptured) return null;
-
     // Fetch partial remittances already done yesterday (real DB, even in mock mode)
     const partialDeductions = await remittanceRepository.getPartialTotalsByDate(
         supplierCode,
         eventId,
         yesterdayStr,
+    );
+
+    // Fetch prev-day amounts already captured in today's remittances (is_prev_sales = 1 lines).
+    // This replaces the old boolean hasPrevSalesTransactionByDate check — that approach blocked
+    // ALL prev-day sales once any tender was remitted, causing unremitted tenders (e.g. Cash)
+    // to silently disappear on the next remittance.
+    const todayStr = manilaDate(new Date());
+    const todayPrevRemitted = await remittanceRepository.getPrevSalesRemittedByDate(
+        supplierCode,
+        eventId,
+        todayStr,
     );
 
     let rawSales: SalesRecord[];
@@ -92,18 +94,27 @@ const getPrevDaySales = async (
         }
     }
 
-    // Deduct partial remittances from each tender; drop tenders fully covered
+    // Deduct: (1) partial remittances done yesterday, (2) prev-day portions already remitted today
     const netSales = rawSales
         .map((s) => {
-            const deducted = partialDeductions[s.payment_method] ?? 0;
-            const net = parseFloat(Math.max(0, parseFloat(s.total) - deducted).toFixed(2));
+            const yesterdayDeducted = partialDeductions[s.payment_method] ?? 0;
+            const todayDeducted = todayPrevRemitted[s.payment_method] ?? 0;
+            const net = parseFloat(
+                Math.max(0, parseFloat(s.total) - yesterdayDeducted - todayDeducted).toFixed(2),
+            );
             return { ...s, total: String(net) };
         })
         .filter((s) => parseFloat(s.total) > 0);
 
-    if (netSales.length === 0) return null; // everything already partially remitted
+    if (netSales.length === 0) return null; // all prev-day amounts fully covered
 
-    return { sales: netSales, date: yesterdayStr, partial_deductions: partialDeductions };
+    // Combine deductions for display on the frontend
+    const allDeductions: Record<string, number> = { ...partialDeductions };
+    for (const [method, amt] of Object.entries(todayPrevRemitted)) {
+        allDeductions[method] = (allDeductions[method] ?? 0) + amt;
+    }
+
+    return { sales: netSales, date: yesterdayStr, partial_deductions: allDeductions };
 };
 
 const getSupplierSales = async (supplierCode: number) => {

@@ -36,7 +36,7 @@ interface Props {
 }
 
 export const ReceiptPreview = ({ receipt, onPrint, onReset }: Props) => {
-    const cashLine = receipt.lines.find((l) => l.method === 'CASH')
+    const cashLines = receipt.lines.filter((l) => l.method === 'CASH')
     const cardLines = receipt.lines.filter((l) => l.method !== 'CASH')
     const grandTotal = receipt.lines.reduce((s, l) => s + Number(l.amount), 0)
     const cardsTotal = cardLines.reduce((s, l) => s + Number(l.amount), 0)
@@ -123,21 +123,24 @@ export const ReceiptPreview = ({ receipt, onPrint, onReset }: Props) => {
 
                             <p className="mb-1 font-semibold">Remittance Details:</p>
 
-                            {cashLine && (
+                            {cashLines.length > 0 && (
                                 <div className="mb-2">
-                                    <ScreenRow
-                                        label="  Cash Total:"
-                                        value={fmtAmt(cashLine.amount)}
-                                    />
+                                    {cashLines.map((l, i) => (
+                                        <ScreenRow
+                                            key={`cash-${i}`}
+                                            label={`  Cash${l.is_prev_sales ? ' (prev.)' : ''} Total:`}
+                                            value={fmtAmt(l.amount)}
+                                        />
+                                    ))}
                                 </div>
                             )}
 
                             {cardLines.length > 0 && (
                                 <div className="mb-2">
                                     <p>Online Payments Breakdown</p>
-                                    {cardLines.map((l) => (
-                                        <div key={l.method} className="flex justify-between ml-4">
-                                            <span>{tenderLabelByCode(l.method)}</span>
+                                    {cardLines.map((l, i) => (
+                                        <div key={`${l.method}-${i}`} className="flex justify-between ml-4">
+                                            <span>{tenderLabelByCode(l.method)}{l.is_prev_sales ? ' (prev.)' : ''}</span>
                                             <span>{fmtAmt(l.amount)}</span>
                                         </div>
                                     ))}

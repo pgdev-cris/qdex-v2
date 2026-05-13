@@ -116,7 +116,9 @@ const CopyBlock = ({ receipt, copyLabel }: { receipt: Receipt; copyLabel: string
                     <div style={{ fontWeight: 'bold' }}>
                         {receipt.remit_type === 'partial'
                             ? 'PARTIAL REMITTANCE'
-                            : 'FULL REMITTANCE'}
+                            : receipt.remit_type === 'manual'
+                              ? 'MANUAL REMITTANCE'
+                              : 'FULL REMITTANCE'}
                     </div>
                     <div style={{ fontWeight: 'bold' }}>{copyLabel}</div>
                     {receipt.is_prev_sales_only && (

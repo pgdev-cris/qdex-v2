@@ -5,6 +5,7 @@ import { Layout } from '@/components/Layout'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { RemittancePage } from '@/pages/transaction/remittance'
+import { ManualRemitPage } from '@/pages/transaction/manual-remit'
 import { MonitoringPage } from '@/pages/transaction/MonitoringPage'
 import { UsersPage } from '@/pages/maintenance/UsersPage'
 import { SuppliersPage } from '@/pages/maintenance/SuppliersPage'
@@ -35,6 +36,14 @@ const App = () => {
                         element={
                             <Layout>
                                 <RemittancePage />
+                            </Layout>
+                        }
+                    />
+                    <Route
+                        path="/transaction/manual-remit"
+                        element={
+                            <Layout>
+                                <ManualRemitPage />
                             </Layout>
                         }
                     />

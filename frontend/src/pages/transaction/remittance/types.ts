@@ -38,7 +38,7 @@ export interface Receipt {
     supplier_code: string
     supplier_name: string
     remitter_name: string
-    remit_type: 'partial' | 'full'
+    remit_type: 'partial' | 'full' | 'manual'
     lines: ReceiptLine[]
     verified_at: string
     gen_at: string

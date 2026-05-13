@@ -13,6 +13,9 @@ router.post('/partial', jwtValidator, controller.partialRemitRequest);
 // POST /remittance — full remittance (all payment methods)
 router.post('/', jwtValidator, controller.fullRemitRequest);
 
+// POST /remittance/manual — manual remittance (operator-entered amounts, no POS check)
+router.post('/manual', jwtValidator, controller.manualRemitRequest);
+
 // POST /remittance/void/:id — void a transaction (requires override)
 router.post('/void/:id', jwtValidator, controller.voidRemitRequest);
 

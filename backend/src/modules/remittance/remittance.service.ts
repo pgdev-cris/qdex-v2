@@ -363,4 +363,92 @@ const voidRemittance = async (id: number, payload: VoidPayload, userId: number) 
     console.log('[Remittance] voidRemittance completed — transaction id:', id, '| receipt_no:', transaction.receipt_no);
 };
 
-export default { partialRemit, fullRemit, getPartialSummary, voidRemittance };
+const manualRemit = async (payload: FullRemitPayload, userId: number): Promise<RemitResult> => {
+    console.log('[Remittance] manualRemit called — supplier_code:', payload.supplier_code, '| userId:', userId, '| lines:', payload.lines);
+
+    const supplierCode = Number(payload.supplier_code);
+    const supplier = await supplierProvider.validateSupplier(supplierCode);
+
+    validateLines(payload.lines);
+
+    const user = await userRepository.getUserById(userId);
+    if (!user) throw new NotFoundError('Verified user not found.');
+
+    const event = await eventProvider.getCurrentEvent();
+
+    // Series code is scoped per event (shares the same counter as full/partial)
+    const seriesCode = `TRX-${event.id}`;
+
+    const totalAmount = payload.lines.reduce((sum, l) => sum + Number(l.amount), 0);
+    const now = new Date();
+    const referenceCode = generateRefCode();
+
+    let receiptNo!: string;
+
+    await PoolManager.transaction(async (conn) => {
+        const seriesRow = await SeriesRepository.incrementWithConnection(seriesCode, conn);
+        if (!seriesRow) {
+            throw new BadRequestError(
+                `Series "${seriesCode}" not configured. Make sure the event has a counter.`,
+            );
+        }
+
+        const paddedSeq = String(seriesRow.last_sequence).padStart(seriesRow.pad_length, '0');
+        receiptNo = seriesRow.prefix ? `${seriesRow.prefix}${paddedSeq}` : paddedSeq;
+
+        const transactionId = await remittanceRepository.createTransaction(conn, {
+            event_id: event.id,
+            supplier_id: supplier.id,
+            transaction_no: seriesRow.last_sequence,
+            transacted_at: now,
+            total_amount: totalAmount,
+            reference_code: referenceCode,
+            remitted_by: payload.remitter_name.trim(),
+            verified_by: userId,
+            verified_at: now,
+            status: TRANSACTION_STATUS.VERIFIED,
+            type: TRANSACTION_TYPE.MANUAL,
+            has_prev_sales: 0,
+            is_prev_sales_only: 0,
+        });
+
+        const details = payload.lines.map((l) => ({
+            transaction_id: transactionId,
+            tender_type: TENDER_TYPE[l.method.toUpperCase()],
+            amount: Number(l.amount),
+            transaction_count: 1,
+            is_prev_sales: 0 as 0 | 1,
+        }));
+
+        await remittanceRepository.createTransactionDetails(conn, details);
+
+        if (payload.override) {
+            await remittanceRepository.createOverrideLog(conn, {
+                transaction_id: transactionId,
+                action_id: OVERRIDE_ACTION.REMITTANCE,
+                requester_user_id: userId,
+                approver_user_id: payload.override.approver_user_id,
+                remarks: payload.override.remarks,
+            });
+        }
+
+        // Manual remittance does NOT notify POS — amounts are entered manually,
+        // not sourced from POS sales data.
+    });
+
+    console.log('[Remittance] manualRemit completed — receipt_no:', receiptNo, '| reference_code:', referenceCode);
+
+    return {
+        receipt_no: receiptNo,
+        reference_code: referenceCode,
+        supplier_code: payload.supplier_code,
+        supplier_name: supplier.name,
+        remitter_name: payload.remitter_name.trim(),
+        remit_type: 'full',
+        lines: payload.lines,
+        remitted_at: now.toISOString(),
+        is_prev_sales_only: false,
+    };
+};
+
+export default { partialRemit, fullRemit, manualRemit, getPartialSummary, voidRemittance };

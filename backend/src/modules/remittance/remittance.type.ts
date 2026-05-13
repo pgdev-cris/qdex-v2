@@ -38,7 +38,7 @@ export interface Receipt {
     supplier_code: string;
     supplier_name: string;
     remitter_name: string;
-    remit_type: 'partial' | 'full';
+    remit_type: 'partial' | 'full' | 'manual';
     lines: RemitLine[];
     verified_at: string;
     gen_at: string;
@@ -56,7 +56,7 @@ export interface RemitResult {
     supplier_code: string;
     supplier_name: string;
     remitter_name: string;
-    remit_type: 'partial' | 'full';
+    remit_type: 'partial' | 'full' | 'manual';
     lines: RemitLine[];
     remitted_at: string;
     /** True when every line in this remittance came from previous-day unremitted sales */

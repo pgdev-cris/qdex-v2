@@ -50,7 +50,7 @@ const reprintTransaction = async (id: number, printedBy: string): Promise<Receip
         supplier_code: String(transaction.supplier_code),
         supplier_name: transaction.supplier_name,
         remitter_name: transaction.remitted_by,
-        remit_type: transaction.remit_type === TRANSACTION_TYPE.FULL ? 'full' : 'partial',
+        remit_type: transaction.remit_type === TRANSACTION_TYPE.MANUAL ? 'manual' : transaction.remit_type === TRANSACTION_TYPE.FULL ? 'full' : 'partial',
         is_voided: transaction.status === TRANSACTION_STATUS.VOIDED,
         is_prev_sales_only: transaction.is_prev_sales_only === 1,
         lines: transaction.details.map((d) => ({

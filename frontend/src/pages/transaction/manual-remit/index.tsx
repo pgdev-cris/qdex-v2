@@ -190,7 +190,7 @@ const TenderRowInput = ({
                     onChange={(e) => onChange(row.id, 'method', e.target.value)}
                     disabled={disabled}
                 >
-                    <option value="">— Select —</option>
+                    <option value="" disabled>— Select —</option>
                     {availableMethods.map((t) => (
                         <option key={t.code} value={t.code}>
                             {t.label}
@@ -209,6 +209,10 @@ const TenderRowInput = ({
                 placeholder="0.00"
                 value={row.amount}
                 onChange={(e) => onChange(row.id, 'amount', e.target.value)}
+                onBlur={(e) => {
+                    const n = parseFloat(e.target.value)
+                    if (!isNaN(n)) onChange(row.id, 'amount', n.toFixed(2))
+                }}
                 disabled={disabled}
             />
 
@@ -218,7 +222,7 @@ const TenderRowInput = ({
                     variant="ghost"
                     size="icon-sm"
                     type="button"
-                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                    className="shrink-0 text-destructive hover:text-destructive/80"
                     onClick={() => onRemove(row.id)}
                     disabled={disabled}
                 >

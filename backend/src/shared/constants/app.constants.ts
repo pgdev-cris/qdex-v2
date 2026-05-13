@@ -45,6 +45,7 @@ export const TENDER_TYPE: Record<string, number> = {
 export const TRANSACTION_TYPE = {
     PARTIAL: 1,
     FULL: 2,
+    MANUAL: 3,
 } as const;
 
 export const TRANSACTION_STATUS = {

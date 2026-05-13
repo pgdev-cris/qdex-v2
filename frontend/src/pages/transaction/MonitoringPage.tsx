@@ -85,13 +85,14 @@ interface DetailResponse {
 
 //  Constants
 
-const TYPE_LABEL: Record<number, string> = { 1: 'Partial', 2: 'Full' }
+const TYPE_LABEL: Record<number, string> = { 1: 'Partial', 2: 'Full', 3: 'Manual' }
 const STATUS_LABEL: Record<number, string> = { 0: 'Pending', 1: 'Verified', 2: 'Voided' }
 
 const TYPE_OPTIONS = [
     { value: '', label: 'All Types' },
     { value: '1', label: 'Partial' },
     { value: '2', label: 'Full' },
+    { value: '3', label: 'Manual' },
 ]
 
 const STATUS_OPTIONS = [

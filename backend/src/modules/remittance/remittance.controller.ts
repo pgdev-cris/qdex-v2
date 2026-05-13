@@ -49,6 +49,21 @@ const fullRemitRequest = async (req: Request, res: Response) => {
     });
 };
 
+const manualRemitRequest = async (req: Request, res: Response) => {
+    const body = req.body as FullRemitPayload;
+    const userId: number = (req as any).user?.id;
+
+    validateBody(body, res);
+
+    const data = await remittanceService.manualRemit(body, userId);
+
+    return res.json({
+        result: 'success',
+        message: 'Manual remittance recorded successfully.',
+        data,
+    });
+};
+
 const getPartialSummaryRequest = async (req: Request, res: Response) => {
     const supplierCode = req.params.supplier_code as string;
     if (!supplierCode) {
@@ -82,6 +97,7 @@ const voidRemitRequest = async (req: Request, res: Response) => {
 export default {
     partialRemitRequest,
     fullRemitRequest,
+    manualRemitRequest,
     getPartialSummaryRequest,
     voidRemitRequest,
 };

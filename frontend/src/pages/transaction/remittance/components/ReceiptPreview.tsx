@@ -88,7 +88,9 @@ export const ReceiptPreview = ({ receipt, onPrint, onReset }: Props) => {
                             <p className="font-bold">
                                 {receipt.remit_type === 'partial'
                                     ? 'PARTIAL REMITTANCE'
-                                    : 'FULL REMITTANCE'}
+                                    : receipt.remit_type === 'manual'
+                                      ? 'MANUAL REMITTANCE'
+                                      : 'FULL REMITTANCE'}
                             </p>
                             <p>Supplier Copy</p>
                             {receipt.is_prev_sales_only && (

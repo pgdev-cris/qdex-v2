@@ -259,6 +259,93 @@ const buildReceiptFromApi = (
 let _nextId = 1
 const nextId = () => String(_nextId++)
 
+// ─── Context panel ────────────────────────────────────────────────────────────
+// Defined outside ManualRemitPage so React never unmounts/remounts it on re-renders.
+
+interface ContextPanelProps {
+    receipt: Receipt | null
+    selectedSupplier: { code: number; name: string } | null
+    totalAmount: number
+    tenderRows: TenderRow[]
+}
+
+const ContextPanel = ({ receipt, selectedSupplier, totalAmount, tenderRows }: ContextPanelProps) => {
+    if (receipt) {
+        const total = receipt.lines.reduce((s, l) => s + Number(l.amount), 0)
+        return (
+            <div className="flex flex-col gap-3">
+                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Transaction Summary</p>
+                <InfoRow label="Trans No." value={receipt.trans_no} />
+                <InfoRow label="Ref Code" value={receipt.ref_code} />
+                <InfoRow label="Supplier" value={`(${receipt.supplier_code}) ${receipt.supplier_name}`} />
+                <InfoRow label="Remitter" value={receipt.remitter_name} />
+                <InfoRow label="Type" value="Manual" />
+                <div className="mt-1 flex justify-between text-sm font-semibold">
+                    <span>Total Remitted</span>
+                    <span className="text-primary tabular-nums">{fmt(total)}</span>
+                </div>
+            </div>
+        )
+    }
+
+    if (selectedSupplier || tenderRows.some((r) => Number(r.amount) > 0)) {
+        return (
+            <div className="flex flex-col gap-6">
+                {selectedSupplier && (
+                    <div className="flex flex-col gap-3">
+                        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Supplier</p>
+                        <InfoRow label="Code" value={String(selectedSupplier.code)} />
+                        <InfoRow label="Name" value={selectedSupplier.name} />
+                    </div>
+                )}
+                {totalAmount > 0 && (
+                    <div className="flex flex-col gap-2">
+                        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Tenders</p>
+                        {tenderRows
+                            .filter((r) => r.method && Number(r.amount) > 0)
+                            .map((r) => (
+                                <div key={r.id} className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">
+                                        {tenderLabelByCode(r.method) || r.method}
+                                    </span>
+                                    <span className="font-medium tabular-nums">
+                                        {fmt(Number(r.amount))}
+                                    </span>
+                                </div>
+                            ))}
+                        <div className="mt-1 flex justify-between border-t pt-2 text-sm font-semibold">
+                            <span>Total</span>
+                            <span className="tabular-nums">{fmt(totalAmount)}</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">How it works</p>
+            <ol className="flex flex-col gap-3">
+                {[
+                    'Search and select a supplier by code or name',
+                    "Enter the remitter's name",
+                    'Add cash and/or other tender amounts',
+                    'Review the summary and confirm to post',
+                    'Print the receipt for TRS and supplier',
+                ].map((text, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                            {i + 1}
+                        </span>
+                        <span className="text-sm text-muted-foreground pt-0.5">{text}</span>
+                    </li>
+                ))}
+            </ol>
+        </div>
+    )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export const ManualRemitPage = () => {
@@ -339,6 +426,11 @@ export const ManualRemitPage = () => {
     const handleSubmit = () => {
         setSubmitError(null)
 
+        if (!currentEvent) {
+            setSubmitError('No active event. Please activate an event before processing.')
+            return
+        }
+
         if (!selectedSupplier) {
             setSubmitError('Please select a supplier.')
             return
@@ -346,6 +438,13 @@ export const ManualRemitPage = () => {
 
         if (!remitterName.trim()) {
             setSubmitError('Please enter the remitter name.')
+            return
+        }
+
+        // Rows with an amount entered but no method chosen
+        const incompleteRows = tenderRows.filter((r) => !r.method && Number(r.amount) > 0)
+        if (incompleteRows.length > 0) {
+            setSubmitError('One or more rows have an amount but no payment method selected.')
             return
         }
 
@@ -443,89 +542,7 @@ export const ManualRemitPage = () => {
         setResetConfirmOpen(false)
     }
 
-    // ─── Context panel (right side) ──────────────────────────────────────────
-
     const totalAmount = tenderRows.reduce((s, r) => s + (Number(r.amount) || 0), 0)
-
-    const ContextPanel = () => {
-        if (receipt) {
-            const total = receipt.lines.reduce((s, l) => s + Number(l.amount), 0)
-            return (
-                <div className="flex flex-col gap-3">
-                    <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Transaction Summary</p>
-                    <InfoRow label="Trans No." value={receipt.trans_no} />
-                    <InfoRow label="Ref Code" value={receipt.ref_code} />
-                    <InfoRow label="Supplier" value={`(${receipt.supplier_code}) ${receipt.supplier_name}`} />
-                    <InfoRow label="Remitter" value={receipt.remitter_name} />
-                    <InfoRow label="Type" value="Manual" />
-                    <div className="mt-1 flex justify-between text-sm font-semibold">
-                        <span>Total Remitted</span>
-                        <span className="text-primary tabular-nums">{fmt(total)}</span>
-                    </div>
-                </div>
-            )
-        }
-
-        if (selectedSupplier || tenderRows.some((r) => Number(r.amount) > 0)) {
-            return (
-                <div className="flex flex-col gap-6">
-                    {selectedSupplier && (
-                        <div className="flex flex-col gap-3">
-                            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Supplier</p>
-                            <InfoRow
-                                label="Code"
-                                value={String(selectedSupplier.code)}
-                            />
-                            <InfoRow label="Name" value={selectedSupplier.name} />
-                        </div>
-                    )}
-                    {totalAmount > 0 && (
-                        <div className="flex flex-col gap-2">
-                            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Tenders</p>
-                            {tenderRows
-                                .filter((r) => r.method && Number(r.amount) > 0)
-                                .map((r) => (
-                                    <div key={r.id} className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                            {tenderLabelByCode(r.method) || r.method}
-                                        </span>
-                                        <span className="font-medium tabular-nums">
-                                            {fmt(Number(r.amount))}
-                                        </span>
-                                    </div>
-                                ))}
-                            <div className="mt-1 flex justify-between border-t pt-2 text-sm font-semibold">
-                                <span>Total</span>
-                                <span className="tabular-nums">{fmt(totalAmount)}</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )
-        }
-
-        return (
-            <div className="flex flex-col gap-3">
-                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">How it works</p>
-                <ol className="flex flex-col gap-3">
-                    {[
-                        'Search and select a supplier by code or name',
-                        "Enter the remitter's name",
-                        'Add cash and/or other tender amounts',
-                        'Review the summary and confirm to post',
-                        'Print the receipt for TRS and supplier',
-                    ].map((text, i) => (
-                        <li key={i} className="flex items-start gap-3">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                                {i + 1}
-                            </span>
-                            <span className="text-sm text-muted-foreground pt-0.5">{text}</span>
-                        </li>
-                    ))}
-                </ol>
-            </div>
-        )
-    }
 
     // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -724,7 +741,12 @@ export const ManualRemitPage = () => {
                 {/* Right — context panel */}
                 <div className="w-72 shrink-0">
                     <div className="rounded-xl border bg-card p-5">
-                        <ContextPanel />
+                        <ContextPanel
+                            receipt={receipt}
+                            selectedSupplier={selectedSupplier}
+                            totalAmount={totalAmount}
+                            tenderRows={tenderRows}
+                        />
                     </div>
                 </div>
             </div>

@@ -27,8 +27,10 @@ module.exports = {
             merge_logs: true,
             log_date_format: 'YYYY-MM-DD HH:mm:ss',
 
-            // Windows compatibility
-            kill_timeout: 5000,
+            // Windows compatibility — use message-based graceful shutdown
+            // PM2 sends process.send('shutdown') before killing
+            shutdown_with_message: true,
+            kill_timeout: 15000,        // 15s: enough for POS calls (10s timeout) to finish
         },
     ],
 };

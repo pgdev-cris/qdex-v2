@@ -58,6 +58,29 @@ app.use(`${API_PREFIX}/tender-types`, tenderTypesRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+const shutdown = () => {
+    console.log('[Shutdown] Draining in-flight requests...');
+    server.close(() => {
+        console.log('[Shutdown] All requests finished. Exiting.');
+        process.exit(0);
+    });
+
+    // Force exit if requests don't drain in time
+    setTimeout(() => {
+        console.error('[Shutdown] Force exit after timeout.');
+        process.exit(1);
+    }, 12_000);
+};
+
+// PM2 graceful shutdown — works on Windows (no SIGTERM needed)
+process.on('message', (msg) => {
+    if (msg === 'shutdown') shutdown();
+});
+
+// Fallback for non-PM2 environments (Linux/Mac dev)
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

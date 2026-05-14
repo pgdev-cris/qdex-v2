@@ -15,6 +15,10 @@ const login = async (username: string, password: string) => {
         throw new Error('Invalid username or password');
     }
 
+    if (user.status !== 1) {
+        throw new Error('Account is inactive. Please contact your administrator.');
+    }
+
     // Create a payload without the password
     const { password: _, ...payload } = user;
     const token = signToken(payload);

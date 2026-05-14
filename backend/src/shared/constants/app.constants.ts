@@ -41,6 +41,7 @@ export const TENDER_TYPE: Record<string, number> = {
     SKYRO: 8,
     SHOPEE_PAY: 9,
     BANK_TO_BANK: 10,
+    GCASH_VOUCHER: 11,
 };
 
 export const TRANSACTION_TYPE = {

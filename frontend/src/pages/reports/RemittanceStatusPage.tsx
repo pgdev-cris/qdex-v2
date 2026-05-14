@@ -370,9 +370,9 @@ export const RemittanceStatusPage = () => {
                             <colgroup>
                                 <col style={{ width: '90px' }} />
                                 <col />
-                                <col style={{ width: '150px' }} />
-                                <col style={{ width: '150px' }} />
-                                <col style={{ width: '140px' }} />
+                                <col style={{ width: '175px' }} />
+                                <col style={{ width: '175px' }} />
+                                <col style={{ width: '160px' }} />
                                 <col style={{ width: '120px' }} />
                             </colgroup>
                             <thead>
@@ -423,7 +423,7 @@ export const RemittanceStatusPage = () => {
                                                         {row.supplier_name}
                                                     </p>
                                                 </td>
-                                                <td className="px-4 py-3 text-right tabular-nums">
+                                                <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
                                                     {row.total_sales > 0 ? (
                                                         fmt(row.total_sales)
                                                     ) : (
@@ -432,7 +432,7 @@ export const RemittanceStatusPage = () => {
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3 text-right tabular-nums">
+                                                <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
                                                     {row.total_remitted > 0 ? (
                                                         fmt(row.total_remitted)
                                                     ) : (
@@ -442,7 +442,7 @@ export const RemittanceStatusPage = () => {
                                                     )}
                                                 </td>
                                                 <td
-                                                    className={`px-4 py-3 text-right tabular-nums font-medium ${
+                                                    className={`px-4 py-3 text-right tabular-nums font-medium whitespace-nowrap ${
                                                         balanceNegative
                                                             ? 'text-red-600'
                                                             : row.balance > 0
@@ -486,14 +486,14 @@ export const RemittanceStatusPage = () => {
                                     <div className="flex-1 px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                                         Totals ({sorted.length} suppliers)
                                     </div>
-                                    <div className="w-[150px] px-4 py-3 text-right tabular-nums text-sm font-semibold">
+                                    <div className="w-[175px] px-4 py-3 text-right tabular-nums text-sm font-semibold whitespace-nowrap">
                                         {fmt(totSales)}
                                     </div>
-                                    <div className="w-[150px] px-4 py-3 text-right tabular-nums text-sm font-semibold">
+                                    <div className="w-[175px] px-4 py-3 text-right tabular-nums text-sm font-semibold whitespace-nowrap">
                                         {fmt(totRemitted)}
                                     </div>
                                     <div
-                                        className={`w-[140px] px-4 py-3 text-right tabular-nums text-sm font-semibold ${
+                                        className={`w-[160px] px-4 py-3 text-right tabular-nums text-sm font-semibold whitespace-nowrap ${
                                             totBalance < 0
                                                 ? 'text-red-600'
                                                 : totBalance > 0
@@ -503,7 +503,7 @@ export const RemittanceStatusPage = () => {
                                     >
                                         {fmt(totBalance)}
                                     </div>
-                                    <div className="w-[120px]" />
+                                    <div className="w-[120px] shrink-0" />
                                 </div>
                             </>
                         )

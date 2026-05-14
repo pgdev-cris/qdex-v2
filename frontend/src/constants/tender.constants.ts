@@ -23,6 +23,7 @@ export const TENDER_ID = {
     GCASH_EPOS: 7,
     SKYRO: 8,
     SHOPEE_PAY: 9,
+    BANK_TO_BANK: 10,
 } as const
 
 export type TenderCode = keyof typeof TENDER_ID
@@ -39,6 +40,7 @@ export const TENDER_LABEL_BY_CODE: Record<string, string> = {
     GCASH_EPOS: 'GCash E-POS',
     SKYRO: 'SKYRO',
     SHOPEE_PAY: 'Shopee Pay',
+    BANK_TO_BANK: 'Bank to Bank',
 }
 
 /** Human-readable label keyed by numeric id. */
@@ -52,6 +54,7 @@ export const TENDER_LABEL_BY_ID: Record<number, string> = {
     [TENDER_ID.GCASH_EPOS]: TENDER_LABEL_BY_CODE.GCASH_EPOS,
     [TENDER_ID.SKYRO]: TENDER_LABEL_BY_CODE.SKYRO,
     [TENDER_ID.SHOPEE_PAY]: TENDER_LABEL_BY_CODE.SHOPEE_PAY,
+    [TENDER_ID.BANK_TO_BANK]: TENDER_LABEL_BY_CODE.BANK_TO_BANK,
 }
 
 /** Resolve a tender string code to a display label. Falls back to the code. */

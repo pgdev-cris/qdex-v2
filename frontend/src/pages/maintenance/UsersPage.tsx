@@ -117,6 +117,7 @@ export const UsersPage = () => {
     } | null>(null)
     const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
     const [pwModal, setPwModal] = useState<{ user: User; oldPassword: string; newPassword: string; repeatPassword: string } | null>(null)
+    const [pwError, setPwError] = useState<string | null>(null)
 
     //  Fetch users
 
@@ -297,11 +298,11 @@ export const UsersPage = () => {
     const handleChangePassword = async () => {
         if (!pwModal) return
         if (pwModal.newPassword !== pwModal.repeatPassword) {
-            setError('Passwords do not match.')
+            setPwError('Passwords do not match.')
             return
         }
         setSaving(true)
-        setError(null)
+        setPwError(null)
         try {
             await apiFetch(`/api/v1/users/${pwModal.user.id}/password`, {
                 method: 'PATCH',
@@ -309,7 +310,9 @@ export const UsersPage = () => {
             })
             setPwModal(null)
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : 'Failed to change password.')
+            const err = e as { message?: string; errors?: { body?: Record<string, string> } }
+            const firstBodyError = err?.errors?.body ? Object.values(err.errors.body)[0] : undefined
+            setPwError(firstBodyError ?? err?.message ?? 'Failed to change password.')
         } finally {
             setSaving(false)
         }
@@ -475,7 +478,7 @@ export const UsersPage = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon-sm"
-                                                    onClick={() => setPwModal({ user, oldPassword: '', newPassword: '', repeatPassword: '' })}
+                                                    onClick={() => { setPwError(null); setPwModal({ user, oldPassword: '', newPassword: '', repeatPassword: '' }) }}
                                                     title="Change Password"
                                                 >
                                                     <KeyRound className="h-3.5 w-3.5" />
@@ -658,7 +661,7 @@ export const UsersPage = () => {
             {/* Change password modal */}
             <Modal
                 open={pwModal !== null}
-                onClose={() => setPwModal(null)}
+                onClose={() => { setPwModal(null); setPwError(null) }}
                 title="Change Password"
                 description={
                     pwModal
@@ -667,7 +670,7 @@ export const UsersPage = () => {
                 }
                 footer={
                     <>
-                        <Button variant="outline" onClick={() => setPwModal(null)} disabled={saving}>
+                        <Button variant="outline" onClick={() => { setPwModal(null); setPwError(null) }} disabled={saving}>
                             Cancel
                         </Button>
                         <Button onClick={handleChangePassword} disabled={saving}>
@@ -708,7 +711,7 @@ export const UsersPage = () => {
                                 }
                             />
                         </FormField>
-                        {error && <p className="text-sm text-destructive">{error}</p>}
+                        {pwError && <p className="text-sm text-destructive">{pwError}</p>}
                     </div>
                 )}
             </Modal>

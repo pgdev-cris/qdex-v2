@@ -355,9 +355,13 @@ const voidRemittance = async (id: number, payload: VoidPayload, userId: number) 
             remarks: payload.override.remarks,
         });
 
-        // Notify POS — failure here rolls back the entire transaction
-        console.log('[Remittance] Void — notifying POS for receipt:', transaction.receipt_no);
-        await notifyPosVoid(transaction.receipt_no);
+        // Notify POS — skip for manual remittances since they are not sourced from POS sales data
+        if (transaction.type !== TRANSACTION_TYPE.MANUAL) {
+            console.log('[Remittance] Void — notifying POS for receipt:', transaction.receipt_no);
+            await notifyPosVoid(transaction.receipt_no);
+        } else {
+            console.log('[Remittance] Void — skipping POS notification for manual remittance, receipt:', transaction.receipt_no);
+        }
     });
 
     console.log('[Remittance] voidRemittance completed — transaction id:', id, '| receipt_no:', transaction.receipt_no);

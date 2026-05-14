@@ -389,6 +389,7 @@ export interface TransactionRow {
     reference_code: string;
     supplier_id: number;
     status: number;
+    type: number;
 }
 
 /**
@@ -402,7 +403,8 @@ const getTransactionById = async (id: number): Promise<TransactionRow | null> =>
             CONCAT(COALESCE(sr.prefix, ''), LPAD(t.transaction_no, COALESCE(sr.pad_length, 6), '0')) AS receipt_no,
             t.reference_code,
             t.supplier_id,
-            t.status
+            t.status,
+            t.type
         FROM tbl_transactions t
         LEFT JOIN tbl_series sr ON sr.code = CONCAT('TRX-', t.event_id)
         WHERE t.id = ?

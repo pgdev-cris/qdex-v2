@@ -2,3 +2,5 @@ name: Prod
 variables:
   - name: qdex_base_url
     value: https://tnap-convention-api.puregold.com.ph/qdex
+  - name: qdex_client_base_url
+    value: https://tnap-convention-dev.puregold.com.ph/qdex

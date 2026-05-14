@@ -10,7 +10,7 @@ http:
     type: json
     data: |-
       {
-          "receipt_no": "000030",
+          "receipt_no": "000222",
           "supplier_code": 11460,
           "total_amount": 71334,
           "remitted_by": "Lovely Doris Tibar",

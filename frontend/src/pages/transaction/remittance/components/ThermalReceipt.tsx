@@ -269,14 +269,16 @@ export const ThermalReceipt = ({ receipt }: Props) => {
 
             <div id="qdex-thermal">
                 {/* TRS Copy — page break pushes Supplier Copy to next sheet */}
-                <div style={{ pageBreakAfter: 'always', breakAfter: 'page' }}>
+                <div style={receipt.is_voided ? undefined : { pageBreakAfter: 'always', breakAfter: 'page' }}>
                     <CopyBlock receipt={receipt} copyLabel="TRS Copy" />
                 </div>
 
-                {/* Supplier Copy */}
-                <div>
-                    <CopyBlock receipt={receipt} copyLabel="Supplier Copy" />
-                </div>
+                {/* Supplier Copy — omitted for voided receipts */}
+                {!receipt.is_voided && (
+                    <div>
+                        <CopyBlock receipt={receipt} copyLabel="Supplier Copy" />
+                    </div>
+                )}
             </div>
         </>
     )

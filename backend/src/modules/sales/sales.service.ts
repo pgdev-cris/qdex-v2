@@ -125,32 +125,57 @@ const getSupplierSales = async (supplierCode: number) => {
 
     const url = `${baseUrl}/fetch-sales/${encodeURIComponent(supplierCode)}`;
 
-    let response: Response;
+    let currentSales: SalesRecord[] = [];
+    let posError: Error | null = null;
+
     try {
-        response = await fetch(url, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(10_000),
-        });
+        let response: Response;
+        try {
+            response = await fetch(url, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                signal: AbortSignal.timeout(10_000),
+            });
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Could not reach the sales service.';
+            throw new Error(`[POS] ${message}`);
+        }
+
+        if (!response.ok) {
+            const errorBody = await response.json().catch(() => ({ message: response.statusText }));
+            throw new Error(
+                `[POS] ${errorBody?.message ?? `HTTP error! status: ${response.statusText}`}`,
+            );
+        }
+
+        const json = (await response.json()) as SalesApiResponse;
+        currentSales = json.data;
     } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Could not reach the sales service.';
-        throw new Error(`[POS] ${message}`);
+        posError = err instanceof Error ? err : new Error(String(err));
     }
 
-    if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(
-            `[POS] ${errorBody?.message ?? `HTTP error! status: ${response.statusText}`}`,
-        );
-    }
-
-    const json = (await response.json()) as SalesApiResponse;
     const prevDay = await getPrevDaySales(supplierCode, event.id);
+
+    // POS fetch failed — allow proceeding only if there are previous unremitted sales
+    if (posError) {
+        if (prevDay && prevDay.sales.length > 0) {
+            return {
+                supplier,
+                sales: [] as SalesRecord[],
+                total_amount: '0',
+                prev_sales: prevDay.sales,
+                prev_date: prevDay.date,
+                prev_partial_deductions: prevDay.partial_deductions,
+            };
+        }
+        // No previous sales to fall back on — surface the POS error
+        throw posError;
+    }
 
     return {
         supplier,
-        sales: json.data,
-        total_amount: getSupplierSalesTotalAmount(json.data),
+        sales: currentSales,
+        total_amount: getSupplierSalesTotalAmount(currentSales),
         prev_sales: prevDay?.sales ?? null,
         prev_date: prevDay?.date ?? null,
         prev_partial_deductions: prevDay?.partial_deductions ?? null,
@@ -162,6 +187,23 @@ const getSupplierSalesMock = async (supplierCode: number) => {
     const event = await eventProvider.getCurrentEvent();
 
     await assertNoFullRemittanceToday(supplierCode);
+
+    // Simulate a POS failure — fall through to prev-sales check before surfacing the error
+    const simulatePosFailure = true;
+    if (simulatePosFailure) {
+        const prevDay = await getPrevDaySales(supplierCode, event.id);
+        if (prevDay && prevDay.sales.length > 0) {
+            return {
+                supplier,
+                sales: [] as SalesRecord[],
+                total_amount: '0',
+                prev_sales: prevDay.sales,
+                prev_date: prevDay.date,
+                prev_partial_deductions: prevDay.partial_deductions,
+            };
+        }
+        throw new Error('Mock no sales error on back end.');
+    }
 
     const supplierSales = [
         { payment_method: 'CASH', total: '6055.39', total_count: 2 },

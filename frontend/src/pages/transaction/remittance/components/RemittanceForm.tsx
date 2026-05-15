@@ -571,14 +571,14 @@ export const RemittanceForm = ({
                 )}
 
                 {/* Partial: top note */}
-                {remitType === 'partial' && (!!cashRecord && isPartiable('CASH') || sortedSalesData.some((r) => r.payment_method !== 'CASH' && isEditable(r.payment_method) && isPartiable(r.payment_method)) || prevOnlyTenders.length > 0) && (
+                {remitType === 'partial' && ((isPartiable('CASH') && (!!cashRecord || (includePrevSales && (prevSalesMap.get('CASH') ?? 0) > 0))) || sortedSalesData.some((r) => r.payment_method !== 'CASH' && isEditable(r.payment_method) && isPartiable(r.payment_method)) || prevOnlyTenders.length > 0) && (
                     <p className="text-xs text-muted-foreground">
                         Amounts are pre-filled from POS. Entering more than the POS total requires override approval.
                     </p>
                 )}
 
                 {/* Partial: cash card */}
-                {remitType === 'partial' && !!cashRecord && isPartiable('CASH') && (() => {
+                {remitType === 'partial' && isPartiable('CASH') && (!!cashRecord || (includePrevSales && (prevSalesMap.get('CASH') ?? 0) > 0)) && (() => {
                     const prevCash = includePrevSales ? (prevSalesMap.get('CASH') ?? 0) : 0
                     const hasPrevCash = prevCash > 0
                     const maxCash = balance + prevCash
@@ -616,7 +616,7 @@ export const RemittanceForm = ({
                                     <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
                                         <div className="flex justify-between">
                                             <span>Today</span>
-                                            <span className="tabular-nums">{fmt(cashRecord.total)}</span>
+                                            <span className="tabular-nums">{fmt(cashRecord?.total ?? 0)}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Previous day</span>

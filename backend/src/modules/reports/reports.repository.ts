@@ -1,6 +1,10 @@
 import PoolManager from '../../shared/db/pool.manager';
 import { RemittanceRecord, RemittanceSummary } from '../../shared/types';
-import { RemittanceReportQuery, TransactionReportQuery, RemittanceStatusQuery } from './reports.schema';
+import {
+    RemittanceReportQuery,
+    TransactionReportQuery,
+    RemittanceStatusQuery,
+} from './reports.schema';
 
 const POOL = 'auth-pool';
 
@@ -179,7 +183,7 @@ const getTransactions = async (query: TransactionReportQuery): Promise<Transacti
             t.transacted_at
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers v ON v.id = t.supplier_id
-        INNER JOIN tbl_events   e ON e.id = t.event_id
+        INNER JOIN tbl_events   e ON e.id = t.event_id AND e.status = 1
         LEFT  JOIN tbl_series   s ON s.code = CONCAT('TRX-', t.event_id)
         ${where}
         ORDER BY t.id DESC
@@ -247,7 +251,7 @@ const getSupplierPerTender = async (
             COALESCE(SUM(td.amount), 0)                                                       AS total
         FROM tbl_transactions t
         INNER JOIN tbl_suppliers           v  ON v.id  = t.supplier_id
-        INNER JOIN tbl_events              e  ON e.id  = t.event_id
+        INNER JOIN tbl_events              e  ON e.id  = t.event_id AND e.status = 1
         INNER JOIN tbl_transaction_details td ON td.transaction_id = t.id
         INNER JOIN tbl_tender_types        tt ON tt.id = td.tender_type
         LEFT  JOIN tbl_users               u  ON u.id  = t.verified_by
